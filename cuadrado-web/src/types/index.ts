@@ -6,12 +6,13 @@ export interface Usuario {
     partidasJugadas: number;
     partidasGanadas: number;
     ranking: number;
-    avatar: string;
-    reverso: string;
-    tapete: string;
+    avatarSeleccionado: string;
+    reversoSeleccionado: string;
+    tapeteSeleccionado: string;
 }
 
 export interface Inventario {
+    IDusuario: number;
     avatares: string[];
     reversos: string[];
     tapetes: string[];

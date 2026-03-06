@@ -1,4 +1,5 @@
 // Fichero crear usuarios de prueba
+/*
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import type { Usuario, EstadoAutenticacion } from '../types/index.tsx';
 
@@ -10,9 +11,9 @@ const MOCK_USER: Usuario = {
     partidasJugadas: 10,
     partidasGanadas: 5,
     ranking: 2,
-    avatar: "avatar1.png",
-    reverso: "reverso1.png",
-    tapete: "tapete1.png"
+    avatarSeleccionado: "avatar1.png",
+    reversoSeleccionado: "reverso1.png",
+    tapeteSeleccionado: "tapete1.png",
 };
 
 interface TipoContextoAutenticacion extends EstadoAutenticacion {
@@ -53,4 +54,86 @@ export function usarAutenticación() {
   const ctx = useContext(ContextoAutenticacion);
   if (!ctx) throw new Error('usarAutenticación debe usarse dentro de ProveedorAutenticacion');
   return ctx;
+}
+*/
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react';
+
+import {
+  loginRequest,
+  registerRequest,
+  changePasswordRequest,
+} from '../services/auth.service';
+
+import type {
+  LoginPayload,
+  RegisterPayload,
+  ChangePasswordPayload,
+} from '../types/auth.types';
+
+interface AuthContextType {
+  isAuthenticated: boolean;
+  login: (data: LoginPayload) => Promise<void>;
+  register: (data: RegisterPayload) => Promise<void>;
+  logout: () => void;
+  changePassword: (data: ChangePasswordPayload) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    setIsAuthenticated(!!token);
+  }, []);
+
+  async function login(data: LoginPayload) {
+    const res = await loginRequest(data);
+
+    localStorage.setItem('accessToken', res.accessToken);
+    localStorage.setItem('refreshToken', res.refreshToken);
+
+    setIsAuthenticated(true);
+  }
+
+  async function register(data: RegisterPayload) {
+    await registerRequest(data);
+  }
+
+  function logout() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    setIsAuthenticated(false);
+  }
+
+  async function changePassword(data: ChangePasswordPayload) {
+    const token = localStorage.getItem('accessToken');
+    if (!token) throw new Error('No autenticado');
+
+    await changePasswordRequest(data, token);
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{ isAuthenticated, login, register, logout, changePassword }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth debe usarse dentro de AuthProvider');
+  }
+  return context;
 }
