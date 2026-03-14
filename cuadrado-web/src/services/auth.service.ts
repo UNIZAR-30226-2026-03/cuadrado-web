@@ -3,10 +3,11 @@ import type {
   LoginPayload,
   ChangePasswordPayload,
   RefreshPayload,
+  ForgotPasswordPayload,
   AuthResponse,
 } from '../types/auth.types';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 async function handleResponse(res: Response) {
   const data = await res.json();
@@ -68,4 +69,16 @@ export async function refreshTokenRequest(
   });
 
   return handleResponse(res);
+}
+
+export async function forgotPasswordRequest(
+  payload: ForgotPasswordPayload
+): Promise<void> {
+  const res = await fetch(`${API_URL}/forgotten_passwd/notify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  await handleResponse(res);
 }

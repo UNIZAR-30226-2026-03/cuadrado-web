@@ -1,32 +1,30 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { forgotPasswordRequest } from '../services/auth.service';
 import Sparkle from '../components/Sparkle';
 import ErrorModal from '../components/ErrorModal';
 
-export default function LoginPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
-    if (!username || !password) {
-      setError('Todos los campos son obligatorios');
+    if (!email) {
+      setError('El correo electrónico es obligatorio');
       return;
     }
 
     try {
       setLoading(true);
-      await login({ username, password });
-      navigate('/home');
+      await forgotPasswordRequest({ email });
+      setSuccess('Se ha enviado un correo de recuperación. Revisa tu bandeja de entrada.');
     } catch (err: unknown) {
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setShowNetworkError(true);
@@ -52,38 +50,24 @@ export default function LoginPage() {
             <label className="form-label">Correo electrónico</label>
             <input
               className="neon-input"
-              type="text"
+              type="email"
               placeholder="Correo electrónico"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Contraseña</label>
-            <input
-              className="neon-input"
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </div>
 
           {error && <p className="form-error">{error}</p>}
+          {success && <p className="form-success">{success}</p>}
 
           <button className="neon-btn neon-btn--large" type="submit" disabled={loading}>
-            {loading ? 'Entrando...' : 'Iniciar Sesión'}
+            {loading ? 'Enviando...' : 'Enviar correo de recuperación'}
           </button>
         </form>
 
         <p className="auth-link" style={{ marginTop: '1rem' }}>
-          <Link to="/register">Registrarse</Link>
-        </p>
-        <p className="auth-link">
-          <Link to="/forgot-password">¿Has olvidado tu contraseña?</Link>
+          <Link to="/login">Volver a Iniciar Sesión</Link>
         </p>
       </div>
 

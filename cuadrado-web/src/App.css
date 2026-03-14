@@ -1,42 +1,342 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+/* ═══════════════════════════════════════════
+   CUBO — Component & Page Styles
+   ═══════════════════════════════════════════ */
+
+/* ── Page wrapper (todas las páginas) ── */
+.page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+/* ── Sparkle (cubo de aristas abajo-derecha) ── */
+.sparkle {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.8rem;
+  width: 34px;
+  height: 34px;
+  opacity: 0.55;
+  animation: sparkle-pulse 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.75; transform: scale(1.15) rotate(15deg); }
+}
+
+/* ═══════════════════════════════
+   PANEL NEÓN
+   ═══════════════════════════════ */
+.neon-panel {
+  background: var(--panel-bg);
+  border: 1.5px solid var(--panel-border);
+  border-radius: var(--radius-panel);
+  box-shadow:
+    0 0 18px var(--panel-glow),
+    0 0 60px rgba(75, 170, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 2.5rem 2.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ═══════════════════════════════
+   WELCOME PAGE
+   ═══════════════════════════════ */
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 7vw, 4.5rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   text-align: center;
+  margin-top: 1rem;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.welcome-subtitle {
+  text-align: center;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  line-height: 1.6;
+  margin-bottom: 2rem;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.welcome-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ═══════════════════════════════
+   AUTH PAGES (Login, Register, etc.)
+   ═══════════════════════════════ */
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-panel .logo-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+/* Logo image used across auth/welcome pages */
+.app-logo {
+  width: min(420px, 60vw);
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding-left: 0.15rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════════════════════════════
+   INPUTS
+   ═══════════════════════════════ */
+.neon-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-input);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+.neon-input::placeholder {
+  color: var(--input-placeholder);
+}
+.neon-input:focus {
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 10px rgba(80, 180, 255, 0.15);
+  background: rgba(140, 185, 230, 0.28);
+}
+
+/* ═══════════════════════════════
+   BOTONES
+   ═══════════════════════════════ */
+.neon-btn {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--btn-bg);
+  border: 1.5px solid var(--btn-border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.02em;
+}
+.neon-btn:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  box-shadow: 0 0 16px rgba(80, 180, 255, 0.18);
+  transform: translateY(-1px);
+}
+.neon-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(80, 180, 255, 0.12);
+}
+.neon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.neon-btn--large {
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+/* ═══════════════════════════════
+   LINKS DE AUTH
+   ═══════════════════════════════ */
+.auth-link {
+  text-align: center;
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.auth-link a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--text-primary);
+}
+.auth-link a:hover {
+  color: var(--cyan-bright);
+}
+
+/* ═══════════════════════════════
+   MENSAJES DE ERROR / ÉXITO
+   ═══════════════════════════════ */
+.form-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(255, 60, 60, 0.08);
+  border-radius: var(--radius-input);
+  border: 1px solid rgba(255, 60, 60, 0.20);
+  animation: error-shake 0.4s ease;
+}
+.form-success {
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(68, 221, 160, 0.08);
+  border-radius: var(--radius-input);
+  border: 1px solid rgba(68, 221, 160, 0.20);
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ═══════════════════════════════
+   ERROR MODAL (backend no accesible)
+   ═══════════════════════════════ */
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 12, 30, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-in 0.3s ease;
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.error-modal {
+  background: var(--panel-bg);
+  border: 1.5px solid rgba(255, 80, 80, 0.45);
+  border-radius: var(--radius-panel);
+  box-shadow:
+    0 0 20px rgba(255, 80, 80, 0.15),
+    0 0 60px rgba(255, 80, 80, 0.06);
+  padding: 2.5rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: modal-in 0.35s ease;
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.92) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.error-modal__icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+.error-modal__title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  letter-spacing: 0.04em;
+  color: var(--red);
+  margin-bottom: 0.75rem;
+}
+.error-modal__text {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+.error-modal__btn {
+  display: inline-block;
+  padding: 0.7rem 2rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(255, 80, 80, 0.15);
+  border: 1.5px solid rgba(255, 80, 80, 0.40);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.error-modal__btn:hover {
+  background: rgba(255, 80, 80, 0.25);
+  border-color: rgba(255, 80, 80, 0.60);
+}
+
+/* ═══════════════════════════════
+   HOME PAGE (demo)
+   ═══════════════════════════════ */
+.home-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 5rem);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 20px rgba(80, 180, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ═══════════════════════════════
+   ANIMATIONS (fade-in on mount)
+   ═══════════════════════════════ */
+.fade-in {
+  animation: fade-in 0.5s ease both;
+}
+.fade-in-delay-1 { animation-delay: 0.1s; }
+.fade-in-delay-2 { animation-delay: 0.2s; }
+.fade-in-delay-3 { animation-delay: 0.35s; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════ */
+@media (max-width: 480px) {
+  .neon-panel {
+    padding: 2rem 1.5rem 1.5rem;
+    max-width: 95%;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

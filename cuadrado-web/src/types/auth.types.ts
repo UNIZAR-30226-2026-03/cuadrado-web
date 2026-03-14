@@ -18,6 +18,10 @@ export interface RefreshPayload {
   refreshToken: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
