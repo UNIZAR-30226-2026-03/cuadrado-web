@@ -1,98 +1,60 @@
-import { useState } from 'react'
-import viteLogo from '/vite.svg'
-import './App.css'
+import type { ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import './App.css';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
+import DashboardPage from './pages/DashboardPage';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <h1>Demo Autenticación</h1>
-
-          <div style={{ marginBottom: "20px" }}>
-              <button >Login</button>
-
-              <button style={{ marginLeft: "10px" }}>Registro</button>
-
-              <button style={{ marginLeft: "10px" }}>
-                Cambiar contraseña
-              </button>
-          </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
 }
 
-export default App
+function HomeRedirect() {
+  const { isAuthenticated } = useAuth();
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+}
 
-// PÁGINA POR DEFECTO COMENTADA
-
-// puede que haya que hacer este comando la primera vez que lo vayas a ejecutar: npm install react-router-dom
-
-/*
-
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ChangePasswordPage from "./pages/ChangePasswordPage";
-
-import { AuthProvider } from "./context/AuthContext";
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/change-password"
+        element={
+          <RequireAuth>
+            <ChangePasswordPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAuth>
+            <DashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-
-        <div style={{ padding: "20px" }}>
-          
-          <h1>Demo Autenticación</h1>
-
-          <div style={{ marginBottom: "20px" }}>
-            <Link to="/login">
-              <button>Login</button>
-            </Link>
-
-            <Link to="/register">
-              <button style={{ marginLeft: "10px" }}>Registro</button>
-            </Link>
-
-            <Link to="/change-password">
-              <button style={{ marginLeft: "10px" }}>
-                Cambiar contraseña
-              </button>
-            </Link>
-          </div>
-
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/change-password" element={<ChangePasswordPage />} />
-          </Routes>
-
-        </div>
-
+        <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
   );
 }
 
 export default App;
-*/

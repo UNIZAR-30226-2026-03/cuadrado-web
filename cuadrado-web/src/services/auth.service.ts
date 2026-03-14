@@ -9,7 +9,7 @@ import type {
 const API_URL = import.meta.env.VITE_API_URL;
 
 async function handleResponse(res: Response) {
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     throw new Error(data.message || 'Error en la petición');
@@ -47,7 +47,7 @@ export async function changePasswordRequest(
   accessToken: string
 ): Promise<void> {
   const res = await fetch(`${API_URL}/auth/change-password`, {
-    method: 'PATCH',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,

@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AuthFormWrapper from '../components/auth/AuthFormWrapper';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -13,12 +14,17 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !confirm) {
       setError('Todos los campos son obligatorios');
+      return;
+    }
+
+    if (username.length < 3) {
+      setError('El usuario debe tener al menos 3 caracteres');
       return;
     }
 
@@ -36,50 +42,98 @@ export default function RegisterPage() {
       setLoading(true);
       await register({ username, email, password });
       navigate('/login');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo registrar el usuario'
+      );
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div>
-      <h2>Registro</h2>
+    <AuthFormWrapper
+      title="Crear cuenta"
+      subtitle="Registra tu usuario para empezar a jugar."
+      footer={
+        <>
+          <span>¿Ya tienes cuenta?</span>
+          <Link className="auth-link" to="/login">
+            Iniciar sesion
+          </Link>
+        </>
+      }
+    >
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="username">
+            Usuario
+          </label>
+          <input
+            id="username"
+            className="auth-input"
+            placeholder="Tu usuario"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            className="auth-input"
+            type="email"
+            placeholder="tu@email.com"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="password">
+            Contraseña
+          </label>
+          <input
+            id="password"
+            className="auth-input"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="confirm">
+            Confirmar contraseña
+          </label>
+          <input
+            id="confirm"
+            className="auth-input"
+            type="password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-        />
+        {error && (
+          <p className="auth-message auth-message--error" role="alert">
+            {error}
+          </p>
+        )}
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-
-        <button disabled={loading}>
+        <button className="auth-button" disabled={loading} type="submit">
           {loading ? 'Registrando...' : 'Registrarse'}
         </button>
       </form>
-    </div>
+    </AuthFormWrapper>
   );
 }

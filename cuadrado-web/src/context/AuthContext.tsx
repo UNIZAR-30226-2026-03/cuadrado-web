@@ -75,10 +75,12 @@ import type {
   LoginPayload,
   RegisterPayload,
   ChangePasswordPayload,
+  AuthResponse,
 } from '../types/auth.types';
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  user: AuthResponse['user'] | null;
   login: (data: LoginPayload) => Promise<void>;
   register: (data: RegisterPayload) => Promise<void>;
   logout: () => void;
@@ -89,17 +91,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthResponse['user'] | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
+    if (!token) {
+      localStorage.removeItem('user');
+      setUser(null);
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem('user');
+      }
+    }
+
+    setIsAuthenticated(true);
   }, []);
 
   async function login(data: LoginPayload) {
     const res = await loginRequest(data);
 
     localStorage.setItem('accessToken', res.accessToken);
-    localStorage.setItem('refreshToken', res.refreshToken);
+    if (res.refreshToken) {
+      localStorage.setItem('refreshToken', res.refreshToken);
+    }
+    const resolvedUser = res.user ?? { username: data.username };
+    localStorage.setItem('user', JSON.stringify(resolvedUser));
+    setUser(resolvedUser);
 
     setIsAuthenticated(true);
   }
@@ -111,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function logout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    setUser(null);
     setIsAuthenticated(false);
   }
 
@@ -123,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, login, register, logout, changePassword }}
+      value={{ isAuthenticated, user, login, register, logout, changePassword }}
     >
       {children}
     </AuthContext.Provider>

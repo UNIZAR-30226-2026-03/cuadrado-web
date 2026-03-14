@@ -20,5 +20,10 @@ export interface RefreshPayload {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
+  user?: {
+    username: string;
+    cubitos?: number;
+    eloRating?: number;
+  };
 }
