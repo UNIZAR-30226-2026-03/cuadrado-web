@@ -49,11 +49,11 @@ export default function LoginPage() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Correo electrónico</label>
+            <label className="form-label">Nombre de usuario</label>
             <input
               className="neon-input"
               type="text"
-              placeholder="Correo electrónico"
+              placeholder="Usuario"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
