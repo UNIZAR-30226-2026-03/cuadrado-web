@@ -1,29 +1,27 @@
-/* ═══════════════════════════════════════════
-   CUBO — Component & Page Styles
+/* ═══════════════════════════════════════════════════════
+   CUBO — Component & Page Styles (Neon Casino unificado)
 
-   Este fichero contiene los estilos de todos los
-   componentes y páginas de la app. Usa las variables
-   CSS definidas en index.css. Está organizado en secciones:
-   1. Page wrapper (contenedor de página)
-   2. Sparkle (decoración de cubo 3D)
-   3. Panel neón (tarjeta de glassmorphism)
-   4. Welcome page
-   5. Auth pages (Login, Register, etc.)
-   6. Inputs
-   7. Botones
-   8. Links de auth
-   9. Mensajes de error/éxito
-   10. Error Modal (sin conexión al backend)
-   11. Home page
-   12. Animaciones fade-in
-   13. Responsive
-   ═══════════════════════════════════════════ */
+   Estilos de componentes y páginas alineados con la
+   versión desktop. Usa los tokens CSS de index.css.
 
-/* ── 1. Page wrapper ────────────────────────────────────
-   Todas las páginas de la app usan esta clase como raíz.
-   Centra su contenido vertical y horizontalmente con flexbox. */
+   Secciones:
+   1. Page wrapper
+   2. Welcome page (logo animado, título, botones)
+   3. Auth pages (Login, Register, ForgotPassword)
+   4. Inputs
+   5. Botones (neon + ghost)
+   6. Links de auth
+   7. Mensajes de error/éxito
+   8. Error Modal
+   9. Home page
+   10. Responsive
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 1. Page wrapper ─────────────────────────────────────
+   Contenedor raíz de todas las páginas.
+   z-index: 1 para quedar sobre las capas de fondo animado. */
 .page {
-  position: relative; /* Necesario para posicionar elementos hijos con position: fixed/absolute */
+  position: relative;
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -31,273 +29,477 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
+  z-index: 1;
 }
 
-/* ── 2. Sparkle (cubo decorativo) ───────────────────────
-   El componente <Sparkle> se fija en la esquina inferior
-   derecha con position: fixed (no se desplaza con el scroll).
-   pointer-events: none evita que intercepte clics del usuario. */
-.sparkle {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.8rem;
-  width: 34px;
-  height: 34px;
-  opacity: 0.55;
-  animation: sparkle-pulse 3s ease-in-out infinite;
-  pointer-events: none; /* No interfiere con la interacción del usuario */
-  z-index: 0;           /* Queda detrás del contenido interactivo */
+/* ── 2. Welcome page ─────────────────────────────────────
+   Pantalla de bienvenida con logo animado estilo desktop. */
+
+/* Orbe de resplandor detrás del logo */
+.welcome-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 500px;
+  height: 500px;
+  transform: translate(-50%, -58%);
+  background: radial-gradient(
+    circle,
+    rgba(0, 229, 255, 0.08) 0%,
+    rgba(168, 85, 247, 0.04) 35%,
+    transparent 70%
+  );
+  animation: breathe 6s ease-in-out infinite;
+  pointer-events: none;
 }
 
-/* Animación: el cubo pulsa suavemente entre opacidades y rota un poco */
-@keyframes sparkle-pulse {
-  0%, 100% { opacity: 0.45; transform: scale(1) rotate(0deg); }
-  50% { opacity: 0.75; transform: scale(1.15) rotate(15deg); }
+/* Contenedor del logo con entrada dramática */
+.welcome-logo {
+  position: relative;
+  z-index: 2;
+  animation: logo-dramatic 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* ── 3. Panel neón ──────────────────────────────────────
-   Efecto "glassmorphism": fondo semitransparente con desenfoque,
-   borde translúcido y sombra de brillo cyan.
-   backdrop-filter: blur() requiere prefijo -webkit- para Safari. */
-.neon-panel {
-  background: var(--panel-bg);
-  border: 1.5px solid var(--panel-border);
-  border-radius: var(--radius-panel);
-  box-shadow:
-    0 0 18px var(--panel-glow),                    /* Brillo principal */
-    0 0 60px rgba(75, 170, 255, 0.06),             /* Halo difuso exterior */
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);       /* Borde superior sutil (efecto cristal) */
-  padding: 2.5rem 2.5rem 2rem;
-  width: 100%;
-  max-width: 420px;
-  backdrop-filter: blur(6px);           /* Desenfoca lo que hay detrás del panel */
-  -webkit-backdrop-filter: blur(6px);   /* Prefijo necesario para Safari/iOS */
+/* Logo hero: grande con animación de respiración neón */
+.logo-hero {
+  height: 300px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)) brightness(1.15);
+  animation: breathe-glow 4s ease-in-out infinite;
 }
 
-/* ── 4. Welcome page ────────────────────────────────────*/
-
-/* Título principal: fuente display en mayúsculas, escalable con clamp().
-   clamp(mín, preferido, máx) adapta el tamaño al ancho de la ventana. */
+/* Título de bienvenida */
 .welcome-title {
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 7vw, 4.5rem); /* Entre 2.8rem y 4.5rem según el viewport */
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  font-weight: 700;
   letter-spacing: 0.04em;
+  text-align: center;
+  margin-top: 0.5rem;
+  color: var(--text-100);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.25), 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Subtítulo tipo tagline: texto revelado con animación */
+.welcome-tagline {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-50);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: center;
-  margin-top: 1rem;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  animation: text-reveal 0.8s ease-out 0.9s forwards;
 }
 
-.welcome-subtitle {
-  text-align: center;
-  font-size: clamp(0.95rem, 2vw, 1.15rem);
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
-  line-height: 1.6;
-  margin-bottom: 2rem;
-}
-
-/* Botones de bienvenida apilados verticalmente */
-.welcome-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* ── 5. Auth pages ──────────────────────────────────────
-   Las páginas de autenticación (Login, Register, ForgotPassword)
-   comparten estos estilos además de .neon-panel. */
-
-/* El panel de auth centra su contenido verticalmente */
-.auth-panel {
+/* Contenedor de botones con entrada deslizante */
+.welcome-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 14px;
+  margin-top: 48px;
+  opacity: 0;
+  animation: field-slide-up 0.6s var(--spring) 1.2s forwards;
 }
 
-.auth-panel .logo-wrapper {
-  margin-bottom: 1.5rem;
+/* Botón de welcome: ancho fijo para alineación */
+.welcome-btn {
+  min-width: 260px;
+  text-align: center;
+  font-size: 16px;
+  padding: 15px 0;
+  text-decoration: none;
 }
 
-/* Logo de la app: responsivo, usa min() para no superar el 60% del viewport */
-.app-logo {
-  width: min(420px, 60vw); /* Nunca supera 420px ni el 60% del ancho de pantalla */
-  max-width: 100%;
-  height: auto;
+/* ── 3. Auth pages ───────────────────────────────────────
+   Tarjeta de autenticación con glassmorphism y borde animado. */
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 52px 40px;
+  min-width: 400px;
+  max-width: 440px;
+  width: 100%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 0 30px rgba(0, 229, 255, 0.06),
+    0 16px 50px rgba(0, 0, 0, 0.5);
+  animation: glow-border 5s ease-in-out infinite;
+}
+
+/* Logo dentro de las tarjetas de auth: tamaño moderado */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.auth-logo-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
   display: block;
-  margin: 0 auto; /* Centra horizontalmente */
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)) brightness(1.15);
 }
 
-/* Formulario de autenticación: columna con espacio entre campos */
+/* Formulario de auth: columna con ancho completo */
 .auth-form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
 }
 
-/* Cada campo del formulario: label encima del input */
-.form-group {
+/* Grupo de campo: label + input + error con animación escalonada */
+.auth-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 6px;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: field-slide-up 0.4s var(--spring) forwards;
+}
+/* Cada campo aparece 80ms después del anterior */
+.auth-field:nth-child(1) { animation-delay: 200ms; }
+.auth-field:nth-child(2) { animation-delay: 280ms; }
+.auth-field:nth-child(3) { animation-delay: 360ms; }
+.auth-field:nth-child(4) { animation-delay: 440ms; }
+
+/* Labels de los campos: uppercase, pequeñas, color atenuado */
+.auth-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-50);
+  padding-left: 2px;
 }
 
-.form-label {
-  font-weight: 700;
-  font-size: 0.92rem;
-  padding-left: 0.15rem;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-/* ── 6. Inputs ──────────────────────────────────────────
-   Los inputs tienen fondo semitransparente y borde que
-   cambia de color y añade un brillo al recibir el foco. */
+/* ── 4. Inputs ───────────────────────────────────────────
+   Inputs con fondo oscuro y borde que brilla en foco. */
 .neon-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  color: var(--text-primary);
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text-100);
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius-input);
-  outline: none; /* Eliminamos el outline por defecto del navegador */
-  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+  outline: none;
+  transition: all 250ms var(--smooth);
 }
 .neon-input::placeholder {
-  color: var(--input-placeholder);
+  color: var(--text-50);
 }
-/* Al hacer foco: borde más brillante + sutil brillo exterior + fondo ligeramente más opaco */
+/* Al hacer foco: borde neón cyan + halo exterior */
 .neon-input:focus {
-  border-color: var(--input-focus-border);
-  box-shadow: 0 0 10px rgba(80, 180, 255, 0.15);
-  background: rgba(140, 185, 230, 0.28);
+  border-color: rgba(0, 229, 255, 0.55);
+  background: rgba(10, 20, 60, 0.80);
+  box-shadow:
+    0 0 0 3px rgba(0, 229, 255, 0.08),
+    0 0 25px rgba(0, 229, 255, 0.12);
 }
 
-/* ── 7. Botones ─────────────────────────────────────────
-   Botón de ancho completo con forma de píldora (border-radius: 999px).
-   En hover sube 1px (transform: translateY(-1px)) para dar sensación
-   de elevación. Deshabilitado cuando loading=true. */
-.neon-btn {
-  display: block;
+/* ── 5. Botones ──────────────────────────────────────────
+   Botón neón principal: gradiente cyan-purple con shimmer en hover. */
+.btn-neon {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 0.85rem 1.5rem;
+  padding: 14px 40px;
   font-family: var(--font-body);
-  font-size: 1.1rem;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary);
-  background: var(--btn-bg);
-  border: 1.5px solid var(--btn-border);
-  border-radius: var(--radius-pill);
+  letter-spacing: 0.04em;
+  color: var(--text-100);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(168, 85, 247, 0.12));
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: background var(--transition), border-color var(--transition), box-shadow var(--transition), transform var(--transition);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  letter-spacing: 0.02em;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  box-shadow:
+    0 0 15px rgba(0, 229, 255, 0.15),
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 260ms var(--spring);
+  text-decoration: none;
 }
-/* :not(:disabled) evita aplicar el efecto hover cuando el botón está deshabilitado */
-.neon-btn:hover:not(:disabled) {
-  background: var(--btn-hover-bg);
-  border-color: var(--btn-hover-border);
-  box-shadow: 0 0 16px rgba(80, 180, 255, 0.18);
-  transform: translateY(-1px); /* Efecto de elevación */
+
+/* Capa de shimmer — inicialmente fuera de vista */
+.btn-neon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
 }
-.neon-btn:active:not(:disabled) {
-  transform: translateY(0); /* Al pulsar vuelve a su posición original */
-  box-shadow: 0 0 8px rgba(80, 180, 255, 0.12);
+
+.btn-neon:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(0, 229, 255, 0.65);
+  box-shadow:
+    0 0 30px rgba(0, 229, 255, 0.30),
+    0 0 60px rgba(0, 229, 255, 0.10),
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
 }
-/* Aspecto deshabilitado cuando loading=true: menos opaco y cursor no permitido */
-.neon-btn:disabled {
-  opacity: 0.5;
+/* Shimmer se activa en hover */
+.btn-neon:hover:not(:disabled)::before {
+  animation: shimmer 0.6s ease-in-out;
+}
+
+.btn-neon:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2), inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.btn-neon:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
-/* Variante grande: más padding y fuente más grande para los botones principales */
-.neon-btn--large {
-  padding: 1rem 2rem;
-  font-size: 1.25rem;
-  margin-top: 0.5rem;
+
+/* Botón ghost: solo borde, sin relleno, acento púrpura */
+.btn-ghost {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 40px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-100);
+  background: transparent;
+  border: 1px solid rgba(168, 85, 247, 0.40);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.08), 0 4px 20px rgba(0,0,0,0.3);
+  transition: all 260ms var(--spring);
+  text-decoration: none;
 }
 
-/* ── 8. Links de auth ───────────────────────────────────
-   Texto de navegación bajo los formularios (ej: "¿Olvidaste tu contraseña?") */
-.auth-link {
+.btn-ghost::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent);
+  pointer-events: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(168, 85, 247, 0.70);
+  box-shadow:
+    0 0 25px rgba(168, 85, 247, 0.25),
+    0 0 50px rgba(168, 85, 247, 0.08),
+    0 8px 30px rgba(0,0,0,0.4);
+  text-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+}
+.btn-ghost:hover:not(:disabled)::before {
+  animation: shimmer 0.6s ease-in-out;
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Botón submit: ancho completo con animación escalonada */
+.auth-submit {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 14px 0;
+  margin-top: 8px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-100);
+  background: linear-gradient(135deg, rgba(0,229,255,0.18), rgba(168,85,247,0.12));
+  border: 1px solid rgba(0,229,255,0.35);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(0,229,255,0.5);
+  box-shadow:
+    0 0 15px rgba(0,229,255,0.15),
+    0 4px 20px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: all 260ms var(--spring);
+  opacity: 0;
+  animation: field-slide-up 0.4s var(--spring) 480ms forwards;
+}
+
+.auth-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  pointer-events: none;
+}
+
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(0,229,255,0.65);
+  box-shadow:
+    0 0 30px rgba(0,229,255,0.30),
+    0 0 60px rgba(0,229,255,0.10),
+    0 8px 30px rgba(0,0,0,0.5);
+  text-shadow: 0 0 20px rgba(0,229,255,0.8);
+}
+.auth-submit:hover:not(:disabled)::before {
+  animation: shimmer 0.6s ease-in-out;
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 0 8px rgba(0,229,255,0.2), inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.auth-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── 6. Links de auth ────────────────────────────────────
+   Links de navegación bajo el formulario con underline animado. */
+.auth-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  opacity: 0;
+  animation: field-slide-up 0.4s ease-out 560ms forwards;
+}
+
+.auth-links a {
+  font-size: 13px;
+  color: var(--text-link);
+  position: relative;
+  text-decoration: none;
+}
+/* Underline animado que crece desde la izquierda en hover */
+.auth-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 220ms;
+}
+.auth-links a:hover {
+  color: var(--neon-cyan);
+}
+.auth-links a:hover::after {
+  width: 100%;
+}
+
+/* Link de volver: posicionado arriba a la izquierda */
+.auth-back {
+  position: absolute;
+  top: 28px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-80);
+  z-index: 3;
+  transition: color 200ms, transform 200ms;
+  cursor: pointer;
+  text-decoration: none;
+}
+.auth-back::before {
+  content: '\2190'; /* ← */
+  font-size: 18px;
+  transition: transform 200ms var(--spring);
+}
+.auth-back:hover {
+  color: var(--neon-cyan);
+}
+.auth-back:hover::before {
+  transform: translateX(-4px);
+}
+
+/* ── 7. Mensajes de error / éxito ────────────────────────
+   Con fondo translúcido y bordes de color semántico. */
+.auth-message--error {
   text-align: center;
-  margin-top: 0.4rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-.auth-link a {
-  text-decoration: underline;
-  text-underline-offset: 3px; /* Separa el subrayado del texto para mejor legibilidad */
-  color: var(--text-primary);
-}
-.auth-link a:hover {
-  color: var(--cyan-bright);
-}
-
-/* ── 9. Mensajes de error / éxito ───────────────────────
-   Aparecen dentro del formulario. El mensaje de error tiene
-   una animación de sacudida (shake) para llamar la atención. */
-
-.form-error {
-  color: var(--red);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: center;
-  padding: 0.5rem;
-  background: rgba(255, 60, 60, 0.08);
+  padding: 12px 18px;
   border-radius: var(--radius-input);
-  border: 1px solid rgba(255, 60, 60, 0.20);
-  animation: error-shake 0.4s ease; /* Sacudida al aparecer */
+  font-size: 13px;
+  margin-bottom: 16px;
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.30);
+  color: #f9a8d4;
+  animation: field-slide-up 0.3s ease-out, error-shake 0.4s ease;
 }
-.form-success {
-  color: var(--green);
-  font-size: 0.85rem;
-  font-weight: 600;
+
+.auth-message--success {
   text-align: center;
-  padding: 0.5rem;
-  background: rgba(68, 221, 160, 0.08);
+  padding: 12px 18px;
   border-radius: var(--radius-input);
-  border: 1px solid rgba(68, 221, 160, 0.20);
+  font-size: 13px;
+  margin-bottom: 16px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.30);
+  color: #86efac;
+  animation: field-slide-up 0.3s ease-out;
 }
 
-/* Animación de sacudida horizontal: simula "no, eso no está bien" */
-@keyframes error-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
-}
-
-/* ── 10. Error Modal ────────────────────────────────────
-   Diálogo modal que aparece cuando el backend no es accesible.
-   El overlay usa inset: 0 para cubrir toda la pantalla. */
-
-/* Fondo oscuro semitransparente que cubre toda la ventana */
+/* ── 8. Error Modal ──────────────────────────────────────
+   Modal que aparece cuando el backend no responde. */
 .error-overlay {
   position: fixed;
-  inset: 0; /* Equivale a top:0, right:0, bottom:0, left:0 */
-  z-index: 1000; /* Por encima de todo el contenido normal */
+  inset: 0;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(4, 12, 30, 0.75);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  animation: overlay-in 0.3s ease; /* Aparece con fundido */
-}
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  animation: overlay-in 0.3s ease;
 }
 
-/* Caja del modal: borde rojo en lugar de cyan para indicar error */
 .error-modal {
-  background: var(--panel-bg);
+  background: var(--glass);
   border: 1.5px solid rgba(255, 80, 80, 0.45);
-  border-radius: var(--radius-panel);
+  border-radius: var(--radius-card);
   box-shadow:
     0 0 20px rgba(255, 80, 80, 0.15),
     0 0 60px rgba(255, 80, 80, 0.06);
@@ -305,13 +507,9 @@
   max-width: 400px;
   width: 90%;
   text-align: center;
-  animation: modal-in 0.35s ease; /* Aparece con escala + deslizamiento */
+  animation: modal-in 0.35s ease;
 }
-/* El modal escala desde 92% y se desplaza 12px hacia arriba al aparecer */
-@keyframes modal-in {
-  from { opacity: 0; transform: scale(0.92) translateY(12px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
+
 .error-modal__icon {
   font-size: 3rem;
   margin-bottom: 1rem;
@@ -325,64 +523,50 @@
   margin-bottom: 0.75rem;
 }
 .error-modal__text {
-  color: var(--text-secondary);
+  color: var(--text-80);
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 1.5rem;
 }
-/* Botón de cierre del modal: tono rojo translúcido */
 .error-modal__btn {
   display: inline-block;
   padding: 0.7rem 2rem;
   font-family: var(--font-body);
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-100);
   background: rgba(255, 80, 80, 0.15);
   border: 1.5px solid rgba(255, 80, 80, 0.40);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-btn);
   cursor: pointer;
-  transition: background var(--transition), border-color var(--transition);
+  transition: background 250ms, border-color 250ms;
 }
 .error-modal__btn:hover {
   background: rgba(255, 80, 80, 0.25);
   border-color: rgba(255, 80, 80, 0.60);
 }
 
-/* ── 11. Home page ──────────────────────────────────────
-   Placeholder visual. El título usa la fuente display con
-   sombra neón cyan. */
+/* ── 9. Home page ────────────────────────────────────────*/
 .home-title {
   font-family: var(--font-display);
   font-size: clamp(3rem, 8vw, 5rem);
   letter-spacing: 0.06em;
-  text-shadow: 0 0 20px rgba(80, 180, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* ── 12. Animaciones de entrada ─────────────────────────
-   Los elementos con .fade-in aparecen desplazándose hacia
-   arriba desde 10px. Las clases delay-1/2/3 escalonan la
-   aparición para crear un efecto de secuencia visual. */
-.fade-in {
-  animation: fade-in 0.5s ease both;
-  /* "both" hace que el estado inicial (opacidad 0) se aplique
-     antes de que empiece la animación, evitando un flash */
-}
-.fade-in-delay-1 { animation-delay: 0.1s; }
-.fade-in-delay-2 { animation-delay: 0.2s; }
-.fade-in-delay-3 { animation-delay: 0.35s; }
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── 13. Responsive ─────────────────────────────────────
-   En pantallas pequeñas (< 480px) reducimos el padding del
-   panel para aprovechar mejor el espacio. */
+/* ── 10. Responsive ──────────────────────────────────────*/
 @media (max-width: 480px) {
-  .neon-panel {
-    padding: 2rem 1.5rem 1.5rem;
-    max-width: 95%; /* Ocupa casi todo el ancho en móvil */
+  .auth-card {
+    min-width: auto;
+    padding: 32px 24px 28px;
+    max-width: 95%;
+  }
+
+  .logo-hero {
+    height: 200px;
+  }
+
+  .welcome-btn {
+    min-width: 220px;
   }
 }

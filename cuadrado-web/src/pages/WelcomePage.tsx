@@ -1,57 +1,43 @@
 // ─────────────────────────────────────────────────────────
 // pages/WelcomePage.tsx — Pantalla de bienvenida (ruta "/")
 //
-// Es la primera página que ve el usuario al abrir la app.
-// Muestra el logo, un título, un subtítulo y dos botones
-// para navegar a Login o Registro.
+// Primera página que ve el usuario. Muestra:
+//   - Logo animado con efecto de respiración neón (estilo desktop)
+//   - Título "¡BIENVENIDO A CUBO!" y tagline "EL JUEGO DE CARTAS DEFINITIVO"
+//   - Dos botones: Iniciar Sesión (neon) y Crear Cuenta (ghost)
 //
-// Los elementos tienen clases "fade-in" con distintos retrasos
-// (delay-1, delay-2, delay-3) para crear un efecto de entrada
-// escalonado al cargar la página.
+// Los elementos aparecen con animaciones escalonadas:
+//   logo → título → tagline → botones
 // ─────────────────────────────────────────────────────────
 
-import { Link } from 'react-router-dom'; // Navega sin recargar la página
-import Sparkle from '../components/Sparkle'; // Decoración de cubo 3D (esquina inferior derecha)
+import { Link } from 'react-router-dom';
 
 export default function WelcomePage() {
   return (
     <div className="page">
+      {/* Orbe de resplandor cyan/púrpura detrás del logo */}
+      <div className="welcome-orb" aria-hidden="true" />
 
-      {/* Logo de la app — aparece primero con fade-in sin retraso */}
-      <div className="fade-in">
-        <img src="/Logo.png" alt="Cubo logo" className="app-logo" />
+      {/* Logo con entrada dramática (escala + blur → normal) */}
+      <div className="welcome-logo">
+        <img src="/Logo.png" alt="Cubo logo" className="logo-hero" />
       </div>
 
-      {/* Título principal — aparece 0.1s después */}
-      <h1 className="welcome-title fade-in fade-in-delay-1">
-        ¡BIENVENIDO A CUBO!
-      </h1>
+      {/* Título principal */}
+      <h1 className="welcome-title">¡Bienvenido a Cubo!</h1>
 
-      {/* Subtítulo descriptivo — aparece 0.2s después */}
-      <div className="welcome-subtitle fade-in fade-in-delay-2">
-        El juego donde menos es más<br />
-        El cuadrado de siempre, con una nueva dimensión
+      {/* Tagline con revelación de texto animada */}
+      <p className="welcome-tagline">El juego de cartas definitivo</p>
+
+      {/* Botones de acceso con entrada deslizante */}
+      <div className="welcome-actions">
+        <Link to="/login" className="btn-neon welcome-btn">
+          Iniciar Sesión
+        </Link>
+        <Link to="/register" className="btn-ghost welcome-btn">
+          Crear Cuenta
+        </Link>
       </div>
-
-      {/* Panel con botones de acceso — aparece 0.35s después */}
-      <div className="neon-panel fade-in fade-in-delay-3" style={{ maxWidth: 380 }}>
-        <div className="welcome-buttons">
-          {/* Link de react-router-dom genera un <a> que no recarga la página */}
-          <Link to="/login">
-            <button className="neon-btn neon-btn--large" type="button">
-              Iniciar Sesión
-            </button>
-          </Link>
-          <Link to="/register">
-            <button className="neon-btn neon-btn--large" type="button">
-              Registrarse
-            </button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Decoración fija en esquina inferior derecha */}
-      <Sparkle />
     </div>
   );
 }
