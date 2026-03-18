@@ -1,21 +1,40 @@
+// ─────────────────────────────────────────────────────────
+// pages/ForgotPasswordPage.tsx — Recuperación de contraseña (ruta "/forgot-password")
+//
+// Permite al usuario solicitar un correo de recuperación
+// introduciendo su dirección de email.
+//
+// A diferencia de Login y Register, esta página llama
+// directamente al servicio (forgotPasswordRequest) sin
+// pasar por el contexto, ya que no afecta al estado de
+// autenticación global.
+//
+// Muestra dos tipos de feedback:
+//   - success: mensaje verde si el correo se envió correctamente
+//   - error: mensaje rojo si hubo un problema
+// ─────────────────────────────────────────────────────────
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { forgotPasswordRequest } from '../services/auth.service';
+import { forgotPasswordRequest } from '../services/auth.service'; // Llamada directa al servicio
 import Sparkle from '../components/Sparkle';
 import ErrorModal from '../components/ErrorModal';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [success, setSuccess] = useState('');    // Mensaje de éxito (vacío = no mostrar)
   const [loading, setLoading] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
 
+  // ── handleSubmit ────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Limpiamos ambos mensajes antes de intentar de nuevo
     setError('');
     setSuccess('');
 
+    // Validación: el email es el único campo del formulario
     if (!email) {
       setError('El correo electrónico es obligatorio');
       return;
@@ -24,12 +43,13 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true);
       await forgotPasswordRequest({ email });
+      // Si el backend responde correctamente, mostramos un mensaje de éxito
       setSuccess('Se ha enviado un correo de recuperación. Revisa tu bandeja de entrada.');
     } catch (err: unknown) {
       if (err instanceof TypeError && err.message.includes('fetch')) {
-        setShowNetworkError(true);
+        setShowNetworkError(true); // Error de red → modal
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message); // Error del backend (p.ej. "Email no registrado")
       } else {
         setError('Error desconocido');
       }
@@ -58,6 +78,7 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
+          {/* Mensajes de error y éxito son mutuamente exclusivos */}
           {error && <p className="form-error">{error}</p>}
           {success && <p className="form-success">{success}</p>}
 

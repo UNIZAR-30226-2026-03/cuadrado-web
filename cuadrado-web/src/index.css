@@ -1,56 +1,71 @@
-/* ═══════════════════════════════════════════
-   CUBO — Global Theme (Neon Digital / Sci-Fi)
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   index.css — Tema global de la aplicación (Neon Digital / Sci-Fi)
 
+   Este fichero define:
+   1. Variables CSS (:root) — paleta de colores, fuentes y radios
+      reutilizados en toda la app, incluido App.css.
+   2. Reset básico — elimina márgenes y paddings por defecto.
+   3. Estilos del body y #root — fondo degradado y layout flex.
+   4. Estilos de enlaces globales.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Variables de diseño ──────────────────────────────────
+   Al definirlas en :root (el elemento <html>) son accesibles
+   desde cualquier selector con var(--nombre). Cambiar un valor
+   aquí se propaga automáticamente a toda la UI. */
 :root {
-  /* ── Fondos ── */
+  /* Fondo principal: tres tonos azul oscuro para el degradado */
   --bg-deep: #071a35;
   --bg-mid: #0f3060;
   --bg-light: #1b5090;
 
-  /* ── Panel ── */
+  /* Panel: vidrio translúcido (glassmorphism) con borde y brillo cyan */
   --panel-bg: rgba(12, 32, 68, 0.65);
   --panel-border: rgba(75, 170, 255, 0.40);
   --panel-glow: rgba(75, 170, 255, 0.18);
 
-  /* ── Inputs ── */
+  /* Inputs: fondo semitransparente con borde que se ilumina al hacer foco */
   --input-bg: rgba(140, 185, 230, 0.22);
   --input-border: rgba(120, 175, 230, 0.30);
   --input-focus-border: rgba(80, 180, 255, 0.65);
   --input-placeholder: rgba(180, 210, 240, 0.50);
 
-  /* ── Botones ── */
+  /* Botones: fondo oscuro con borde que brilla en hover */
   --btn-bg: rgba(18, 48, 88, 0.82);
   --btn-border: rgba(75, 135, 200, 0.40);
   --btn-hover-bg: rgba(25, 60, 110, 0.90);
   --btn-hover-border: rgba(80, 180, 255, 0.60);
 
-  /* ── Acentos ── */
-  --cyan: #4db8ff;
-  --cyan-bright: #80d4ff;
-  --gold: #ffd966;
-  --green: #44dda0;
-  --red: #ff5a5a;
+  /* Colores de acento para elementos especiales y mensajes */
+  --cyan: #4db8ff;        /* Cyan principal */
+  --cyan-bright: #80d4ff; /* Cyan brillante para hover de enlaces */
+  --gold: #ffd966;        /* Dorado (reservado para elementos premium) */
+  --green: #44dda0;       /* Verde para mensajes de éxito */
+  --red: #ff5a5a;         /* Rojo para mensajes de error */
 
-  /* ── Texto ── */
+  /* Jerarquía de texto: primary=blanco puro, secondary=70% opaco, muted=55% */
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.70);
   --text-muted: rgba(180, 210, 240, 0.55);
 
-  /* ── Tipografía ── */
+  /* Fuentes: display para títulos grandes, body para texto normal */
   --font-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
   --font-body: 'Montserrat', 'Segoe UI', sans-serif;
 
-  /* ── Radios ── */
+  /* Radios de borde: panel=14px redondeado, input=10px, pill=999px (círculo) */
   --radius-panel: 14px;
   --radius-input: 10px;
-  --radius-pill: 999px;
+  --radius-pill: 999px; /* Valor exagerado para garantizar esquinas completamente redondas */
 
-  /* ── Transición ── */
+  /* Duración estándar de todas las transiciones CSS */
   --transition: 0.25s ease;
 }
 
-/* ── Reset & base ── */
+/* ── Reset universal ──────────────────────────────────────
+   box-sizing: border-box hace que el padding y borde se
+   incluyan dentro del ancho/alto declarado, no se añadan encima.
+   Eliminar margin y padding por defecto evita inconsistencias
+   entre navegadores. */
 *,
 *::before,
 *::after {
@@ -59,6 +74,8 @@
   padding: 0;
 }
 
+/* Garantizamos que la app ocupe siempre al menos toda la ventana.
+   overflow-x: hidden evita scroll horizontal no deseado. */
 html, body, #root {
   width: 100%;
   height: 100%;
@@ -70,12 +87,17 @@ body {
   font-family: var(--font-body);
   font-weight: 400;
   color: var(--text-primary);
+  /* Degradado radial que simula una fuente de luz en la parte superior:
+     claro en el centro-arriba, oscuro en los bordes */
   background: radial-gradient(ellipse at 50% 25%, var(--bg-light) 0%, var(--bg-mid) 40%, var(--bg-deep) 100%);
-  background-attachment: fixed;
+  background-attachment: fixed; /* El fondo no se desplaza al hacer scroll */
+  /* Suavizado de fuentes para mejor renderizado en pantallas de alta densidad */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* #root es el contenedor React. Lo centramos con flexbox para que
+   las páginas con altura menor que la ventana queden centradas. */
 #root {
   display: flex;
   flex-direction: column;
@@ -83,12 +105,12 @@ body {
   justify-content: center;
 }
 
-/* ── Links globales ── */
+/* ── Estilos globales de enlaces ── */
 a {
   color: var(--text-primary);
-  text-decoration: none;
+  text-decoration: none; /* Eliminamos el subrayado por defecto */
   transition: color var(--transition);
 }
 a:hover {
-  color: var(--cyan-bright);
+  color: var(--cyan-bright); /* Los enlaces brillan en cyan al pasar el ratón */
 }

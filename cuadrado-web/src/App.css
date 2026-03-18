@@ -1,10 +1,29 @@
 /* ═══════════════════════════════════════════
    CUBO — Component & Page Styles
+
+   Este fichero contiene los estilos de todos los
+   componentes y páginas de la app. Usa las variables
+   CSS definidas en index.css. Está organizado en secciones:
+   1. Page wrapper (contenedor de página)
+   2. Sparkle (decoración de cubo 3D)
+   3. Panel neón (tarjeta de glassmorphism)
+   4. Welcome page
+   5. Auth pages (Login, Register, etc.)
+   6. Inputs
+   7. Botones
+   8. Links de auth
+   9. Mensajes de error/éxito
+   10. Error Modal (sin conexión al backend)
+   11. Home page
+   12. Animaciones fade-in
+   13. Responsive
    ═══════════════════════════════════════════ */
 
-/* ── Page wrapper (todas las páginas) ── */
+/* ── 1. Page wrapper ────────────────────────────────────
+   Todas las páginas de la app usan esta clase como raíz.
+   Centra su contenido vertical y horizontalmente con flexbox. */
 .page {
-  position: relative;
+  position: relative; /* Necesario para posicionar elementos hijos con position: fixed/absolute */
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -14,7 +33,10 @@
   padding: 2rem 1rem;
 }
 
-/* ── Sparkle (cubo de aristas abajo-derecha) ── */
+/* ── 2. Sparkle (cubo decorativo) ───────────────────────
+   El componente <Sparkle> se fija en la esquina inferior
+   derecha con position: fixed (no se desplaza con el scroll).
+   pointer-events: none evita que intercepte clics del usuario. */
 .sparkle {
   position: fixed;
   bottom: 1.5rem;
@@ -23,38 +45,42 @@
   height: 34px;
   opacity: 0.55;
   animation: sparkle-pulse 3s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
+  pointer-events: none; /* No interfiere con la interacción del usuario */
+  z-index: 0;           /* Queda detrás del contenido interactivo */
 }
+
+/* Animación: el cubo pulsa suavemente entre opacidades y rota un poco */
 @keyframes sparkle-pulse {
   0%, 100% { opacity: 0.45; transform: scale(1) rotate(0deg); }
   50% { opacity: 0.75; transform: scale(1.15) rotate(15deg); }
 }
 
-/* ═══════════════════════════════
-   PANEL NEÓN
-   ═══════════════════════════════ */
+/* ── 3. Panel neón ──────────────────────────────────────
+   Efecto "glassmorphism": fondo semitransparente con desenfoque,
+   borde translúcido y sombra de brillo cyan.
+   backdrop-filter: blur() requiere prefijo -webkit- para Safari. */
 .neon-panel {
   background: var(--panel-bg);
   border: 1.5px solid var(--panel-border);
   border-radius: var(--radius-panel);
   box-shadow:
-    0 0 18px var(--panel-glow),
-    0 0 60px rgba(75, 170, 255, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 0 18px var(--panel-glow),                    /* Brillo principal */
+    0 0 60px rgba(75, 170, 255, 0.06),             /* Halo difuso exterior */
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);       /* Borde superior sutil (efecto cristal) */
   padding: 2.5rem 2.5rem 2rem;
   width: 100%;
   max-width: 420px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);           /* Desenfoca lo que hay detrás del panel */
+  -webkit-backdrop-filter: blur(6px);   /* Prefijo necesario para Safari/iOS */
 }
 
-/* ═══════════════════════════════
-   WELCOME PAGE
-   ═══════════════════════════════ */
+/* ── 4. Welcome page ────────────────────────────────────*/
+
+/* Título principal: fuente display en mayúsculas, escalable con clamp().
+   clamp(mín, preferido, máx) adapta el tamaño al ancho de la ventana. */
 .welcome-title {
   font-family: var(--font-display);
-  font-size: clamp(2.8rem, 7vw, 4.5rem);
+  font-size: clamp(2.8rem, 7vw, 4.5rem); /* Entre 2.8rem y 4.5rem según el viewport */
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
@@ -72,15 +98,18 @@
   margin-bottom: 2rem;
 }
 
+/* Botones de bienvenida apilados verticalmente */
 .welcome-buttons {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-/* ═══════════════════════════════
-   AUTH PAGES (Login, Register, etc.)
-   ═══════════════════════════════ */
+/* ── 5. Auth pages ──────────────────────────────────────
+   Las páginas de autenticación (Login, Register, ForgotPassword)
+   comparten estos estilos además de .neon-panel. */
+
+/* El panel de auth centra su contenido verticalmente */
 .auth-panel {
   display: flex;
   flex-direction: column;
@@ -91,15 +120,16 @@
   margin-bottom: 1.5rem;
 }
 
-/* Logo image used across auth/welcome pages */
+/* Logo de la app: responsivo, usa min() para no superar el 60% del viewport */
 .app-logo {
-  width: min(420px, 60vw);
+  width: min(420px, 60vw); /* Nunca supera 420px ni el 60% del ancho de pantalla */
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 0 auto;
+  margin: 0 auto; /* Centra horizontalmente */
 }
 
+/* Formulario de autenticación: columna con espacio entre campos */
 .auth-form {
   width: 100%;
   display: flex;
@@ -107,6 +137,7 @@
   gap: 1.1rem;
 }
 
+/* Cada campo del formulario: label encima del input */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -120,9 +151,9 @@
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* ═══════════════════════════════
-   INPUTS
-   ═══════════════════════════════ */
+/* ── 6. Inputs ──────────────────────────────────────────
+   Los inputs tienen fondo semitransparente y borde que
+   cambia de color y añade un brillo al recibir el foco. */
 .neon-input {
   width: 100%;
   padding: 0.75rem 1rem;
@@ -132,21 +163,23 @@
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius-input);
-  outline: none;
+  outline: none; /* Eliminamos el outline por defecto del navegador */
   transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 .neon-input::placeholder {
   color: var(--input-placeholder);
 }
+/* Al hacer foco: borde más brillante + sutil brillo exterior + fondo ligeramente más opaco */
 .neon-input:focus {
   border-color: var(--input-focus-border);
   box-shadow: 0 0 10px rgba(80, 180, 255, 0.15);
   background: rgba(140, 185, 230, 0.28);
 }
 
-/* ═══════════════════════════════
-   BOTONES
-   ═══════════════════════════════ */
+/* ── 7. Botones ─────────────────────────────────────────
+   Botón de ancho completo con forma de píldora (border-radius: 999px).
+   En hover sube 1px (transform: translateY(-1px)) para dar sensación
+   de elevación. Deshabilitado cuando loading=true. */
 .neon-btn {
   display: block;
   width: 100%;
@@ -163,29 +196,31 @@
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   letter-spacing: 0.02em;
 }
+/* :not(:disabled) evita aplicar el efecto hover cuando el botón está deshabilitado */
 .neon-btn:hover:not(:disabled) {
   background: var(--btn-hover-bg);
   border-color: var(--btn-hover-border);
   box-shadow: 0 0 16px rgba(80, 180, 255, 0.18);
-  transform: translateY(-1px);
+  transform: translateY(-1px); /* Efecto de elevación */
 }
 .neon-btn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(0); /* Al pulsar vuelve a su posición original */
   box-shadow: 0 0 8px rgba(80, 180, 255, 0.12);
 }
+/* Aspecto deshabilitado cuando loading=true: menos opaco y cursor no permitido */
 .neon-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Variante grande: más padding y fuente más grande para los botones principales */
 .neon-btn--large {
   padding: 1rem 2rem;
   font-size: 1.25rem;
   margin-top: 0.5rem;
 }
 
-/* ═══════════════════════════════
-   LINKS DE AUTH
-   ═══════════════════════════════ */
+/* ── 8. Links de auth ───────────────────────────────────
+   Texto de navegación bajo los formularios (ej: "¿Olvidaste tu contraseña?") */
 .auth-link {
   text-align: center;
   margin-top: 0.4rem;
@@ -194,16 +229,17 @@
 }
 .auth-link a {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 3px; /* Separa el subrayado del texto para mejor legibilidad */
   color: var(--text-primary);
 }
 .auth-link a:hover {
   color: var(--cyan-bright);
 }
 
-/* ═══════════════════════════════
-   MENSAJES DE ERROR / ÉXITO
-   ═══════════════════════════════ */
+/* ── 9. Mensajes de error / éxito ───────────────────────
+   Aparecen dentro del formulario. El mensaje de error tiene
+   una animación de sacudida (shake) para llamar la atención. */
+
 .form-error {
   color: var(--red);
   font-size: 0.85rem;
@@ -213,7 +249,7 @@
   background: rgba(255, 60, 60, 0.08);
   border-radius: var(--radius-input);
   border: 1px solid rgba(255, 60, 60, 0.20);
-  animation: error-shake 0.4s ease;
+  animation: error-shake 0.4s ease; /* Sacudida al aparecer */
 }
 .form-success {
   color: var(--green);
@@ -226,6 +262,7 @@
   border: 1px solid rgba(68, 221, 160, 0.20);
 }
 
+/* Animación de sacudida horizontal: simula "no, eso no está bien" */
 @keyframes error-shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-6px); }
@@ -234,25 +271,29 @@
   80% { transform: translateX(4px); }
 }
 
-/* ═══════════════════════════════
-   ERROR MODAL (backend no accesible)
-   ═══════════════════════════════ */
+/* ── 10. Error Modal ────────────────────────────────────
+   Diálogo modal que aparece cuando el backend no es accesible.
+   El overlay usa inset: 0 para cubrir toda la pantalla. */
+
+/* Fondo oscuro semitransparente que cubre toda la ventana */
 .error-overlay {
   position: fixed;
-  inset: 0;
-  z-index: 1000;
+  inset: 0; /* Equivale a top:0, right:0, bottom:0, left:0 */
+  z-index: 1000; /* Por encima de todo el contenido normal */
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(4, 12, 30, 0.75);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  animation: overlay-in 0.3s ease;
+  animation: overlay-in 0.3s ease; /* Aparece con fundido */
 }
 @keyframes overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Caja del modal: borde rojo en lugar de cyan para indicar error */
 .error-modal {
   background: var(--panel-bg);
   border: 1.5px solid rgba(255, 80, 80, 0.45);
@@ -264,8 +305,9 @@
   max-width: 400px;
   width: 90%;
   text-align: center;
-  animation: modal-in 0.35s ease;
+  animation: modal-in 0.35s ease; /* Aparece con escala + deslizamiento */
 }
+/* El modal escala desde 92% y se desplaza 12px hacia arriba al aparecer */
 @keyframes modal-in {
   from { opacity: 0; transform: scale(0.92) translateY(12px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
@@ -288,6 +330,7 @@
   line-height: 1.5;
   margin-bottom: 1.5rem;
 }
+/* Botón de cierre del modal: tono rojo translúcido */
 .error-modal__btn {
   display: inline-block;
   padding: 0.7rem 2rem;
@@ -306,9 +349,9 @@
   border-color: rgba(255, 80, 80, 0.60);
 }
 
-/* ═══════════════════════════════
-   HOME PAGE (demo)
-   ═══════════════════════════════ */
+/* ── 11. Home page ──────────────────────────────────────
+   Placeholder visual. El título usa la fuente display con
+   sombra neón cyan. */
 .home-title {
   font-family: var(--font-display);
   font-size: clamp(3rem, 8vw, 5rem);
@@ -316,11 +359,14 @@
   text-shadow: 0 0 20px rgba(80, 180, 255, 0.25), 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* ═══════════════════════════════
-   ANIMATIONS (fade-in on mount)
-   ═══════════════════════════════ */
+/* ── 12. Animaciones de entrada ─────────────────────────
+   Los elementos con .fade-in aparecen desplazándose hacia
+   arriba desde 10px. Las clases delay-1/2/3 escalonan la
+   aparición para crear un efecto de secuencia visual. */
 .fade-in {
   animation: fade-in 0.5s ease both;
+  /* "both" hace que el estado inicial (opacidad 0) se aplique
+     antes de que empiece la animación, evitando un flash */
 }
 .fade-in-delay-1 { animation-delay: 0.1s; }
 .fade-in-delay-2 { animation-delay: 0.2s; }
@@ -331,12 +377,12 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ═══════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════ */
+/* ── 13. Responsive ─────────────────────────────────────
+   En pantallas pequeñas (< 480px) reducimos el padding del
+   panel para aprovechar mejor el espacio. */
 @media (max-width: 480px) {
   .neon-panel {
     padding: 2rem 1.5rem 1.5rem;
-    max-width: 95%;
+    max-width: 95%; /* Ocupa casi todo el ancho en móvil */
   }
 }

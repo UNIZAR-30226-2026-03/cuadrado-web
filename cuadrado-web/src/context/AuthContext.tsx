@@ -1,61 +1,13 @@
-// Fichero crear usuarios de prueba
-/*
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import type { Usuario, EstadoAutenticacion } from '../types/index.tsx';
-
-const MOCK_USER: Usuario = {
-    id: 1,
-    nombre: "Usuario de prueba",
-    monedas: 100,
-    exp: 500,
-    partidasJugadas: 10,
-    partidasGanadas: 5,
-    ranking: 2,
-    avatarSeleccionado: "avatar1.png",
-    reversoSeleccionado: "reverso1.png",
-    tapeteSeleccionado: "tapete1.png",
-};
-
-interface TipoContextoAutenticacion extends EstadoAutenticacion {
-    login: (email: string, contrasena: string) => Promise<void>;
-    registrar: (nombre: string, email: string, contrasena: string) => Promise<void>;
-    logout: () => void;
-}
-
-const ContextoAutenticacion = createContext<TipoContextoAutenticacion | undefined>(undefined);
-
-export const ProveedorAutenticacion = ({ children }: { children: ReactNode }) => {
-    const [usuario, setUsuario] = useState<Usuario | null>(null);
-
-    const login = useCallback(async (email: string, contrasena: string) => {
-        // Aquí iría la lógica real de autenticación (API, validación, etc.)
-        // Por ahora, simplemente asignamos el usuario de prueba
-        setUsuario(MOCK_USER);
-    }, []);
-
-    const registrar = useCallback(async (nombre: string, email: string, contrasena: string) => {
-        // Aquí iría la lógica real de registro (API, validación, etc.)
-        // Por ahora, simplemente asignamos el usuario de prueba
-        setUsuario(MOCK_USER);
-    }, []);
-
-    const logout = useCallback(() => {
-        setUsuario(null);
-    }, []);
-
-    return (
-        <ContextoAutenticacion.Provider value={{ usuario, estaAutenticado: !!usuario, login, registrar, logout }}>
-            {children}
-        </ContextoAutenticacion.Provider>
-    );
-}
-
-export function usarAutenticación() {
-  const ctx = useContext(ContextoAutenticacion);
-  if (!ctx) throw new Error('usarAutenticación debe usarse dentro de ProveedorAutenticacion');
-  return ctx;
-}
-*/
+// ─────────────────────────────────────────────────────────
+// context/AuthContext.tsx — Estado global de autenticación
+//
+// Implementa el patrón "Context + custom hook" de React:
+//   - AuthProvider: componente que envuelve la app y expone
+//     las funciones de autenticación a todos sus hijos.
+//   - useAuth: hook que cualquier componente puede llamar
+//     para acceder al estado y acciones de autenticación,
+//     sin necesidad de pasar props manualmente (prop drilling).
+// ─────────────────────────────────────────────────────────
 
 import {
   createContext,
@@ -77,43 +29,58 @@ import type {
   ChangePasswordPayload,
 } from '../types/auth.types';
 
+// Contrato del contexto: qué estado y funciones se exponen a los hijos
 interface AuthContextType {
-  isAuthenticated: boolean;
-  login: (data: LoginPayload) => Promise<void>;
-  register: (data: RegisterPayload) => Promise<void>;
-  logout: () => void;
-  changePassword: (data: ChangePasswordPayload) => Promise<void>;
+  isAuthenticated: boolean;                                    // true si hay sesión activa
+  login: (data: LoginPayload) => Promise<void>;               // Inicia sesión y guarda tokens
+  register: (data: RegisterPayload) => Promise<void>;         // Registra un nuevo usuario
+  logout: () => void;                                          // Cierra la sesión local
+  changePassword: (data: ChangePasswordPayload) => Promise<void>; // Cambia la contraseña
 }
 
+// Creamos el contexto con undefined como valor por defecto.
+// Si alguien intenta usar el contexto fuera del Provider, useAuth lo detectará.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ── AuthProvider ──────────────────────────────────────────
+// Componente que gestiona el estado de autenticación y lo
+// proporciona a todos sus componentes hijos mediante el contexto.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Al montar la app, comprobamos si ya hay un token guardado en localStorage.
+  // Esto permite que el usuario siga autenticado tras recargar la página.
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
-  }, []);
+    setIsAuthenticated(!!token); // !! convierte el valor a booleano
+  }, []); // [] → se ejecuta solo una vez, al montar el componente
 
+  // Llama al servicio de login, guarda los tokens y actualiza el estado.
   async function login(data: LoginPayload) {
     const res = await loginRequest(data);
 
+    // Guardamos ambos tokens en localStorage para persistirlos entre sesiones
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
 
     setIsAuthenticated(true);
   }
 
+  // Solo llama al servicio de registro. No inicia sesión automáticamente:
+  // el usuario debe hacer login explícitamente tras registrarse.
   async function register(data: RegisterPayload) {
     await registerRequest(data);
   }
 
+  // Elimina los tokens del almacenamiento local y marca al usuario como no autenticado
   function logout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     setIsAuthenticated(false);
   }
 
+  // Cambia la contraseña del usuario autenticado.
+  // Requiere el accessToken para que el backend verifique la identidad.
   async function changePassword(data: ChangePasswordPayload) {
     const token = localStorage.getItem('accessToken');
     if (!token) throw new Error('No autenticado');
@@ -122,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
+    // Proporcionamos el estado y las funciones a todos los componentes hijos
     <AuthContext.Provider
       value={{ isAuthenticated, login, register, logout, changePassword }}
     >
@@ -130,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ── useAuth ───────────────────────────────────────────────
+// Hook personalizado para consumir el contexto de autenticación.
+// Lanza un error descriptivo si se usa fuera del AuthProvider,
+// lo que facilita depurar problemas de configuración.
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
