@@ -46,7 +46,11 @@ export default function RegisterPage() {
     const errors: Record<string, string> = {};
 
     if (!username) errors.username = 'Campo obligatorio';
-    if (!email) errors.email = 'Campo obligatorio';
+    if (!email) {
+      errors.email = 'Campo obligatorio';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = 'Introduce un correo electrónico válido';
+    }
 
     if (!password) {
       errors.password = 'Campo obligatorio';
@@ -91,7 +95,7 @@ export default function RegisterPage() {
           <img src="/Logo.png" alt="Cubo logo" className="auth-logo-img" />
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
           {apiError && <p className="auth-message--error">{apiError}</p>}
 
           {/* Campo: nombre de usuario */}

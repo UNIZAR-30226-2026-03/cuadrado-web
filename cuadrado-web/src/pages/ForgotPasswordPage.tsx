@@ -29,6 +29,10 @@ export default function ForgotPasswordPage() {
       setEmailError('El correo electrónico es obligatorio');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError('Introduce un correo electrónico válido');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -56,7 +60,7 @@ export default function ForgotPasswordPage() {
           <img src="/Logo.png" alt="Cubo logo" className="auth-logo-img" />
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit} noValidate>
           {/* Mensajes globales (éxito o error del servidor) */}
           {apiError && <p className="auth-message--error">{apiError}</p>}
           {success && <p className="auth-message--success">{success}</p>}
