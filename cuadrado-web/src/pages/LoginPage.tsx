@@ -1,14 +1,12 @@
 // ─────────────────────────────────────────────────────────
 // pages/LoginPage.tsx — Página de inicio de sesión (ruta "/login")
 //
-// Formulario de login con validación local antes de llamar
-// al backend. Diferencia dos tipos de error:
-//   - Error de red (fetch falla): muestra el modal ErrorModal
-//   - Error de API (credenciales incorrectas): mensaje inline
+// Validación con errores por campo:
+//   - fieldErrors: errores de validación local bajo cada input
+//   - apiError: error del servidor (credenciales incorrectas, etc.)
+//   - showNetworkError: modal cuando el backend no es accesible
 //
-// Usa la estructura de formulario de la versión web con los
-// estilos visuales de la versión desktop (glassmorphism,
-// animaciones escalonadas, botones neón).
+// Al modificar un campo se limpia su error específico.
 // ─────────────────────────────────────────────────────────
 
 import { useState } from 'react';
@@ -22,16 +20,34 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  // Errores por campo (validación local)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Error general del servidor (no atribuible a un campo concreto)
+  const [apiError, setApiError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
 
+  // Limpia el error de un campo concreto cuando el usuario empieza a escribir
+  function clearFieldError(field: string) {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setApiError('');
 
-    if (!username || !password) {
-      setError('Todos los campos son obligatorios');
+    // Validación local: comprobamos cada campo de forma independiente
+    const errors: Record<string, string> = {};
+    if (!username) errors.username = 'Campo obligatorio';
+    if (!password) errors.password = 'Campo obligatorio';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -43,9 +59,9 @@ export default function LoginPage() {
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setShowNetworkError(true);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setApiError(err.message);
       } else {
-        setError('Error desconocido');
+        setApiError('Error desconocido');
       }
     } finally {
       setLoading(false);
@@ -54,43 +70,47 @@ export default function LoginPage() {
 
   return (
     <div className="page">
-      {/* Link de volver a la pantalla de bienvenida */}
       <Link to="/" className="auth-back">Volver</Link>
 
-      {/* Tarjeta de autenticación con glassmorphism */}
       <div className="auth-card">
         <div className="auth-logo">
           <img src="/Logo.png" alt="Cubo logo" className="auth-logo-img" />
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          {/* Mensaje de error inline */}
-          {error && <p className="auth-message--error">{error}</p>}
+          {/* Error del servidor: se muestra arriba del formulario */}
+          {apiError && <p className="auth-message--error">{apiError}</p>}
 
           {/* Campo: nombre de usuario */}
           <div className="auth-field">
             <label className="auth-field-label">Usuario</label>
             <input
-              className="neon-input"
+              className={`neon-input${fieldErrors.username ? ' neon-input--error' : ''}`}
               type="text"
               placeholder="Tu nombre de usuario"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); clearFieldError('username'); }}
               autoComplete="username"
             />
+            {fieldErrors.username && (
+              <span className="auth-field__error">{fieldErrors.username}</span>
+            )}
           </div>
 
           {/* Campo: contraseña */}
           <div className="auth-field">
             <label className="auth-field-label">Contraseña</label>
             <input
-              className="neon-input"
+              className={`neon-input${fieldErrors.password ? ' neon-input--error' : ''}`}
               type="password"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
               autoComplete="current-password"
             />
+            {fieldErrors.password && (
+              <span className="auth-field__error">{fieldErrors.password}</span>
+            )}
           </div>
 
           <button className="auth-submit" type="submit" disabled={loading}>
@@ -98,7 +118,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Links de navegación secundarios */}
         <div className="auth-links">
           <Link to="/register">Crear una cuenta</Link>
           <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>

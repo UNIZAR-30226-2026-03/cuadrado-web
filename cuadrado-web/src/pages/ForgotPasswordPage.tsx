@@ -1,13 +1,9 @@
 // ─────────────────────────────────────────────────────────
 // pages/ForgotPasswordPage.tsx — Recuperación de contraseña (ruta "/forgot-password")
 //
-// Permite solicitar un correo de recuperación introduciendo
-// la dirección de email. No modifica el estado de
-// autenticación global, llama directamente al servicio.
-//
-// Muestra dos tipos de feedback:
-//   - success: mensaje verde si el correo se envió
-//   - error: mensaje rosa/rojo si hubo un problema
+// El error de validación del campo email se muestra bajo el
+// propio campo. Los errores del servidor se muestran arriba.
+// El mensaje de éxito se muestra arriba del formulario.
 // ─────────────────────────────────────────────────────────
 
 import { useState } from 'react';
@@ -17,18 +13,20 @@ import ErrorModal from '../components/ErrorModal';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState(''); // Error específico del campo
+  const [apiError, setApiError] = useState('');     // Error del servidor
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setEmailError('');
+    setApiError('');
     setSuccess('');
 
     if (!email) {
-      setError('El correo electrónico es obligatorio');
+      setEmailError('El correo electrónico es obligatorio');
       return;
     }
 
@@ -40,9 +38,9 @@ export default function ForgotPasswordPage() {
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setShowNetworkError(true);
       } else if (err instanceof Error) {
-        setError(err.message);
+        setApiError(err.message);
       } else {
-        setError('Error desconocido');
+        setApiError('Error desconocido');
       }
     } finally {
       setLoading(false);
@@ -59,20 +57,24 @@ export default function ForgotPasswordPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <p className="auth-message--error">{error}</p>}
+          {/* Mensajes globales (éxito o error del servidor) */}
+          {apiError && <p className="auth-message--error">{apiError}</p>}
           {success && <p className="auth-message--success">{success}</p>}
 
           {/* Campo: correo electrónico */}
           <div className="auth-field">
             <label className="auth-field-label">Correo electrónico</label>
             <input
-              className="neon-input"
+              className={`neon-input${emailError ? ' neon-input--error' : ''}`}
               type="email"
               placeholder="correo@ejemplo.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
               autoComplete="email"
             />
+            {emailError && (
+              <span className="auth-field__error">{emailError}</span>
+            )}
           </div>
 
           <button className="auth-submit" type="submit" disabled={loading}>

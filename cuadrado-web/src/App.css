@@ -209,6 +209,26 @@
     0 0 0 3px rgba(0, 229, 255, 0.08),
     0 0 25px rgba(0, 229, 255, 0.12);
 }
+/* Estado de error: borde y halo en rosa neón */
+.neon-input--error {
+  border-color: rgba(236, 72, 153, 0.6);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.10);
+}
+.neon-input--error:focus {
+  border-color: rgba(236, 72, 153, 0.75);
+  box-shadow:
+    0 0 0 3px rgba(236, 72, 153, 0.15),
+    0 0 20px rgba(236, 72, 153, 0.12);
+}
+
+/* Error bajo el campo: pequeño, en rosa neón, con entrada deslizante */
+.auth-field__error {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--neon-pink);
+  padding-left: 3px;
+  animation: field-slide-up 0.2s ease-out;
+}
 
 /* ── 5. Botones ──────────────────────────────────────────
    Botón neón principal: gradiente cyan-purple con shimmer en hover. */
