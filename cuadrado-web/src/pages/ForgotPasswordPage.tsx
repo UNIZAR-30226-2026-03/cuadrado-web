@@ -7,15 +7,16 @@
 // ─────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { forgotPasswordRequest } from '../services/auth.service';
 import ErrorModal from '../components/ErrorModal';
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState(''); // Error específico del campo
   const [apiError, setApiError] = useState('');     // Error del servidor
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showNetworkError, setShowNetworkError] = useState(false);
 
@@ -23,7 +24,6 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setEmailError('');
     setApiError('');
-    setSuccess('');
 
     if (!email) {
       setEmailError('El correo electrónico es obligatorio');
@@ -37,7 +37,9 @@ export default function ForgotPasswordPage() {
     try {
       setLoading(true);
       await forgotPasswordRequest({ email });
-      setSuccess('Se ha enviado un correo de recuperación. Revisa tu bandeja de entrada.');
+      // Tras enviar con éxito, navegamos a la pantalla de verificación
+      // pasando el email por state para no exponerlo en la URL
+      navigate('/verify-code', { state: { email } });
     } catch (err: unknown) {
       if (err instanceof TypeError && err.message.includes('fetch')) {
         setShowNetworkError(true);
@@ -61,9 +63,8 @@ export default function ForgotPasswordPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
-          {/* Mensajes globales (éxito o error del servidor) */}
+          {/* Error del servidor: se muestra arriba del formulario */}
           {apiError && <p className="auth-message--error">{apiError}</p>}
-          {success && <p className="auth-message--success">{success}</p>}
 
           {/* Campo: correo electrónico */}
           <div className="auth-field">

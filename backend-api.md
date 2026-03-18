@@ -170,7 +170,8 @@ Cierra la sesión e invalida el refresh token.
 ### 3. Recuperación de contraseña — `/api/forgotten_passwd`
 
 #### `POST /api/forgotten_passwd/notify`
-Envía un código de verificación de 9 dígitos al email del usuario. El código expira en **10 minutos**.
+Envía un código de verificación de 9 caracteres alfanuméricos al email del usuario. El código expira en **10 minutos**.
+Por seguridad, la respuesta es siempre la misma aunque el email no exista en el sistema.
 
 **Body:**
 ```json
@@ -178,13 +179,13 @@ Envía un código de verificación de 9 dígitos al email del usuario. El códig
 ```
 **Respuesta exitosa (200):**
 ```json
-{ "ok": true, "message": "Código enviado al correo" }
+{ "ok": true, "message": "Si el email existe, se ha enviado un código de verificación." }
 ```
 
 ---
 
 #### `POST /api/forgotten_passwd/verify`
-Verifica el código de recuperación.
+Verifica que el código de recuperación es correcto. No comprueba expiración (eso se valida en `/reset`).
 
 **Body:**
 ```json
@@ -195,8 +196,31 @@ Verifica el código de recuperación.
 ```
 **Respuesta exitosa (200):**
 ```json
-{ "ok": true, "message": "Código verificado" }
+{ "ok": true, "message": "Código verificado correctamente." }
 ```
+**Error (401):** `"El código de verificación es incorrecto"`
+
+---
+
+#### `POST /api/forgotten_passwd/reset`
+Restablece la contraseña del usuario. Valida el código y comprueba que no haya expirado.
+Tras el cambio, el código se invalida para evitar reutilización.
+
+**Body:**
+```json
+{
+  "email": "jugador1@correo.com",
+  "authCode": "a3f9b1c2e",
+  "newPassword": "nueva12345"
+}
+```
+**Respuesta exitosa (200):**
+```json
+{ "ok": true, "message": "Contraseña restablecida correctamente." }
+```
+**Errores:**
+- **401:** `"El código de verificación es incorrecto"`
+- **401:** `"El código de verificación ha expirado"`
 
 ---
 
@@ -291,6 +315,7 @@ El cliente debe identificarse enviando su `userId` en los datos de conexión del
 | `rooms:join` | `{ roomCode: string }` | Se une a una sala existente por código |
 | `rooms:leave` | _(vacío)_ | Abandona la sala actual |
 | `rooms:start` | `{ roomCode: string }` | Inicia la partida (solo el host) |
+| `rooms:list-public` | _(vacío)_ | Lista las salas públicas que no han comenzado |
 
 **Estructura de `rules` (RulesConfig):**
 ```json
@@ -310,6 +335,7 @@ El cliente debe identificarse enviando su `userId` en los datos de conexión del
 | `rooms:join` | callback | `{ success: true, roomCode: "XXXX", roomName: "..." }` |
 | `rooms:leave` | callback | `{ success: true }` |
 | `rooms:start` | callback | `{ success: true, roomCode: "XXXX" }` |
+| `rooms:list-public` | callback | `{ success: true, rooms: [{ name, code, playersCount, rules, createdAt }] }` |
 
 #### Eventos que emite el servidor a todos los jugadores de la sala
 
@@ -317,7 +343,7 @@ El cliente debe identificarse enviando su `userId` en los datos de conexión del
 |--------|---------|-------------|
 | `room:update` | `RoomState` | Estado actualizado de la sala (jugadores, turno, etc.) |
 | `room:playerReconnected` | `{ userId, socketId }` | Un jugador se ha reconectado |
-| `room:playerDisconnected` | `{ userId, waitingForReconnect }` | Un jugador se ha desconectado (30s de espera) |
+| `room:playerDisconnected` | `{ userId, waitingForReconnect }` | Un jugador se ha desconectado (25s de espera) |
 | `room:closed` | `{ reason, roomCode }` | La sala fue cerrada (el host abandonó) |
 
 **Estructura de `RoomState`:**
@@ -355,7 +381,10 @@ El cliente debe identificarse enviando su `userId` en los datos de conexión del
 | `rankPlacement` | Int | Posición en ranking |
 | `gamesPlayed` | Int | Total de partidas |
 | `gamesWon` | Int | Partidas ganadas |
-| `equippedSkinID` | String | Skin actualmente equipada |
+| `numPlayersPlayed` | Int | Total de jugadores enfrentados |
+| `numPlayersWon` | Int | Jugadores contra los que ha ganado |
+| `settings` | Json? | Configuraciones del usuario |
+| `equippedSkinID` | String? | Skin actualmente equipada |
 
 ### Skin
 | Campo | Tipo | Descripción |
@@ -380,6 +409,7 @@ POST   /api/auth/logout               → Logout (🔒)
 
 POST   /api/forgotten_passwd/notify   → Solicitar código de recuperación
 POST   /api/forgotten_passwd/verify   → Verificar código
+POST   /api/forgotten_passwd/reset    → Restablecer contraseña
 
 GET    /api/skins/store               → Tienda de skins
 GET    /api/skins/inventory           → Inventario del usuario (🔒)
@@ -388,7 +418,7 @@ PATCH  /api/skins/equip/:skinId       → Equipar skin (🔒)
 PATCH  /api/skins/unequip             → Desequipar skin (🔒)
 
 WS     ws://localhost:3000            → Salas de juego en tiempo real
-  emit:   rooms:create / rooms:join / rooms:leave / rooms:start
+  emit:   rooms:create / rooms:join / rooms:leave / rooms:start / rooms:list-public
   listen: room:update / room:playerReconnected / room:playerDisconnected / room:closed
 ```
 > 🔒 = requiere `Authorization: Bearer <accessToken>`

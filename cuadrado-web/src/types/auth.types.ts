@@ -36,6 +36,19 @@ export interface ForgotPasswordPayload {
   email: string;
 }
 
+// Datos para verificar el código de recuperación recibido por email
+export interface VerifyCodePayload {
+  email: string;
+  authCode: string;
+}
+
+// Datos para restablecer la contraseña tras verificar el código
+export interface ResetPasswordPayload {
+  email: string;
+  authCode: string;    // Código de verificación (9 caracteres)
+  newPassword: string; // Nueva contraseña (mínimo 8 caracteres)
+}
+
 // Respuesta del backend tras un login o refresh exitoso.
 // La app usa autenticación JWT con dos tokens:
 //   - accessToken: vida corta, se envía en cada petición protegida

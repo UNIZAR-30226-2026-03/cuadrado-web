@@ -14,6 +14,8 @@ import type {
   ChangePasswordPayload,
   RefreshPayload,
   ForgotPasswordPayload,
+  VerifyCodePayload,
+  ResetPasswordPayload,
   AuthResponse,
 } from '../types/auth.types';
 
@@ -88,23 +90,6 @@ export async function changePasswordRequest(
   await handleResponse(res);
 }
 
-// ── refreshTokenRequest ───────────────────────────────────
-// Obtiene un nuevo par de tokens usando el refreshToken actual.
-// Se usa cuando el accessToken ha caducado (vida corta)
-// sin obligar al usuario a volver a hacer login.
-// POST /auth/refresh → devuelve { accessToken, refreshToken }
-export async function refreshTokenRequest(
-  payload: RefreshPayload
-): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  return handleResponse(res);
-}
-
 // ── forgotPasswordRequest ─────────────────────────────────
 // Solicita al backend que envíe un correo de recuperación de contraseña.
 // POST /forgotten_passwd/notify → no devuelve datos (void)
@@ -113,6 +98,39 @@ export async function forgotPasswordRequest(
   payload: ForgotPasswordPayload
 ): Promise<void> {
   const res = await fetch(`${API_URL}/forgotten_passwd/notify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  await handleResponse(res);
+}
+
+// ── verifyCodeRequest ─────────────────────────────────────
+// Verifica que el código de recuperación enviado al email es correcto.
+// POST /forgotten_passwd/verify → no devuelve datos (void)
+// Este paso no comprueba la expiración; solo valida el código.
+export async function verifyCodeRequest(
+  payload: VerifyCodePayload
+): Promise<void> {
+  const res = await fetch(`${API_URL}/forgotten_passwd/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  await handleResponse(res);
+}
+
+// ── resetPasswordRequest ──────────────────────────────────
+// Restablece la contraseña del usuario tras verificar el código.
+// POST /forgotten_passwd/reset → no devuelve datos (void)
+// Valida el código, comprueba que no haya expirado e invalida
+// el código después de un cambio exitoso para evitar reutilización.
+export async function resetPasswordRequest(
+  payload: ResetPasswordPayload
+): Promise<void> {
+  const res = await fetch(`${API_URL}/forgotten_passwd/reset`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

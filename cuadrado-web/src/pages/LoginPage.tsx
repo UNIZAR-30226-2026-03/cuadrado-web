@@ -10,13 +10,17 @@
 // ─────────────────────────────────────────────────────────
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ErrorModal from '../components/ErrorModal';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Si venimos del flujo de restablecimiento de contraseña, mostramos un mensaje de éxito
+  const resetSuccess = (location.state as { resetSuccess?: boolean })?.resetSuccess;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -78,6 +82,13 @@ export default function LoginPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {/* Mensaje de éxito tras restablecer la contraseña */}
+          {resetSuccess && (
+            <p className="auth-message--success">
+              Contraseña restablecida correctamente. Ya puedes iniciar sesión.
+            </p>
+          )}
+
           {/* Error del servidor: se muestra arriba del formulario */}
           {apiError && <p className="auth-message--error">{apiError}</p>}
 
