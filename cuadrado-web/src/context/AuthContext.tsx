@@ -23,19 +23,25 @@ import {
   changePasswordRequest,
 } from '../services/auth.service';
 
+import { getProfileRequest } from '../services/user.service';
+
 import type {
   LoginPayload,
   RegisterPayload,
   ChangePasswordPayload,
 } from '../types/auth.types';
 
+import type { UserProfile } from '../types/user.types';
+
 // Contrato del contexto: qué estado y funciones se exponen a los hijos
 interface AuthContextType {
   isAuthenticated: boolean;                                    // true si hay sesión activa
+  user: UserProfile | null;                                    // Datos del usuario autenticado
   login: (data: LoginPayload) => Promise<void>;               // Inicia sesión y guarda tokens
   register: (data: RegisterPayload) => Promise<void>;         // Registra un nuevo usuario
   logout: () => void;                                          // Cierra la sesión local
   changePassword: (data: ChangePasswordPayload) => Promise<void>; // Cambia la contraseña
+  fetchProfile: () => Promise<void>;                           // Refresca los datos del usuario
 }
 
 // Creamos el contexto con undefined como valor por defecto.
@@ -47,15 +53,34 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // proporciona a todos sus componentes hijos mediante el contexto.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   // Al montar la app, comprobamos si ya hay un token guardado en localStorage.
-  // Esto permite que el usuario siga autenticado tras recargar la página.
+  // Si existe, intentamos cargar el perfil del usuario desde el backend.
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token); // !! convierte el valor a booleano
+    if (token) {
+      setIsAuthenticated(true);
+      fetchProfile();
+    }
   }, []); // [] → se ejecuta solo una vez, al montar el componente
 
-  // Llama al servicio de login, guarda los tokens y actualiza el estado.
+  // Obtiene el perfil actualizado del usuario desde el backend.
+  // Se llama al montar la app (si hay token) y tras el login.
+  async function fetchProfile() {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+
+    try {
+      const profile = await getProfileRequest(token);
+      setUser(profile);
+    } catch {
+      // Si falla (token expirado, etc.), no cerramos sesión aquí;
+      // el usuario verá datos vacíos hasta que refresque
+    }
+  }
+
+  // Llama al servicio de login, guarda los tokens y los datos del usuario.
   async function login(data: LoginPayload) {
     const res = await loginRequest(data);
 
@@ -63,7 +88,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
 
+    // Guardamos los datos del usuario que devuelve el login
+    if (res.user) {
+      setUser({
+        username: res.user.username,
+        cubitos: res.user.cubitos ?? 0,
+        eloRating: res.user.eloRating ?? 1200,
+      });
+    }
+
     setIsAuthenticated(true);
+
+    // Cargamos el perfil completo en segundo plano
+    fetchProfile();
   }
 
   // Solo llama al servicio de registro. No inicia sesión automáticamente:
@@ -72,10 +109,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await registerRequest(data);
   }
 
-  // Elimina los tokens del almacenamiento local y marca al usuario como no autenticado
+  // Elimina los tokens del almacenamiento local y limpia el estado
   function logout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    setUser(null);
     setIsAuthenticated(false);
   }
 
@@ -91,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     // Proporcionamos el estado y las funciones a todos los componentes hijos
     <AuthContext.Provider
-      value={{ isAuthenticated, login, register, logout, changePassword }}
+      value={{ isAuthenticated, user, login, register, logout, changePassword, fetchProfile }}
     >
       {children}
     </AuthContext.Provider>

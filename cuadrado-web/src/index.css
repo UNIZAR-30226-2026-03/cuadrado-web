@@ -112,7 +112,7 @@ a:hover {
    Capas apiladas con position: fixed para cubrir el viewport.
    ═══════════════════════════════════════════════════════════ */
 
-/* Capa 1: Gradiente radial animado con movimiento sutil */
+/* Capa 1: Gradiente radial animado con movimiento + respiración de brillo */
 .bg-mesh {
   position: fixed;
   /* Overscan para evitar bordes vacíos durante traslaciones/escala */
@@ -120,13 +120,15 @@ a:hover {
   z-index: 0;
   pointer-events: none;
   transform-origin: center;
-  will-change: transform, filter;
+  will-change: transform, filter, opacity;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 0%,  rgba(68, 155, 255, 0.24) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 80% at 90% 90%, rgba(168, 85, 247, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(116, 232, 255, 0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 5%  70%, rgba(236, 72, 153, 0.08) 0%, transparent 55%);
-  animation: mesh-drift 20s ease-in-out infinite alternate;
+    radial-gradient(ellipse 80% 50% at 20% 0%,  rgba(68, 155, 255, 0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 90%, rgba(168, 85, 247, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(116, 232, 255, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 5%  70%, rgba(236, 72, 153, 0.05) 0%, transparent 55%);
+  animation:
+    mesh-drift 20s ease-in-out infinite alternate,
+    mesh-breathe 8s ease-in-out infinite;
 }
 
 /* Capa 2: Viñeta radial que oscurece los bordes del viewport */
@@ -142,6 +144,21 @@ a:hover {
 /* ═══════════════════════════════════════════════════════════
    KEYFRAMES GLOBALES
    ═══════════════════════════════════════════════════════════ */
+
+/* Respiración orgánica del brillo del fondo */
+@keyframes mesh-breathe {
+  0%, 100% { opacity: 0.85; filter: hue-rotate(0deg) brightness(1); }
+  50%      { opacity: 1;    filter: hue-rotate(5deg) brightness(1.08); }
+}
+
+/* Levitación y rotación 3D de los cubos flotantes */
+@keyframes cube-float {
+  0%   { transform: translateY(0)     rotateX(0deg)   rotateY(0deg); }
+  25%  { transform: translateY(-18px) rotateX(45deg)  rotateY(90deg); }
+  50%  { transform: translateY(-8px)  rotateX(90deg)  rotateY(180deg); }
+  75%  { transform: translateY(-22px) rotateX(135deg) rotateY(270deg); }
+  100% { transform: translateY(0)     rotateX(180deg) rotateY(360deg); }
+}
 
 /* Desplazamiento sutil del gradiente de fondo */
 @keyframes mesh-drift {
@@ -202,6 +219,12 @@ a:hover {
   50%      { border-color: rgba(0, 229, 255, 0.40); box-shadow: 0 0 40px rgba(0, 229, 255, 0.12), 0 16px 50px rgba(0, 0, 0, 0.5); }
 }
 
+/* Pulsación del borde hexagonal de la mesa */
+@keyframes hex-glow {
+  0%, 100% { background-color: rgba(0, 229, 255, 0.20); }
+  50%      { background-color: rgba(0, 229, 255, 0.50); }
+}
+
 /* Efecto shimmer en botones al hover */
 @keyframes shimmer {
   0%   { left: -120%; }
@@ -212,6 +235,67 @@ a:hover {
 @keyframes neon-pulse {
   0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.3), 0 0 20px rgba(0,229,255,0.1), inset 0 1px 0 rgba(255,255,255,0.06); }
   50%      { box-shadow: 0 0 16px rgba(0,229,255,0.5), 0 0 50px rgba(0,229,255,0.2), 0 0 80px rgba(0,229,255,0.08), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+
+/* Pulso dorado para el botón primario de crear partida */
+@keyframes neon-pulse-gold {
+  0%, 100% { box-shadow: 0 0 10px rgba(251,191,36,0.15), 0 0 20px rgba(251,191,36,0.05), 0 8px 24px rgba(0,0,0,0.3); }
+  50%      { box-shadow: 0 0 20px rgba(251,191,36,0.3), 0 0 50px rgba(251,191,36,0.12), 0 8px 24px rgba(0,0,0,0.3); }
+}
+
+/* Pulso suave cyan para el botón primario "Unirse" */
+@keyframes nav-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(0,229,255,0.2), 0 0 24px rgba(0,229,255,0.08), 0 8px 24px rgba(0,0,0,0.3);
+    border-color: rgba(0,229,255,0.45);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(0,229,255,0.4), 0 0 60px rgba(0,229,255,0.15), 0 8px 24px rgba(0,0,0,0.3);
+    border-color: rgba(0,229,255,0.65);
+  }
+}
+
+/* ── Animaciones geométricas para el arte central de la mesa ── */
+
+/* Rotación lenta del hexágono exterior */
+@keyframes geo-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Contra-rotación del hexágono interior */
+@keyframes geo-rotate-reverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+/* Movimiento de los dashes en las líneas radiales */
+@keyframes geo-dash {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: 16; }
+}
+
+/* Pulso del rombo central */
+@keyframes geo-diamond-pulse {
+  0%, 100% { opacity: 0.4; stroke-width: 1; }
+  50%      { opacity: 0.8; stroke-width: 1.5; }
+}
+
+/* ── Animaciones del flujo de cartas ──────────────────── */
+
+/* Pila pulsando al robar una carta */
+@keyframes pile-draw {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.92); }
+  60%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Carta saliendo de su posición al intercambiar */
+@keyframes card-swap-out {
+  0%   { transform: scale(1); opacity: 1; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+  40%  { transform: scale(1.12); opacity: 0.7; box-shadow: 0 8px 30px rgba(0,229,255,0.3); }
+  100% { transform: scale(1); opacity: 1; box-shadow: 0 4px 20px rgba(0,0,0,0.8); }
 }
 
 /* Sacudida horizontal para errores */
@@ -233,6 +317,35 @@ a:hover {
 @keyframes modal-in {
   from { opacity: 0; transform: scale(0.92) translateY(12px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Animaciones del grid isométrico de fondo ───────────── */
+
+/* Respiración sutil del grid isométrico */
+@keyframes iso-breathe {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1; }
+}
+
+/* Ciclo de vida de un cubo efímero: aparición → existencia → desaparición */
+@keyframes cube-lifecycle {
+  0%   { opacity: 0; transform: scale(0.15); }
+  12%  { opacity: 0.85; transform: scale(1); }
+  82%  { opacity: 0.75; transform: scale(0.95); }
+  100% { opacity: 0; transform: scale(0.1); }
+}
+
+/* Rotación 3D continua de los cubos efímeros */
+@keyframes cube-tumble {
+  from { transform: rotateX(20deg)  rotateY(0deg); }
+  to   { transform: rotateX(380deg) rotateY(360deg); }
+}
+
+/* Balanceo del icono de dispositivo en overlay de orientación vertical */
+@keyframes phone-rock {
+  0%, 15%  { transform: rotate(0deg); }
+  35%, 65% { transform: rotate(-90deg) scale(1.05); }
+  85%, 100% { transform: rotate(0deg); }
 }
 
 /* ── Scrollbar personalizado ─────────────────────────────── */

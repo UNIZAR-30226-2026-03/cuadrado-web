@@ -53,7 +53,13 @@ export interface ResetPasswordPayload {
 // La app usa autenticación JWT con dos tokens:
 //   - accessToken: vida corta, se envía en cada petición protegida
 //   - refreshToken: vida larga, solo se usa para obtener un nuevo accessToken
+// El login además devuelve un objeto user con datos básicos del perfil.
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  user?: {
+    username: string;
+    eloRating: number;
+    cubitos: number;
+  };
 }
