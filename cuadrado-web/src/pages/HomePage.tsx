@@ -1,21 +1,16 @@
-// ─────────────────────────────────────────────────────────
-// pages/HomePage.tsx — Pantalla principal del lobby de juego
+// pages/HomePage.tsx - Lobby principal del juego (ruta "/home")
 //
-// Compone las tres zonas del lobby: cabecera con stats,
-// mesa decorativa central y barra de navegación inferior.
-// Incluye grid isométrico de fondo, cubos 3D efímeros que
-// aparecen/giran/desaparecen, y un overlay para orientación
-// vertical en dispositivos móviles.
-// Se muestra tras autenticarse exitosamente (ruta "/home").
-// ─────────────────────────────────────────────────────────
+// Compone: GameHeader (stats), GameTable (mesa decorativa) y GameNavBar (navegacion).
+// Incluye cubos 3D efimeros y un overlay de orientacion para moviles verticales.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import '../styles/HomePage.css';
 import type { CSSProperties } from 'react';
 import GameHeader from '../components/GameHeader';
 import GameTable from '../components/GameTable';
 import GameNavBar from '../components/GameNavBar';
 
-// ── Cubo 3D CSS puro (6 caras wireframe neón) ────────────
+// --- CubeMesh: cubo 3D CSS puro con 6 caras wireframe ---
 function CubeMesh({ size }: { size: number }) {
   const half = size / 2;
   const faces = [
@@ -40,11 +35,8 @@ function CubeMesh({ size }: { size: number }) {
   );
 }
 
-// ── Sistema de cubos efímeros ─────────────────────────────
-// Los cubos aparecen en posiciones aleatorias, giran durante
-// su vida útil y se desvanecen al finalizar. React gestiona
-// el pool, CSS controla la animación con animation-fill-mode:
-// forwards para que el cubo termine en opacity 0.
+// --- SpawnedCube: tipo para los cubos efimeros ---
+// React gestiona el pool; CSS controla la animacion (animation-fill-mode: forwards).
 interface SpawnedCube {
   id: number;
   size: number;
@@ -53,7 +45,7 @@ interface SpawnedCube {
   duration: number;
 }
 
-const MAX_CUBES = 16;
+const MAX_CUBES = 30;
 
 function SpawningCubes() {
   const [cubes, setCubes] = useState<SpawnedCube[]>([]);
@@ -62,10 +54,10 @@ function SpawningCubes() {
   const spawn = useCallback(() => {
     const cube: SpawnedCube = {
       id: idRef.current++,
-      size: 16 + Math.random() * 36,
-      x: 2 + Math.random() * 94,
-      y: 2 + Math.random() * 94,
-      duration: 6000 + Math.random() * 8000,
+      size: 12 + Math.random() * 40,
+      x: 1 + Math.random() * 96,
+      y: 1 + Math.random() * 96,
+      duration: 7000 + Math.random() * 9000,
     };
 
     setCubes(prev => {
@@ -80,15 +72,15 @@ function SpawningCubes() {
   }, []);
 
   useEffect(() => {
-    // Lote inicial escalonado
-    for (let i = 0; i < 8; i++) {
-      setTimeout(spawn, i * 500);
+    // Lote inicial más denso y escalonado rápidamente
+    for (let i = 0; i < 16; i++) {
+      setTimeout(spawn, i * 280);
     }
 
-    // Spawneo continuo con intervalos variables
+    // Spawneo continuo con intervalos más cortos para mayor densidad
     let timeoutId: ReturnType<typeof setTimeout>;
     function scheduleNext() {
-      const delay = 1200 + Math.random() * 2500;
+      const delay = 700 + Math.random() * 1600;
       timeoutId = setTimeout(() => {
         spawn();
         scheduleNext();
@@ -118,10 +110,7 @@ function SpawningCubes() {
   );
 }
 
-// ── Overlay para orientación vertical en móvil ────────────
-// Detecta pantallas estrechas en vertical y muestra una
-// animación indicando que se gire el dispositivo. Cuando
-// pasa a horizontal, se desvanece con una transición CSS.
+// --- PortraitOverlay: detecta movil vertical y pide girar el dispositivo ---
 function PortraitOverlay() {
   const [isPortrait, setIsPortrait] = useState(false);
 
@@ -168,7 +157,7 @@ function PortraitOverlay() {
   );
 }
 
-// ── Página principal del lobby ────────────────────────────
+// --- HomePage: pagina principal del lobby ---
 export default function HomePage() {
   return (
     <div className="lobby">

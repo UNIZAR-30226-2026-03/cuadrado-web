@@ -1,7 +1,6 @@
-/* ═══════════════════════════════════════════════════════════
+/* ===========================================================
    index.css — Tema global unificado (Neon Casino Design System)
 
-   Sistema de diseño compartido con la versión desktop.
    Define:
    1. Variables CSS (:root) — tokens de color, fuentes y radios
    2. Reset básico
@@ -9,11 +8,11 @@
    4. Estilos de enlaces globales
    5. Sistema de fondo animado (mesh, estrellas, viñeta)
    6. Keyframes globales
-   ═══════════════════════════════════════════════════════════ */
+   =========================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
-/* ── Variables de diseño ─────────────────────────────────── */
+/* -- Variables de diseno -- */
 :root {
   /* Fondos: tres tonos del sistema desktop */
   --bg-void:    #0b1733;
@@ -60,7 +59,7 @@
   --smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Reset universal ─────────────────────────────────────── */
+/* -- Reset universal -- */
 *,
 *::before,
 *::after {
@@ -96,7 +95,7 @@ input, button, select, textarea {
   justify-content: center;
 }
 
-/* ── Enlaces globales ────────────────────────────────────── */
+/* -- Enlaces globales -- */
 a {
   color: var(--text-link);
   text-decoration: none;
@@ -107,10 +106,10 @@ a:hover {
   color: var(--neon-cyan);
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* ===========================================================
    SISTEMA DE FONDO ANIMADO
    Capas apiladas con position: fixed para cubrir el viewport.
-   ═══════════════════════════════════════════════════════════ */
+   =========================================================== */
 
 /* Capa 1: Gradiente radial animado con movimiento + respiración de brillo */
 .bg-mesh {
@@ -141,9 +140,9 @@ a:hover {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
+/* ===========================================================
    KEYFRAMES GLOBALES
-   ═══════════════════════════════════════════════════════════ */
+   =========================================================== */
 
 /* Respiración orgánica del brillo del fondo */
 @keyframes mesh-breathe {
@@ -219,6 +218,20 @@ a:hover {
   50%      { border-color: rgba(0, 229, 255, 0.40); box-shadow: 0 0 40px rgba(0, 229, 255, 0.12), 0 16px 50px rgba(0, 0, 0, 0.5); }
 }
 
+/* Respiracion del glow neon de la superficie stadium */
+@keyframes glow-surface {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 2px rgba(0, 229, 255, 0.40))
+      drop-shadow(0 0 25px rgba(0, 229, 255, 0.10));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 3px rgba(0, 229, 255, 0.65))
+      drop-shadow(0 0 45px rgba(0, 229, 255, 0.18));
+  }
+}
+
 /* Pulsación del borde hexagonal de la mesa */
 @keyframes hex-glow {
   0%, 100% { background-color: rgba(0, 229, 255, 0.20); }
@@ -255,7 +268,7 @@ a:hover {
   }
 }
 
-/* ── Animaciones geométricas para el arte central de la mesa ── */
+/* --Animaciones geométricas para el arte central de la mesa --*/
 
 /* Rotación lenta del hexágono exterior */
 @keyframes geo-rotate {
@@ -281,7 +294,7 @@ a:hover {
   50%      { opacity: 0.8; stroke-width: 1.5; }
 }
 
-/* ── Animaciones del flujo de cartas ──────────────────── */
+/* -- Animaciones del flujo de cartas -- */
 
 /* Pila pulsando al robar una carta */
 @keyframes pile-draw {
@@ -319,7 +332,7 @@ a:hover {
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Animaciones del grid isométrico de fondo ───────────── */
+/* -- Animaciones del grid isometrico de fondo -- */
 
 /* Respiración sutil del grid isométrico */
 @keyframes iso-breathe {
@@ -348,7 +361,7 @@ a:hover {
   85%, 100% { transform: rotate(0deg); }
 }
 
-/* ── Scrollbar personalizado ─────────────────────────────── */
+/* -- Scrollbar personalizado -- */
 ::-webkit-scrollbar             { width: 5px; }
 ::-webkit-scrollbar-track       { background: rgba(6,14,36,0.5); }
 ::-webkit-scrollbar-thumb       { background: rgba(0,229,255,0.3); border-radius: 3px; }

@@ -1,11 +1,6 @@
-// ─────────────────────────────────────────────────────────
-// types/user.types.ts — Tipos del perfil de usuario
-//
-// Define la estructura de datos del usuario tal como la
-// devuelve el backend en login y en el endpoint /auth/me.
-// ─────────────────────────────────────────────────────────
+// types/user.types.ts - Tipo del perfil de usuario
 
-// Datos del usuario que se almacenan en el contexto de autenticación
+/** Datos del usuario tal como los devuelve /auth/me y el login */
 export interface UserProfile {
   username: string;
   email?: string;

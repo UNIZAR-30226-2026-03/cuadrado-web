@@ -1,0 +1,357 @@
+/* auth.css - Estilos compartidos por todas las paginas de autenticacion */
+
+/* === Tarjeta === */
+
+/* Tarjeta con glassmorphism y borde pulsante */
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 52px 40px;
+  min-width: 400px;
+  max-width: 440px;
+  width: 100%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 0 30px rgba(0, 229, 255, 0.06),
+    0 16px 50px rgba(0, 0, 0, 0.5);
+  animation: glow-border 5s ease-in-out infinite;
+}
+
+/* Logo dentro de la tarjeta */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.auth-logo-img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)) brightness(1.15);
+}
+
+/* === Formulario === */
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grupo campo: label + input + error con entrada escalonada */
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: field-slide-up 0.4s var(--spring) forwards;
+}
+
+/* Cada campo aparece 80ms despues del anterior */
+.auth-field:nth-child(1) { animation-delay: 200ms; }
+.auth-field:nth-child(2) { animation-delay: 280ms; }
+.auth-field:nth-child(3) { animation-delay: 360ms; }
+.auth-field:nth-child(4) { animation-delay: 440ms; }
+
+.auth-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-50);
+  padding-left: 2px;
+}
+
+/* === Inputs === */
+
+/* Input con fondo oscuro y borde que brilla al enfocar */
+.neon-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text-100);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-input);
+  outline: none;
+  transition: all 250ms var(--smooth);
+}
+
+.neon-input::placeholder {
+  color: var(--text-50);
+}
+
+.neon-input:focus {
+  border-color: rgba(0, 229, 255, 0.55);
+  background: rgba(10, 20, 60, 0.80);
+  box-shadow:
+    0 0 0 3px rgba(0, 229, 255, 0.08),
+    0 0 25px rgba(0, 229, 255, 0.12);
+}
+
+/* Estado de error: borde y halo en rosa neon */
+.neon-input--error {
+  border-color: rgba(236, 72, 153, 0.6);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.10);
+}
+
+.neon-input--error:focus {
+  border-color: rgba(236, 72, 153, 0.75);
+  box-shadow:
+    0 0 0 3px rgba(236, 72, 153, 0.15),
+    0 0 20px rgba(236, 72, 153, 0.12);
+}
+
+/* Mensaje de error bajo el campo */
+.auth-field__error {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--neon-pink);
+  padding-left: 3px;
+  animation: field-slide-up 0.2s ease-out;
+}
+
+/* === Botones === */
+
+/* Boton primario: gradiente cyan-purple con shimmer en hover.
+   Tambien lo usa .auth-submit (formularios) con animacion de entrada adicional. */
+.btn-neon,
+.auth-submit {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 40px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-100);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.18), rgba(168, 85, 247, 0.12));
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  box-shadow:
+    0 0 15px rgba(0, 229, 255, 0.15),
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: all 260ms var(--spring);
+  text-decoration: none;
+}
+
+/* Capa de shimmer — fuera de vista hasta el hover */
+.btn-neon::before,
+.auth-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  pointer-events: none;
+}
+
+.btn-neon:hover:not(:disabled),
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(0, 229, 255, 0.65);
+  box-shadow:
+    0 0 30px rgba(0, 229, 255, 0.30),
+    0 0 60px rgba(0, 229, 255, 0.10),
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
+}
+
+.btn-neon:hover:not(:disabled)::before,
+.auth-submit:hover:not(:disabled)::before {
+  animation: shimmer 0.6s ease-in-out;
+}
+
+.btn-neon:active:not(:disabled),
+.auth-submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.2), inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-neon:disabled,
+.auth-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* auth-submit: variante del boton primario para formularios (con entrada animada) */
+.auth-submit {
+  padding: 14px 0;
+  margin-top: 8px;
+  opacity: 0;
+  animation: field-slide-up 0.4s var(--spring) 480ms forwards;
+}
+
+/* Boton ghost: solo borde, acento purpura */
+.btn-ghost {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px 40px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-100);
+  background: transparent;
+  border: 1px solid rgba(168, 85, 247, 0.40);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.08), 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: all 260ms var(--spring);
+  text-decoration: none;
+}
+
+.btn-ghost::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.10), transparent);
+  pointer-events: none;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(168, 85, 247, 0.70);
+  box-shadow:
+    0 0 25px rgba(168, 85, 247, 0.25),
+    0 0 50px rgba(168, 85, 247, 0.08),
+    0 8px 30px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 18px rgba(168, 85, 247, 0.7);
+}
+
+.btn-ghost:hover:not(:disabled)::before {
+  animation: shimmer 0.6s ease-in-out;
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* === Links y navegacion === */
+
+/* Links de navegacion bajo el formulario con underline animado */
+.auth-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  opacity: 0;
+  animation: field-slide-up 0.4s ease-out 560ms forwards;
+}
+
+.auth-links a {
+  font-size: 13px;
+  color: var(--text-link);
+  position: relative;
+  text-decoration: none;
+}
+
+/* Underline que crece desde la izquierda en hover */
+.auth-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width 220ms;
+}
+
+.auth-links a:hover { color: var(--neon-cyan); }
+.auth-links a:hover::after { width: 100%; }
+
+/* Link "Volver": posicionado arriba a la izquierda de la pagina */
+.auth-back {
+  position: absolute;
+  top: 28px;
+  left: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-80);
+  z-index: 3;
+  transition: color 200ms, transform 200ms;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.auth-back::before {
+  content: '\2190'; /* flecha izquierda */
+  font-size: 18px;
+  transition: transform 200ms var(--spring);
+}
+
+.auth-back:hover { color: var(--neon-cyan); }
+.auth-back:hover::before { transform: translateX(-4px); }
+
+/* === Mensajes de estado === */
+
+/* Mensajes de error y exito con fondo translucido */
+.auth-message--error,
+.auth-message--success {
+  text-align: center;
+  padding: 12px 18px;
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  margin-bottom: 16px;
+  animation: field-slide-up 0.3s ease-out;
+}
+
+.auth-message--error {
+  background: rgba(236, 72, 153, 0.12);
+  border: 1px solid rgba(236, 72, 153, 0.30);
+  color: #f9a8d4;
+  animation: field-slide-up 0.3s ease-out, error-shake 0.4s ease;
+}
+
+.auth-message--success {
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.30);
+  color: #86efac;
+}
+
+/* === Responsive === */
+
+@media (max-width: 480px) {
+  .auth-card {
+    min-width: auto;
+    padding: 32px 24px 28px;
+    max-width: 95%;
+  }
+}

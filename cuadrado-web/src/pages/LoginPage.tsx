@@ -1,51 +1,33 @@
-// ─────────────────────────────────────────────────────────
-// pages/LoginPage.tsx — Página de inicio de sesión (ruta "/login")
+// pages/LoginPage.tsx - Inicio de sesion (ruta "/login")
 //
-// Validación con errores por campo:
-//   - fieldErrors: errores de validación local bajo cada input
-//   - apiError: error del servidor (credenciales incorrectas, etc.)
-//   - showNetworkError: modal cuando el backend no es accesible
-//
-// Al modificar un campo se limpia su error específico.
-// ─────────────────────────────────────────────────────────
+// Validacion local por campo + errores de API + modal de error de red.
+// El estado resetSuccess llega por location.state desde ResetPasswordPage.
 
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ErrorModal from '../components/ErrorModal';
+import { useAuthForm, useFieldErrors } from '../hooks/useAuthForm';
+import '../styles/auth.css';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate  = useNavigate();
+  const location  = useLocation();
 
-  // Si venimos del flujo de restablecimiento de contraseña, mostramos un mensaje de éxito
+  // Mensaje de exito si venimos del flujo de restablecimiento de contrasena
   const resetSuccess = (location.state as { resetSuccess?: boolean })?.resetSuccess;
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  // Errores por campo (validación local)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  // Error general del servidor (no atribuible a un campo concreto)
-  const [apiError, setApiError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showNetworkError, setShowNetworkError] = useState(false);
+  const [loading, setLoading]   = useState(false);
 
-  // Limpia el error de un campo concreto cuando el usuario empieza a escribir
-  function clearFieldError(field: string) {
-    setFieldErrors((prev) => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  }
+  const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
+  const { fieldErrors, setFieldErrors, clearFieldError }               = useFieldErrors();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setApiError('');
 
-    // Validación local: comprobamos cada campo de forma independiente
     const errors: Record<string, string> = {};
     if (!username) errors.username = 'Campo obligatorio';
     if (!password) errors.password = 'Campo obligatorio';
@@ -55,21 +37,12 @@ export default function LoginPage() {
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
+    await withSubmit(async () => {
       await login({ username, password });
       navigate('/home');
-    } catch (err: unknown) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        setShowNetworkError(true);
-      } else if (err instanceof Error) {
-        setApiError(err.message);
-      } else {
-        setApiError('Error desconocido');
-      }
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   }
 
   return (
@@ -82,17 +55,13 @@ export default function LoginPage() {
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          {/* Mensaje de éxito tras restablecer la contraseña */}
           {resetSuccess && (
             <p className="auth-message--success">
-              Contraseña restablecida correctamente. Ya puedes iniciar sesión.
+              Contrasena restablecida correctamente. Ya puedes iniciar sesion.
             </p>
           )}
-
-          {/* Error del servidor: se muestra arriba del formulario */}
           {apiError && <p className="auth-message--error">{apiError}</p>}
 
-          {/* Campo: nombre de usuario */}
           <div className="auth-field">
             <label className="auth-field-label">Usuario</label>
             <input
@@ -103,14 +72,11 @@ export default function LoginPage() {
               onChange={(e) => { setUsername(e.target.value); clearFieldError('username'); }}
               autoComplete="username"
             />
-            {fieldErrors.username && (
-              <span className="auth-field__error">{fieldErrors.username}</span>
-            )}
+            {fieldErrors.username && <span className="auth-field__error">{fieldErrors.username}</span>}
           </div>
 
-          {/* Campo: contraseña */}
           <div className="auth-field">
-            <label className="auth-field-label">Contraseña</label>
+            <label className="auth-field-label">Contrasena</label>
             <input
               className={`neon-input${fieldErrors.password ? ' neon-input--error' : ''}`}
               type="password"
@@ -119,25 +85,21 @@ export default function LoginPage() {
               onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
               autoComplete="current-password"
             />
-            {fieldErrors.password && (
-              <span className="auth-field__error">{fieldErrors.password}</span>
-            )}
+            {fieldErrors.password && <span className="auth-field__error">{fieldErrors.password}</span>}
           </div>
 
           <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? 'Entrando...' : 'Iniciar Sesión'}
+            {loading ? 'Entrando...' : 'Iniciar Sesion'}
           </button>
         </form>
 
         <div className="auth-links">
           <Link to="/register">Crear una cuenta</Link>
-          <Link to="/forgot-password">¿Olvidaste tu contraseña?</Link>
+          <Link to="/forgot-password">¿Olvidaste tu contrasena?</Link>
         </div>
       </div>
 
-      {showNetworkError && (
-        <ErrorModal onClose={() => setShowNetworkError(false)} />
-      )}
+      {showNetworkError && <ErrorModal onClose={dismissNetworkError} />}
     </div>
   );
 }

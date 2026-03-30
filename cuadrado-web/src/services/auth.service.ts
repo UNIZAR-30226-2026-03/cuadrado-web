@@ -1,48 +1,32 @@
 // ─────────────────────────────────────────────────────────
-// services/auth.service.ts — Capa de acceso a la API de autenticación
+// services/auth.service.ts - Capa de acceso a la API de autenticacion
 //
-// Este módulo centraliza todas las llamadas HTTP relacionadas
-// con la autenticación. Al aislarlo aquí:
+// Centraliza todas las llamadas HTTP de autenticacion:
 //   - El contexto (AuthContext) no necesita saber los detalles de fetch.
-//   - Si la URL o el formato de la API cambia, solo hay que editar aquí.
-//   - Se puede sustituir fetch por axios u otra librería fácilmente.
-// ─────────────────────────────────────────────────────────
+//   - Si la URL o el formato de la API cambia, solo hay que editar aqui.
+//   - Se puede sustituir fetch por axios u otra libreria facilmente.
 
 import type {
   RegisterPayload,
   LoginPayload,
   ChangePasswordPayload,
-  RefreshPayload,
   ForgotPasswordPayload,
   VerifyCodePayload,
   ResetPasswordPayload,
   AuthResponse,
 } from '../types/auth.types';
 
-// La URL base de la API se lee de las variables de entorno de Vite.
-// En desarrollo apunta a localhost; en producción se configura en .env
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { API_URL } from './api.config';
 
-// ── handleResponse ────────────────────────────────────────
-// Función auxiliar que procesa todas las respuestas HTTP.
-// - Parsea el cuerpo JSON de la respuesta.
-// - Si el código HTTP indica error (4xx/5xx), lanza una excepción
-//   con el mensaje de error del backend, o uno genérico si no lo hay.
-// - Si todo va bien, devuelve los datos parseados.
+// --- handleResponse ---
+// Parsea la respuesta HTTP y lanza un error si el codigo es >= 400.
 async function handleResponse(res: Response) {
   const data = await res.json();
-
-  if (!res.ok) {
-    // res.ok es false cuando el código HTTP es >= 400
-    throw new Error(data.message || 'Error en la petición');
-  }
-
+  if (!res.ok) throw new Error(data.message || 'Error en la peticion');
   return data;
 }
 
-// ── registerRequest ───────────────────────────────────────
-// Registra un nuevo usuario en el sistema.
-// POST /auth/register → no devuelve datos (void)
+/** Registra un nuevo usuario. POST /auth/register */
 export async function registerRequest(
   payload: RegisterPayload
 ): Promise<void> {
@@ -55,9 +39,7 @@ export async function registerRequest(
   await handleResponse(res);
 }
 
-// ── loginRequest ──────────────────────────────────────────
-// Autentica a un usuario y obtiene los tokens JWT.
-// POST /auth/login → devuelve { accessToken, refreshToken }
+/** Autentica un usuario y devuelve los tokens JWT. POST /auth/login */
 export async function loginRequest(
   payload: LoginPayload
 ): Promise<AuthResponse> {
@@ -70,10 +52,7 @@ export async function loginRequest(
   return handleResponse(res);
 }
 
-// ── changePasswordRequest ─────────────────────────────────
-// Cambia la contraseña de un usuario autenticado.
-// PATCH /auth/change-password → requiere el token en la cabecera Authorization
-// El uso de PATCH (en lugar de PUT) indica una actualización parcial del recurso.
+/** Cambia la contrasena del usuario autenticado. PATCH /auth/change-password */
 export async function changePasswordRequest(
   payload: ChangePasswordPayload,
   accessToken: string  // Token JWT necesario para identificar al usuario
@@ -82,7 +61,7 @@ export async function changePasswordRequest(
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`, // Esquema de autenticación Bearer (JWT)
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
   });
@@ -90,10 +69,7 @@ export async function changePasswordRequest(
   await handleResponse(res);
 }
 
-// ── forgotPasswordRequest ─────────────────────────────────
-// Solicita al backend que envíe un correo de recuperación de contraseña.
-// POST /forgotten_passwd/notify → no devuelve datos (void)
-// (Nota: el endpoint está en una ruta distinta al resto de auth)
+/** Solicita el envio del correo de recuperacion. POST /forgotten_passwd/notify */
 export async function forgotPasswordRequest(
   payload: ForgotPasswordPayload
 ): Promise<void> {
@@ -106,10 +82,7 @@ export async function forgotPasswordRequest(
   await handleResponse(res);
 }
 
-// ── verifyCodeRequest ─────────────────────────────────────
-// Verifica que el código de recuperación enviado al email es correcto.
-// POST /forgotten_passwd/verify → no devuelve datos (void)
-// Este paso no comprueba la expiración; solo valida el código.
+/** Verifica el codigo de recuperacion recibido por email. POST /forgotten_passwd/verify */
 export async function verifyCodeRequest(
   payload: VerifyCodePayload
 ): Promise<void> {
@@ -122,11 +95,7 @@ export async function verifyCodeRequest(
   await handleResponse(res);
 }
 
-// ── resetPasswordRequest ──────────────────────────────────
-// Restablece la contraseña del usuario tras verificar el código.
-// POST /forgotten_passwd/reset → no devuelve datos (void)
-// Valida el código, comprueba que no haya expirado e invalida
-// el código después de un cambio exitoso para evitar reutilización.
+/** Restablece la contrasena tras verificar el codigo. POST /forgotten_passwd/reset */
 export async function resetPasswordRequest(
   payload: ResetPasswordPayload
 ): Promise<void> {

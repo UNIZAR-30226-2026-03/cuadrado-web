@@ -1,67 +1,46 @@
-// ─────────────────────────────────────────────────────────
-// pages/RegisterPage.tsx — Página de registro (ruta "/register")
+// pages/RegisterPage.tsx - Registro de nuevo usuario (ruta "/register")
 //
-// Validación con errores por campo:
-//   - username: obligatorio
-//   - email: obligatorio
-//   - password: obligatorio, mínimo 8 caracteres
-//   - confirm: obligatorio, debe coincidir con password
-//
-// Los errores se muestran bajo cada campo. Al modificar
-// un campo se limpia su error específico.
-// ─────────────────────────────────────────────────────────
+// Validacion: username obligatorio, email valido, password >= 8 chars, confirm coincide.
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ErrorModal from '../components/ErrorModal';
+import { useAuthForm, useFieldErrors } from '../hooks/useAuthForm';
+import '../styles/auth.css';
 
 export default function RegisterPage() {
   const { register } = useAuth();
-  const navigate = useNavigate();
+  const navigate     = useNavigate();
 
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [apiError, setApiError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showNetworkError, setShowNetworkError] = useState(false);
+  const [confirm, setConfirm]   = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  function clearFieldError(field: string) {
-    setFieldErrors((prev) => {
-      if (!prev[field]) return prev;
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
-  }
+  const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
+  const { fieldErrors, setFieldErrors, clearFieldError }               = useFieldErrors();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setApiError('');
 
-    // Validación local: cada campo con su mensaje específico
     const errors: Record<string, string> = {};
-
     if (!username) errors.username = 'Campo obligatorio';
     if (!email) {
       errors.email = 'Campo obligatorio';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = 'Introduce un correo electrónico válido';
+      errors.email = 'Introduce un correo electronico valido';
     }
-
     if (!password) {
       errors.password = 'Campo obligatorio';
     } else if (password.length < 8) {
-      errors.password = 'Mínimo 8 caracteres';
+      errors.password = 'Minimo 8 caracteres';
     }
-
     if (!confirm) {
       errors.confirm = 'Campo obligatorio';
     } else if (password && confirm !== password) {
-      errors.confirm = 'Las contraseñas no coinciden';
+      errors.confirm = 'Las contrasenias no coinciden';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -69,21 +48,12 @@ export default function RegisterPage() {
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
+    await withSubmit(async () => {
       await register({ username, email, password });
       navigate('/login');
-    } catch (err: unknown) {
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        setShowNetworkError(true);
-      } else if (err instanceof Error) {
-        setApiError(err.message);
-      } else {
-        setApiError('Error desconocido');
-      }
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
   }
 
   return (
@@ -98,7 +68,6 @@ export default function RegisterPage() {
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           {apiError && <p className="auth-message--error">{apiError}</p>}
 
-          {/* Campo: nombre de usuario */}
           <div className="auth-field">
             <label className="auth-field-label">Usuario</label>
             <input
@@ -109,14 +78,11 @@ export default function RegisterPage() {
               onChange={(e) => { setUsername(e.target.value); clearFieldError('username'); }}
               autoComplete="username"
             />
-            {fieldErrors.username && (
-              <span className="auth-field__error">{fieldErrors.username}</span>
-            )}
+            {fieldErrors.username && <span className="auth-field__error">{fieldErrors.username}</span>}
           </div>
 
-          {/* Campo: correo electrónico */}
           <div className="auth-field">
-            <label className="auth-field-label">Correo electrónico</label>
+            <label className="auth-field-label">Correo electronico</label>
             <input
               className={`neon-input${fieldErrors.email ? ' neon-input--error' : ''}`}
               type="email"
@@ -125,41 +91,33 @@ export default function RegisterPage() {
               onChange={(e) => { setEmail(e.target.value); clearFieldError('email'); }}
               autoComplete="email"
             />
-            {fieldErrors.email && (
-              <span className="auth-field__error">{fieldErrors.email}</span>
-            )}
+            {fieldErrors.email && <span className="auth-field__error">{fieldErrors.email}</span>}
           </div>
 
-          {/* Campo: contraseña */}
           <div className="auth-field">
-            <label className="auth-field-label">Contraseña</label>
+            <label className="auth-field-label">Contrasena</label>
             <input
               className={`neon-input${fieldErrors.password ? ' neon-input--error' : ''}`}
               type="password"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Minimo 8 caracteres"
               value={password}
               onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
               autoComplete="new-password"
             />
-            {fieldErrors.password && (
-              <span className="auth-field__error">{fieldErrors.password}</span>
-            )}
+            {fieldErrors.password && <span className="auth-field__error">{fieldErrors.password}</span>}
           </div>
 
-          {/* Campo: confirmar contraseña */}
           <div className="auth-field">
-            <label className="auth-field-label">Confirmar contraseña</label>
+            <label className="auth-field-label">Confirmar contrasena</label>
             <input
               className={`neon-input${fieldErrors.confirm ? ' neon-input--error' : ''}`}
               type="password"
-              placeholder="Repetir contraseña"
+              placeholder="Repetir contrasena"
               value={confirm}
               onChange={(e) => { setConfirm(e.target.value); clearFieldError('confirm'); }}
               autoComplete="new-password"
             />
-            {fieldErrors.confirm && (
-              <span className="auth-field__error">{fieldErrors.confirm}</span>
-            )}
+            {fieldErrors.confirm && <span className="auth-field__error">{fieldErrors.confirm}</span>}
           </div>
 
           <button className="auth-submit" type="submit" disabled={loading}>
@@ -168,13 +126,11 @@ export default function RegisterPage() {
         </form>
 
         <div className="auth-links">
-          <Link to="/login">¿Ya tienes cuenta? Inicia sesión</Link>
+          <Link to="/login">¿Ya tienes cuenta? Inicia sesion</Link>
         </div>
       </div>
 
-      {showNetworkError && (
-        <ErrorModal onClose={() => setShowNetworkError(false)} />
-      )}
+      {showNetworkError && <ErrorModal onClose={dismissNetworkError} />}
     </div>
   );
 }

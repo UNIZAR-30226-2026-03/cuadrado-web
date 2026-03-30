@@ -1,16 +1,11 @@
-// ─────────────────────────────────────────────────────────
-// pages/WelcomePage.tsx — Pantalla de bienvenida (ruta "/")
+// pages/WelcomePage.tsx - Pantalla de bienvenida (ruta "/")
 //
-// Primera página que ve el usuario. Muestra:
-//   - Logo animado con efecto de respiración neón (estilo desktop)
-//   - Título "¡BIENVENIDO A CUBO!" y tagline "EL JUEGO DE CARTAS DEFINITIVO"
-//   - Dos botones: Iniciar Sesión (neon) y Crear Cuenta (ghost)
-//
-// Los elementos aparecen con animaciones escalonadas:
-//   logo → título → tagline → botones
-// ─────────────────────────────────────────────────────────
+// Logo animado + titulo + tagline + botones de acceso.
+// Los elementos aparecen con animaciones escalonadas.
 
 import { Link } from 'react-router-dom';
+import '../styles/WelcomePage.css';
+import '../styles/auth.css';
 
 export default function WelcomePage() {
   return (

@@ -1,59 +1,50 @@
-// ─────────────────────────────────────────────────────────
-// types/auth.types.ts — Tipos específicos de autenticación
-//
-// Define las formas (shapes) de los datos que se envían y
-// reciben al interactuar con los endpoints de autenticación
-// del backend. Mantenerlos separados de los tipos de dominio
-// facilita la localización de cambios si la API evoluciona.
-// ─────────────────────────────────────────────────────────
+// types/auth.types.ts - Tipos de payloads y respuestas de la API de autenticacion
 
-// Datos necesarios para registrar un nuevo usuario
+/** Datos para registrar un nuevo usuario */
 export interface RegisterPayload {
   username: string;
   email: string;
   password: string;
 }
 
-// Datos necesarios para iniciar sesión
+/** Datos para iniciar sesion */
 export interface LoginPayload {
   username: string;
   password: string;
 }
 
-// Datos para cambiar la contraseña de un usuario autenticado
+/** Datos para cambiar la contrasena de un usuario autenticado */
 export interface ChangePasswordPayload {
-  currentPassword: string; // Contraseña actual (para verificar identidad)
-  newPassword: string;     // Nueva contraseña a establecer
+  currentPassword: string;
+  newPassword: string;
 }
 
-// Datos para refrescar los tokens de sesión cuando el accessToken caduca
+/** Datos para refrescar los tokens cuando el accessToken caduca */
 export interface RefreshPayload {
   refreshToken: string;
 }
 
-// Datos para solicitar el correo de recuperación de contraseña
+/** Datos para solicitar el correo de recuperacion de contrasena */
 export interface ForgotPasswordPayload {
   email: string;
 }
 
-// Datos para verificar el código de recuperación recibido por email
+/** Datos para verificar el codigo de recuperacion recibido por email */
 export interface VerifyCodePayload {
   email: string;
   authCode: string;
 }
 
-// Datos para restablecer la contraseña tras verificar el código
+/** Datos para restablecer la contrasena tras verificar el codigo */
 export interface ResetPasswordPayload {
   email: string;
-  authCode: string;    // Código de verificación (9 caracteres)
-  newPassword: string; // Nueva contraseña (mínimo 8 caracteres)
+  authCode: string;    // 9 caracteres
+  newPassword: string; // minimo 8 caracteres
 }
 
-// Respuesta del backend tras un login o refresh exitoso.
-// La app usa autenticación JWT con dos tokens:
-//   - accessToken: vida corta, se envía en cada petición protegida
-//   - refreshToken: vida larga, solo se usa para obtener un nuevo accessToken
-// El login además devuelve un objeto user con datos básicos del perfil.
+/** Respuesta del backend tras login o refresh.
+ *  accessToken: vida corta, se envia en cada peticion protegida.
+ *  refreshToken: vida larga, solo para obtener un nuevo accessToken. */
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;

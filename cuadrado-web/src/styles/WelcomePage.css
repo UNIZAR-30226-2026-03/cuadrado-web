@@ -1,0 +1,93 @@
+/* WelcomePage.css - Estilos de la pantalla de bienvenida */
+
+/* === Orbe y logo === */
+
+/* Orbe de resplandor detras del logo */
+.welcome-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 500px;
+  height: 500px;
+  transform: translate(-50%, -58%);
+  background: radial-gradient(
+    circle,
+    rgba(0, 229, 255, 0.08) 0%,
+    rgba(168, 85, 247, 0.04) 35%,
+    transparent 70%
+  );
+  animation: breathe 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Contenedor del logo con entrada dramatica */
+.welcome-logo {
+  position: relative;
+  z-index: 2;
+  animation: logo-dramatic 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Logo grande con animacion de respiracion neon */
+.logo-hero {
+  height: 300px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 0 15px rgba(0, 229, 255, 0.5)) brightness(1.15);
+  animation: breathe-glow 4s ease-in-out infinite;
+}
+
+/* === Textos === */
+
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-top: 0.5rem;
+  color: var(--text-100);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.25), 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* Tagline con revelacion de texto animada */
+.welcome-tagline {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-50);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0;
+  animation: text-reveal 0.8s ease-out 0.9s forwards;
+}
+
+/* === Botones === */
+
+/* Contenedor con entrada deslizante */
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 48px;
+  opacity: 0;
+  animation: field-slide-up 0.6s var(--spring) 1.2s forwards;
+}
+
+/* Ancho fijo para que ambos botones queden alineados */
+.welcome-btn {
+  min-width: 260px;
+  text-align: center;
+  font-size: 16px;
+  padding: 15px 0;
+  text-decoration: none;
+}
+
+/* === Responsive === */
+
+@media (max-width: 480px) {
+  .logo-hero { height: 200px; }
+  .welcome-btn { min-width: 220px; }
+}

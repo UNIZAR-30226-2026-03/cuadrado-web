@@ -1,15 +1,10 @@
-// ─────────────────────────────────────────────────────────
-// components/GameHeader.tsx — Cabecera minimalista del lobby
-//
-// Muestra solo el logo del juego (izquierda) y un badge
-// de cubitos con icono wireframe de cubo (derecha), junto
-// a un botón de ajustes fijo.
-// ─────────────────────────────────────────────────────────
+// components/GameHeader.tsx - Cabecera del lobby: logo + badge de cubitos + boton de ajustes
 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import '../styles/GameHeader.css';
 
-// Icono SVG de cubo wireframe (solo aristas)
+/** Icono SVG de cubo wireframe (solo aristas) */
 function CubeWireframeIcon({ size = 18 }: { size?: number }) {
   return (
     <svg
@@ -27,8 +22,7 @@ function CubeWireframeIcon({ size = 18 }: { size?: number }) {
       {/* Aristas verticales */}
       <path d="M4 8 L4 16 L12 20 L12 12" />
       <path d="M20 8 L20 16 L12 20" />
-      {/* Arista trasera superior */}
-      <path d="M12 4 L12 12" opacity="0.4" />
+      <path d="M12 4 L12 12" opacity="0.4" /> {/* arista trasera superior */}
     </svg>
   );
 }

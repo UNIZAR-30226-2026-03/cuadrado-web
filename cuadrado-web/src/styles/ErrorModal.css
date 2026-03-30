@@ -1,0 +1,70 @@
+/* ErrorModal.css - Modal de error de conexion con el backend */
+
+/* Overlay: fondo oscuro semitransparente con blur */
+.error-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 12, 30, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-in 0.3s ease;
+}
+
+/* Contenedor del modal */
+.error-modal {
+  background: var(--glass);
+  border: 1.5px solid rgba(255, 80, 80, 0.45);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 0 20px rgba(255, 80, 80, 0.15),
+    0 0 60px rgba(255, 80, 80, 0.06);
+  padding: 2.5rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  animation: modal-in 0.35s ease;
+}
+
+.error-modal__icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.error-modal__title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  letter-spacing: 0.04em;
+  color: var(--red);
+  margin-bottom: 0.75rem;
+}
+
+.error-modal__text {
+  color: var(--text-80);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.error-modal__btn {
+  display: inline-block;
+  padding: 0.7rem 2rem;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-100);
+  background: rgba(255, 80, 80, 0.15);
+  border: 1.5px solid rgba(255, 80, 80, 0.40);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: background 250ms, border-color 250ms;
+}
+
+.error-modal__btn:hover {
+  background: rgba(255, 80, 80, 0.25);
+  border-color: rgba(255, 80, 80, 0.60);
+}

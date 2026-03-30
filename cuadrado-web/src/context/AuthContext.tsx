@@ -1,13 +1,7 @@
-// ─────────────────────────────────────────────────────────
-// context/AuthContext.tsx — Estado global de autenticación
+// context/AuthContext.tsx - Estado global de autenticacion (patron Context + custom hook)
 //
-// Implementa el patrón "Context + custom hook" de React:
-//   - AuthProvider: componente que envuelve la app y expone
-//     las funciones de autenticación a todos sus hijos.
-//   - useAuth: hook que cualquier componente puede llamar
-//     para acceder al estado y acciones de autenticación,
-//     sin necesidad de pasar props manualmente (prop drilling).
-// ─────────────────────────────────────────────────────────
+// - AuthProvider: gestiona tokens en localStorage y expone acciones de auth.
+// - useAuth: hook de consumo; lanza un error descriptivo si se usa fuera del Provider.
 
 import {
   createContext,
@@ -33,83 +27,69 @@ import type {
 
 import type { UserProfile } from '../types/user.types';
 
-// Contrato del contexto: qué estado y funciones se exponen a los hijos
+/** Contrato del contexto: estado y acciones expuestos a los hijos */
 interface AuthContextType {
-  isAuthenticated: boolean;                                    // true si hay sesión activa
-  user: UserProfile | null;                                    // Datos del usuario autenticado
-  login: (data: LoginPayload) => Promise<void>;               // Inicia sesión y guarda tokens
-  register: (data: RegisterPayload) => Promise<void>;         // Registra un nuevo usuario
-  logout: () => void;                                          // Cierra la sesión local
-  changePassword: (data: ChangePasswordPayload) => Promise<void>; // Cambia la contraseña
-  fetchProfile: () => Promise<void>;                           // Refresca los datos del usuario
+  isAuthenticated: boolean;
+  user: UserProfile | null;
+  login: (data: LoginPayload) => Promise<void>;
+  register: (data: RegisterPayload) => Promise<void>;
+  logout: () => void;
+  changePassword: (data: ChangePasswordPayload) => Promise<void>;
+  fetchProfile: () => Promise<void>;
 }
 
-// Creamos el contexto con undefined como valor por defecto.
-// Si alguien intenta usar el contexto fuera del Provider, useAuth lo detectará.
+// undefined como valor por defecto: useAuth lo detecta si se usa fuera del Provider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ── AuthProvider ──────────────────────────────────────────
-// Componente que gestiona el estado de autenticación y lo
-// proporciona a todos sus componentes hijos mediante el contexto.
+/** Provee el estado de autenticacion a todos los hijos */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
 
-  // Al montar la app, comprobamos si ya hay un token guardado en localStorage.
-  // Si existe, intentamos cargar el perfil del usuario desde el backend.
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      setIsAuthenticated(true);
-      fetchProfile();
-    }
-  }, []); // [] → se ejecuta solo una vez, al montar el componente
-
-  // Obtiene el perfil actualizado del usuario desde el backend.
-  // Se llama al montar la app (si hay token) y tras el login.
+  /** Carga el perfil del usuario desde el backend. Fallo silencioso para evitar logout en cascada. */
   async function fetchProfile() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
-
     try {
       const profile = await getProfileRequest(token);
       setUser(profile);
     } catch {
-      // Si falla (token expirado, etc.), no cerramos sesión aquí;
-      // el usuario verá datos vacíos hasta que refresque
+      // Si el token expiro, el usuario vera datos vacios hasta refrescar
     }
   }
 
-  // Llama al servicio de login, guarda los tokens y los datos del usuario.
+  // Al montar: si hay token guardado, restauramos la sesion
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsAuthenticated(true);
+      fetchProfile();
+    }
+  }, []);
+
+  /** Autentica al usuario, guarda tokens y carga el perfil completo */
   async function login(data: LoginPayload) {
     const res = await loginRequest(data);
-
-    // Guardamos ambos tokens en localStorage para persistirlos entre sesiones
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
-
-    // Guardamos los datos del usuario que devuelve el login
     if (res.user) {
       setUser({
-        username: res.user.username,
-        cubitos: res.user.cubitos ?? 0,
+        username:  res.user.username,
+        cubitos:   res.user.cubitos   ?? 0,
         eloRating: res.user.eloRating ?? 1200,
       });
     }
-
     setIsAuthenticated(true);
-
-    // Cargamos el perfil completo en segundo plano
-    fetchProfile();
+    fetchProfile(); // carga el perfil completo en segundo plano
   }
 
-  // Solo llama al servicio de registro. No inicia sesión automáticamente:
-  // el usuario debe hacer login explícitamente tras registrarse.
+  /** Registra un usuario. No inicia sesion automaticamente. */
   async function register(data: RegisterPayload) {
     await registerRequest(data);
   }
 
-  // Elimina los tokens del almacenamiento local y limpia el estado
+  /** Elimina los tokens y limpia el estado */
   function logout() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -117,17 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   }
 
-  // Cambia la contraseña del usuario autenticado.
-  // Requiere el accessToken para que el backend verifique la identidad.
+  /** Cambia la contrasena del usuario autenticado */
   async function changePassword(data: ChangePasswordPayload) {
     const token = localStorage.getItem('accessToken');
     if (!token) throw new Error('No autenticado');
-
     await changePasswordRequest(data, token);
   }
 
   return (
-    // Proporcionamos el estado y las funciones a todos los componentes hijos
     <AuthContext.Provider
       value={{ isAuthenticated, user, login, register, logout, changePassword, fetchProfile }}
     >
@@ -136,10 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ── useAuth ───────────────────────────────────────────────
-// Hook personalizado para consumir el contexto de autenticación.
-// Lanza un error descriptivo si se usa fuera del AuthProvider,
-// lo que facilita depurar problemas de configuración.
+/** Hook para consumir el contexto de autenticacion desde cualquier componente */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

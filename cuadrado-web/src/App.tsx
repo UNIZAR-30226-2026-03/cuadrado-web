@@ -1,12 +1,4 @@
-// ─────────────────────────────────────────────────────────
-// App.tsx — Componente raíz: enrutamiento, fondo animado y proveedores
-//
-// Estructura de la aplicación:
-//   1. AuthProvider envuelve toda la app para estado de autenticación global
-//   2. Capas de fondo animado (mesh, estrellas, viñeta)
-//      se renderizan fuera de Routes para persistir en todas las páginas
-//   3. BrowserRouter + Routes define la navegación SPA
-// ─────────────────────────────────────────────────────────
+// App.tsx - Componente raiz: AuthProvider, fondo animado y enrutamiento SPA
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -24,9 +16,8 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      {/* Capas de fondo animado — siempre visibles detrás del contenido */}
-      <div className="bg-mesh" aria-hidden="true" />
-      <div className="bg-stars" aria-hidden="true" />
+      {/* Capas de fondo animado: siempre visibles, renderizadas fuera de Routes */}
+      <div className="bg-mesh"     aria-hidden="true" />
       <div className="bg-vignette" aria-hidden="true" />
 
       <BrowserRouter>
