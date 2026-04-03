@@ -1,0 +1,278 @@
+/* SkinCard.css - Tarjeta de skin cosmética con 5 variantes visuales */
+
+/* === Contenedor base === */
+.skin-card {
+  position: relative;
+  background: var(--glass);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 200ms var(--smooth), border-color 200ms var(--smooth),
+              box-shadow 200ms var(--smooth);
+}
+
+.skin-card:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* === Imagen de la skin === */
+.skin-card__image-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: rgba(10, 22, 50, 0.6);
+}
+
+/* Aspect ratios por tipo de skin */
+.skin-card--tapete  .skin-card__image-wrap { aspect-ratio: 16 / 9; }
+.skin-card--carta   .skin-card__image-wrap { aspect-ratio: 2 / 3; }
+.skin-card--avatar  .skin-card__image-wrap { aspect-ratio: 1 / 1; }
+
+.skin-card--avatar { border-radius: 50%; }
+.skin-card--avatar .skin-card__image-wrap { border-radius: 50%; }
+
+.skin-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 300ms;
+}
+
+/* Fallback: imagen no cargada */
+.skin-card__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(10,25,60,0.9), rgba(6,14,36,0.95));
+  color: var(--text-50);
+}
+
+.skin-card__fallback-icon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+/* === Overlay de acción (equip/unequip) — solo en inventario === */
+.skin-card__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 200ms var(--smooth);
+  border-radius: inherit;
+}
+
+.skin-card:hover .skin-card__overlay {
+  opacity: 1;
+}
+
+.skin-card__overlay-text {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-100);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  padding: 6px 14px;
+  background: rgba(0, 229, 255, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+/* Overlay rojo para desequipar */
+.skin-card__overlay--unequip .skin-card__overlay-text {
+  background: rgba(255, 90, 90, 0.2);
+  border-color: rgba(255, 90, 90, 0.45);
+}
+
+/* === Info inferior === */
+.skin-card__info {
+  padding: 8px 10px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 38px;
+}
+
+.skin-card__name {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-80);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* === Badge de estado === */
+.skin-card__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Precio (shop-available) */
+.skin-card__badge--price {
+  color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+}
+
+/* Poseída */
+.skin-card__badge--owned {
+  color: var(--green);
+  background: rgba(134, 239, 172, 0.1);
+  border: 1px solid rgba(134, 239, 172, 0.25);
+}
+
+/* Equipada (tienda) */
+.skin-card__badge--equipped-gold {
+  color: var(--neon-gold);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* En uso (inventario) */
+.skin-card__badge--in-use {
+  color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+/* === Botón de compra === */
+.skin-card__buy-btn {
+  margin: 0 10px 10px;
+  width: calc(100% - 20px);
+  padding: 6px 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bg-void);
+  background: var(--neon-cyan);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 200ms, transform 150ms;
+}
+
+.skin-card__buy-btn:hover {
+  opacity: 0.88;
+  transform: scale(1.02);
+}
+
+.skin-card__buy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Spinner en botón durante acción async */
+.skin-card__buy-btn--loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* === Variantes visuales — borde y glow === */
+
+/* shop-available: borde cyan sutil */
+.skin-card--shop-available {
+  border-color: rgba(0, 229, 255, 0.2);
+}
+.skin-card--shop-available:hover {
+  border-color: rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* shop-owned: borde verde sutil */
+.skin-card--shop-owned {
+  border-color: rgba(134, 239, 172, 0.2);
+  opacity: 0.75;
+}
+.skin-card--shop-owned:hover {
+  opacity: 1;
+  border-color: rgba(134, 239, 172, 0.45);
+}
+
+/* shop-equipped: borde dorado pulsante */
+.skin-card--shop-equipped {
+  border-color: rgba(251, 191, 36, 0.4);
+  animation: neon-pulse-gold 5s ease-in-out infinite;
+}
+
+/* inventory-normal: glass sutil */
+.skin-card--inventory-normal {
+  border-color: var(--glass-border);
+}
+.skin-card--inventory-normal:hover {
+  border-color: rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.08), 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+/* inventory-equipped: borde cyan pulsante */
+.skin-card--inventory-equipped {
+  border-color: rgba(0, 229, 255, 0.35);
+  animation: glow-border 5s ease-in-out infinite;
+}
+
+/* === Tarjeta especial "+" (add-more en inventario) === */
+.skin-card--add-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 229, 255, 0.04);
+  border: 1.5px dashed rgba(0, 229, 255, 0.25);
+  cursor: pointer;
+  transition: background 200ms, border-color 200ms, transform 200ms var(--smooth);
+}
+
+.skin-card--add-more:hover {
+  background: rgba(0, 229, 255, 0.09);
+  border-color: rgba(0, 229, 255, 0.5);
+  transform: scale(1.04);
+}
+
+.skin-card__add-icon {
+  font-size: 28px;
+  color: rgba(0, 229, 255, 0.5);
+  line-height: 1;
+  transition: color 200ms, transform 200ms;
+}
+
+.skin-card--add-more:hover .skin-card__add-icon {
+  color: var(--neon-cyan);
+  transform: scale(1.15);
+}
+
+/* === Estado de error (error-shake) === */
+.skin-card--error {
+  animation: error-shake 0.5s ease;
+}
+
+/* === Responsive === */
+@media (max-width: 480px) {
+  .skin-card__name { font-size: 10px; }
+  .skin-card__badge { font-size: 9px; padding: 2px 5px; }
+  .skin-card__info { padding: 6px 8px 8px; }
+  .skin-card__buy-btn { font-size: 10px; padding: 5px 0; }
+}

@@ -1,0 +1,33 @@
+/* InventoryPage.css - Estilos específicos de la pantalla de inventario (/inventory) */
+/* Comparte .skin-page, .skin-page__*, .skin-section, .skin-toggle con ShopPage.css */
+
+/* La card "add-more" debe tener el mismo aspect-ratio que las demás de su sección */
+.skin-section--tapete .skin-card--add-more { aspect-ratio: 16 / 9; }
+.skin-section--carta  .skin-card--add-more { aspect-ratio: 2 / 3; }
+.skin-section--avatar .skin-card--add-more {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+}
+
+/* Mensaje de inventario vacío */
+.inventory-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  color: var(--text-50);
+  font-size: 14px;
+  text-align: center;
+}
+
+.inventory-empty__link {
+  color: var(--neon-cyan);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  font-size: inherit;
+}

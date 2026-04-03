@@ -10,6 +10,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import VerifyCodePage from './pages/VerifyCodePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import HomePage from './pages/HomePage';
+import ShopPage from './pages/ShopPage';
+import InventoryPage from './pages/InventoryPage';
 
 import './App.css';
 
@@ -29,6 +31,8 @@ function App() {
           <Route path="/verify-code" element={<VerifyCodePage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/shop"      element={<ShopPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -9,4 +9,5 @@ export interface UserProfile {
   rankPlacement?: number;
   gamesPlayed?: number;
   gamesWon?: number;
+  equippedSkinID?: string; // Nombre de la skin equipada actualmente (undefined si ninguna)
 }

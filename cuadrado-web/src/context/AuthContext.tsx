@@ -52,7 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!token) return;
     try {
       const profile = await getProfileRequest(token);
-      setUser(profile);
+      // Merge con el estado previo para no perder campos que el backend
+      // puede devolver omitidos según el endpoint (e.g. cubitos, equippedSkinID)
+      setUser(prev => (prev ? { ...prev, ...profile } : profile));
     } catch {
       // Si el token expiro, el usuario vera datos vacios hasta refrescar
     }

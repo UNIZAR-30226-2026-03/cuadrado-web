@@ -34,6 +34,54 @@
   gap: 10px;
 }
 
+/* === Variante sub-página: 3 columnas (volver | título | acciones) === */
+
+.game-header--sub .game-header__brand,
+.game-header--sub .game-header__actions {
+  flex: 1;
+}
+
+.game-header--sub .game-header__actions {
+  justify-content: flex-end;
+}
+
+/* Título centrado de sección */
+.game-header__title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-100);
+  text-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+  margin: 0;
+}
+
+/* Botón de volver (sustituye al logo en sub-páginas) */
+.game-header__back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-80);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: color 200ms var(--smooth), border-color 200ms var(--smooth), background 200ms var(--smooth);
+}
+
+.game-header__back:hover {
+  color: var(--text-100);
+  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.06);
+}
+
 /* === Badge de stats === */
 
 .game-header__badge {
