@@ -150,17 +150,17 @@ export default function ShopPage() {
 
               {/* Controles de ordenado */}
               <div className="skin-sort" aria-label="Ordenar por">
-                <span className="skin-sort__label">Ordenar:</span>
-                {SORTS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    className={`sort-btn${sortBy === key ? ' sort-btn--active' : ''}`}
-                    onClick={() => setSortBy(key)}
-                    aria-pressed={sortBy === key}
-                  >
-                    {label}
-                  </button>
-                ))}
+                <label className="skin-sort__label" htmlFor="shop-sort-select">Ordenar:</label>
+                <select
+                  id="shop-sort-select"
+                  className="skin-sort__select"
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as SortKey)}
+                >
+                  {SORTS.map(({ key, label }) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Grid de skins */}

@@ -31,6 +31,8 @@
   background: rgba(10, 22, 50, 0.55);
   overflow: hidden;
   flex-shrink: 0;
+  /* Padding para que el borde redondeado de la card no recorte la imagen */
+  padding: 8px 8px 0;
 }
 
 /* Aspect ratios por tipo */
@@ -41,16 +43,17 @@
 .skin-card__img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   transition: transform 250ms var(--smooth);
+  border-radius: 6px;
 }
 
 .skin-card:hover .skin-card__img {
   transform: scale(1.04);
 }
 
-/* Fallback: imagen no cargada */
+/* Fallback: imagen no cargada — ocupa toda la zona de media incluyendo el padding */
 .skin-card__fallback {
   position: absolute;
   inset: 0;
@@ -59,6 +62,7 @@
   justify-content: center;
   background: linear-gradient(135deg, rgba(10,25,60,0.9), rgba(6,14,36,0.95));
   color: var(--text-50);
+  border-radius: 6px;
 }
 
 .skin-card__fallback-icon {
@@ -114,7 +118,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 10px 10px;
+  padding: 10px 10px 14px;
   flex: 1;
 }
 

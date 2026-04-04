@@ -29,12 +29,29 @@
   gap: 12px;
 }
 
-/* === Slot individual === */
+/* === Slot individual — es un botón que navega a la tab de esa categoría === */
 .equipped-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 7px;
+  /* Reset de botón */
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 180ms;
+}
+
+.equipped-slot:hover {
+  background: rgba(0, 229, 255, 0.05);
+}
+
+.equipped-slot:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 3px;
 }
 
 .equipped-slot__label {
@@ -119,10 +136,10 @@
   background: rgba(0, 208, 255, 0.06) !important;
 }
 
-/* Aspect-ratio de AddMoreCard según categoría */
-.skin-grid--tapete .skin-card--add-more { aspect-ratio: 16 / 9; }
-.skin-grid--carta  .skin-card--add-more { aspect-ratio: 2 / 3; }
-.skin-grid--avatar .skin-card--add-more { aspect-ratio: 1 / 1; }
+/* AddMoreCard: altura mínima para cuando es la única card del grid (sin vecinos que estiren la fila) */
+.skin-grid--tapete .skin-card--add-more { min-height: 190px; }
+.skin-grid--carta  .skin-card--add-more { min-height: 270px; }
+.skin-grid--avatar .skin-card--add-more { min-height: 210px; }
 
 .add-more-card__icon {
   width: 36px;
@@ -174,4 +191,25 @@
   .equipped-slot__name { font-size: 10px; }
 
   .skin-grid--carta .add-more-card__label { display: none; }
+}
+
+/* Horizontal en móvil (teléfono girado, alto ≤ 500 px) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .equipped-panel {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .equipped-panel__title {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .equipped-panel__slots { gap: 8px; }
+  .equipped-slot__preview { height: 46px; }
+  .equipped-slot__label  { font-size: 9px; }
+  .equipped-slot__name   { font-size: 9px; }
+
+  /* min-height más ajustadas para columnas más anchas en landscape */
+  .skin-grid--tapete .skin-card--add-more { min-height: 140px; }
+  .skin-grid--carta  .skin-card--add-more { min-height: 200px; }
+  .skin-grid--avatar .skin-card--add-more { min-height: 160px; }
 }

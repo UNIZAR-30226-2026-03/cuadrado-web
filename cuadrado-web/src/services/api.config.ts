@@ -1,6 +1,13 @@
 // services/api.config.ts - URL base de la API compartida por todos los servicios
 //
-// Se lee de la variable de entorno VITE_API_URL (definida en .env).
-// En desarrollo apunta a localhost; en produccion se configura en el entorno de despliegue.
+// Prioridad:
+//   1) VITE_API_URL (si esta definida)
+//   2) /api (misma origin; recomendado para evitar errores de CORS/mixed-content)
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+function normalizeBaseUrl(url: string): string {
+	return url.endsWith('/') ? url.slice(0, -1) : url;
+}
+
+const envApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+export const API_URL = normalizeBaseUrl(envApiUrl || '/api');

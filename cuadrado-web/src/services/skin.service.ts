@@ -3,7 +3,7 @@
 // Todos los endpoints requieren token JWT vía Authorization: Bearer.
 // Los errores se propagan como Error(message) siguiendo el patrón de auth.service.ts.
 
-import type { Skin } from '../types/skin.types';
+import type { Skin, SkinType } from '../types/skin.types';
 import { API_URL } from './api.config';
 
 // Reutiliza el mismo patrón handleResponse de auth.service.ts
@@ -47,9 +47,9 @@ export async function equipSkin(skinId: string, token: string): Promise<void> {
   await handleResponse<unknown>(res);
 }
 
-/** Desequipa la skin actualmente equipada. PATCH /skins/unequip */
-export async function unequipSkin(token: string): Promise<void> {
-  const res = await fetch(`${API_URL}/skins/unequip`, {
+/** Desequipa la skin actualmente equipada por tipo. PATCH /skins/unequip/:type */
+export async function unequipSkin(type: SkinType, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/skins/unequip/${encodeURIComponent(type)}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   });

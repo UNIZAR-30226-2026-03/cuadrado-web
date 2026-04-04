@@ -90,8 +90,9 @@ export default function SkinCard({ skin, variant, onAction, loading = false }: S
       case 'shop-owned':
         return <span className="skin-card__badge skin-card__badge--owned">Poseída</span>;
       case 'shop-equipped':
-      case 'inventory-equipped':
         return <span className="skin-card__badge skin-card__badge--equipped">Equipada</span>;
+      case 'inventory-equipped':
+        return null;
       default:
         return null;
     }

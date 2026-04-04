@@ -7,17 +7,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getStore, getInventory, buySkin, equipSkin, unequipSkin } from '../services/skin.service';
-import type { Skin } from '../types/skin.types';
+import type { Skin, SkinType } from '../types/skin.types';
+
+type EquippedSkinIds = Record<SkinType, string | null>;
 
 interface UseSkinsReturn {
   store: Skin[];
   inventory: Skin[];
-  equippedSkinId: string | null;
+  equippedSkinIds: EquippedSkinIds;
   loading: boolean;
   error: string | null;
   buy: (skinId: string) => Promise<void>;
   equip: (skinId: string) => Promise<void>;
-  unequip: () => Promise<void>;
+  unequip: (type: SkinType) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -28,8 +30,11 @@ export function useSkins(): UseSkinsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // equippedSkinId se lee directamente del perfil del usuario en el contexto
-  const equippedSkinId = user?.equippedSkinID ?? null;
+  const equippedSkinIds: EquippedSkinIds = {
+    Carta: user?.equippedCardId ?? null,
+    Avatar: user?.equippedAvatarId ?? null,
+    Tapete: user?.equippedTapeteId ?? null,
+  };
 
   /** Carga tienda e inventario en paralelo */
   const refresh = useCallback(async () => {
@@ -42,7 +47,8 @@ export function useSkins(): UseSkinsReturn {
     setLoading(true);
     setError(null);
     try {
-      const [storeData, inventoryData] = await Promise.all([
+      const [, storeData, inventoryData] = await Promise.all([
+        fetchProfile().catch(() => {}),
         getStore(token),
         getInventory(token),
       ]);
@@ -53,7 +59,7 @@ export function useSkins(): UseSkinsReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchProfile]);
 
   // Carga inicial
   useEffect(() => {
@@ -99,13 +105,17 @@ export function useSkins(): UseSkinsReturn {
   }, [fetchProfile]);
 
   /** Desequipa la skin actual: re-fetch inventario + actualiza perfil */
-  const unequip = useCallback(async () => {
+  const unequip = useCallback(async (type: SkinType) => {
     const token = localStorage.getItem('accessToken');
     if (!token) throw new Error('No autenticado');
 
+    if (!equippedSkinIds[type]) {
+      throw new Error('No hay ninguna skin equipada para desequipar');
+    }
+
     setError(null);
     try {
-      await unequipSkin(token);
+      await unequipSkin(type, token);
       const [, inventoryData] = await Promise.all([
         fetchProfile().catch(() => {}),
         getInventory(token),
@@ -115,7 +125,7 @@ export function useSkins(): UseSkinsReturn {
       setError(err instanceof Error ? err.message : 'Error al desequipar skin');
       throw err;
     }
-  }, [fetchProfile]);
+  }, [equippedSkinIds, fetchProfile]);
 
-  return { store, inventory, equippedSkinId, loading, error, buy, equip, unequip, refresh };
+  return { store, inventory, equippedSkinIds, loading, error, buy, equip, unequip, refresh };
 }

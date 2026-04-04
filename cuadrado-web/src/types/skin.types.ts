@@ -5,7 +5,8 @@ export type SkinType = 'Tapete' | 'Carta' | 'Avatar';
 
 /** Representa una skin cosmética tal como la devuelve el backend */
 export interface Skin {
-  name: string;    // Identificador único (PK en backend)
+  id: string;      // Identificador único (PK en backend)
+  name: string;    // Nombre visible de la skin
   type: SkinType;
   price: number;   // En cubitos
   url: string;     // URL de imagen (Supabase)

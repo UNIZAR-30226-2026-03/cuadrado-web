@@ -34,13 +34,16 @@ function sortSkins(skins: Skin[], sortKey: SortKey): Skin[] {
   });
 }
 
-// Panel de equipados: muestra un vistazo rápido de los 3 slots
+// Panel de equipados: muestra un vistazo rápido de los 3 slots.
+// Al pulsar un slot se navega a su tab de categoría.
 function EquippedPanel({
   inventory,
   equippedSkinIds,
+  onTabSelect,
 }: {
   inventory: Skin[];
   equippedSkinIds: Record<SkinType, string | null>;
+  onTabSelect: (type: SkinType) => void;
 }) {
   const slots: { type: SkinType; label: string; emptyLabel: string }[] = [
     { type: 'Tapete', label: 'Tapete',  emptyLabel: 'Ninguno' },
@@ -57,7 +60,12 @@ function EquippedPanel({
           const skin = equippedId ? inventory.find(s => s.id === equippedId) : null;
 
           return (
-            <div className="equipped-slot" key={type}>
+            <button
+              className="equipped-slot"
+              key={type}
+              onClick={() => onTabSelect(type)}
+              aria-label={`Ver categoría ${label}`}
+            >
               <span className="equipped-slot__label">{label}</span>
               <div className={`equipped-slot__preview${skin ? '' : ' equipped-slot__preview--empty'}`}>
                 {skin ? (
@@ -85,7 +93,7 @@ function EquippedPanel({
               <span className={`equipped-slot__name${skin ? '' : ' equipped-slot__name--empty'}`}>
                 {skin ? skin.name : emptyLabel}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -160,7 +168,11 @@ export default function InventoryPage() {
         ) : (
           <>
             {/* Panel de equipados */}
-            <EquippedPanel inventory={inventory} equippedSkinIds={equippedSkinIds} />
+            <EquippedPanel
+              inventory={inventory}
+              equippedSkinIds={equippedSkinIds}
+              onTabSelect={setActiveTab}
+            />
 
             {/* Barra de tabs */}
             <div className="skin-tabs" role="tablist" aria-label="Categorías del inventario">
@@ -188,17 +200,17 @@ export default function InventoryPage() {
 
               {/* Controles de ordenado */}
               <div className="skin-sort" aria-label="Ordenar por">
-                <span className="skin-sort__label">Ordenar:</span>
-                {SORTS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    className={`sort-btn${sortBy === key ? ' sort-btn--active' : ''}`}
-                    onClick={() => setSortBy(key)}
-                    aria-pressed={sortBy === key}
-                  >
-                    {label}
-                  </button>
-                ))}
+                <label className="skin-sort__label" htmlFor="inv-sort-select">Ordenar:</label>
+                <select
+                  id="inv-sort-select"
+                  className="skin-sort__select"
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as SortKey)}
+                >
+                  {SORTS.map(({ key, label }) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Grid del inventario */}
