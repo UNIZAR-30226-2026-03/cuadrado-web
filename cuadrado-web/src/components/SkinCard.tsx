@@ -57,8 +57,9 @@ export default function SkinCard({ skin, variant, onAction, loading = false }: S
 
   const typeClass = `skin-card--${skin.type.toLowerCase()}`;
   const variantClass = `skin-card--${variant}`;
+  const isEquipped = variant === 'inventory-equipped' || variant === 'shop-equipped';
 
-  // Determina badge según variante
+  // Badge unificado: "Equipada" en tienda e inventario con el mismo estilo dorado
   function renderBadge() {
     if (variant === 'shop-available') {
       return (
@@ -70,36 +71,56 @@ export default function SkinCard({ skin, variant, onAction, loading = false }: S
     if (variant === 'shop-owned') {
       return <span className="skin-card__badge skin-card__badge--owned">Poseída</span>;
     }
-    if (variant === 'shop-equipped') {
+    if (isEquipped) {
       return <span className="skin-card__badge skin-card__badge--equipped-gold">Equipada</span>;
-    }
-    if (variant === 'inventory-equipped') {
-      return <span className="skin-card__badge skin-card__badge--in-use">EN USO</span>;
     }
     return null;
   }
 
-  // Determina overlay de acción (solo en inventario)
+  // Overlay de acción como <button> nativo: teclado + screen readers gratis
   function renderOverlay() {
-    if (variant === 'inventory-normal' && onAction) {
+    if (loading) {
       return (
-        <div className="skin-card__overlay" onClick={onAction}>
-          <span className="skin-card__overlay-text">Equipar</span>
+        <div className="skin-card__overlay skin-card__overlay--loading" aria-hidden="true">
+          <span className="skin-card__overlay-spinner" />
         </div>
       );
     }
-    if (variant === 'inventory-equipped' && onAction) {
+
+    const isEquipAction = variant === 'inventory-normal' || variant === 'shop-owned';
+    const isUnequipAction = variant === 'inventory-equipped' || variant === 'shop-equipped';
+
+    if (isEquipAction && onAction) {
       return (
-        <div className="skin-card__overlay skin-card__overlay--unequip" onClick={onAction}>
+        <button
+          className="skin-card__overlay"
+          onClick={onAction}
+          aria-label={`Equipar ${skin.name}`}
+        >
+          <span className="skin-card__overlay-text">Equipar</span>
+        </button>
+      );
+    }
+    if (isUnequipAction && onAction) {
+      return (
+        <button
+          className="skin-card__overlay skin-card__overlay--unequip"
+          onClick={onAction}
+          aria-label={`Desequipar ${skin.name}`}
+        >
           <span className="skin-card__overlay-text">Desequipar</span>
-        </div>
+        </button>
       );
     }
     return null;
   }
 
   return (
-    <div className={`skin-card ${typeClass} ${variantClass}`}>
+    <div
+      className={`skin-card ${typeClass} ${variantClass}`}
+      aria-label={`${skin.name}${isEquipped ? ', equipada' : ''}`}
+      aria-busy={loading || undefined}
+    >
       <div className="skin-card__image-wrap">
         {!imgError ? (
           <img
@@ -128,6 +149,7 @@ export default function SkinCard({ skin, variant, onAction, loading = false }: S
           className={`skin-card__buy-btn${loading ? ' skin-card__buy-btn--loading' : ''}`}
           onClick={onAction}
           disabled={loading}
+          aria-label={`Comprar ${skin.name} por ${skin.price} cubitos`}
         >
           {loading ? '...' : 'Comprar'}
         </button>
