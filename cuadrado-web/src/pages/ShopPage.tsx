@@ -1,7 +1,7 @@
 // pages/ShopPage.tsx - Tienda de skins cosméticas (/shop)
 //
-// Muestra todas las skins disponibles agrupadas por categoría (Tapetes, Cartas, Avatares).
-// El usuario puede comprar skins que no posea. La compra abre un ConfirmModal.
+// Muestra todas las skins disponibles agrupadas por categoría, ordenadas por precio.
+// Comprar abre ConfirmModal. Las skins poseídas pueden equiparse/desequiparse directamente.
 // Si se navega con ?category=<tipo>, se hace scrollIntoView al montar.
 
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -23,11 +23,13 @@ const CATEGORIES: { type: SkinType; label: string }[] = [
 export default function ShopPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { store, inventory, equippedSkinId, loading, error, buy } = useSkins();
+  const { store, inventory, equippedSkinIds, loading, error, buy, equip, unequip } = useSkins();
 
   // Modal de confirmación de compra
   const [pendingSkin, setPendingSkin] = useState<Skin | null>(null);
   const [buying, setBuying] = useState(false);
+  // ID de skin en operación equip/unequip (para spinner)
+  const [loadingEquipId, setLoadingEquipId] = useState<string | null>(null);
   // ID de la última skin comprada (para animación GSAP)
   const [boughtSkinId, setBoughtSkinId] = useState<string | null>(null);
 
@@ -47,18 +49,42 @@ export default function ShopPage() {
 
   // Determina la variante visual de una skin en la tienda
   function getVariant(skin: Skin) {
-    if (skin.name === equippedSkinId) return 'shop-equipped' as const;
-    if (inventory.some(s => s.name === skin.name)) return 'shop-owned' as const;
+    if (skin.id === equippedSkinIds[skin.type]) return 'shop-equipped' as const;
+    if (inventory.some(s => s.id === skin.id)) return 'shop-owned' as const;
     return 'shop-available' as const;
   }
+
+  // Equipar desde tienda (skin ya poseída, sin modal de confirmación)
+  const handleEquipFromShop = useCallback(async (skin: Skin) => {
+    setLoadingEquipId(skin.id);
+    try {
+      await equip(skin.id);
+    } catch {
+      // error ya gestionado y expuesto por useSkins
+    } finally {
+      setLoadingEquipId(null);
+    }
+  }, [equip]);
+
+  // Desequipar desde tienda la skin actualmente equipada
+  const handleUnequipFromShop = useCallback(async (skin: Skin) => {
+    setLoadingEquipId(skin.id);
+    try {
+      await unequip(skin.type);
+    } catch {
+      // error ya gestionado y expuesto por useSkins
+    } finally {
+      setLoadingEquipId(null);
+    }
+  }, [unequip]);
 
   // Confirmar compra
   const handleConfirm = useCallback(async () => {
     if (!pendingSkin) return;
     setBuying(true);
     try {
-      await buy(pendingSkin.name);
-      setBoughtSkinId(pendingSkin.name);
+      await buy(pendingSkin.id);
+      setBoughtSkinId(pendingSkin.id);
       setPendingSkin(null);
     } catch (err) {
       console.error('Error al comprar skin:', err);
@@ -86,20 +112,32 @@ export default function ShopPage() {
     return () => { tween.kill(); };
   }, [boughtSkinId]);
 
+  // Devuelve el onAction correcto según variante
+  function getOnAction(skin: Skin) {
+    const variant = getVariant(skin);
+    if (variant === 'shop-available') return () => setPendingSkin(skin);
+    if (variant === 'shop-owned')     return () => handleEquipFromShop(skin);
+    if (variant === 'shop-equipped')  return () => handleUnequipFromShop(skin);
+    return undefined;
+  }
+
   return (
     <div className="skin-page">
       <GameHeader title="Tienda" onBack={() => navigate('/home')} />
 
       <main className="skin-page__content">
-        {/* Contenido principal */}
         {loading ? (
           <div className="skin-page__loading">Cargando tienda…</div>
         ) : (
-          <div className="skin-page__sections">
-            {error && <div className="skin-page__error">{error}</div>}
+          <div className="skin-page__sections" aria-live="polite" aria-atomic="false">
+            {error && <div className="skin-page__error" role="alert">{error}</div>}
 
             {CATEGORIES.map(({ type, label }) => {
-              const skins = store.filter(s => s.type === type);
+              // Ordenar por precio ascendiente
+              const skins = store
+                .filter(s => s.type === type)
+                .sort((a, b) => a.price - b.price);
+
               return (
                 <section
                   key={type}
@@ -108,21 +146,25 @@ export default function ShopPage() {
                 >
                   <h2 className="skin-section__title">{label}</h2>
                   <div className={`skin-section__grid skin-section__grid--${type.toLowerCase()}`}>
-                    {skins.map(skin => (
-                      <div
-                        key={skin.name}
-                        ref={skin.name === boughtSkinId ? boughtCardRef : undefined}
-                      >
-                        <SkinCard
-                          skin={skin}
-                          variant={getVariant(skin)}
-                          onAction={getVariant(skin) === 'shop-available'
-                            ? () => setPendingSkin(skin)
-                            : undefined}
-                          loading={buying && pendingSkin?.name === skin.name}
-                        />
-                      </div>
-                    ))}
+                    {skins.map(skin => {
+                      const variant = getVariant(skin);
+                      return (
+                        <div
+                          key={skin.id}
+                          ref={skin.id === boughtSkinId ? boughtCardRef : undefined}
+                        >
+                          <SkinCard
+                            skin={skin}
+                            variant={variant}
+                            onAction={getOnAction(skin)}
+                            loading={
+                              (buying && pendingSkin?.id === skin.id) ||
+                              loadingEquipId === skin.id
+                            }
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               );
