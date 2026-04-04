@@ -2,7 +2,7 @@
 //
 // 5 variantes: shop-available, shop-owned, shop-equipped,
 //              inventory-normal, inventory-equipped.
-// Aspect ratio depende del tipo: Tapete=16:9, Carta=2:3, Avatar=1:1 circular.
+// Estructura vertical: imagen → badge de estado + nombre → botón de acción.
 
 import { useState } from 'react';
 import type { Skin } from '../types/skin.types';
@@ -18,11 +18,31 @@ export type SkinVariant =
 interface SkinCardProps {
   skin: Skin;
   variant: SkinVariant;
-  onAction?: () => void;   // comprar | equipar | desequipar según variante
-  loading?: boolean;       // muestra spinner durante acción async
+  onAction?: () => void;
+  loading?: boolean;
 }
 
-// Icono SVG de fallback por tipo de skin
+// Icono SVG del cubo del juego — usado en el badge de precio
+function CubeIcon() {
+  return (
+    <svg
+      className="skin-card__cube-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+      <line x1="12" y1="22.08" x2="12" y2="12"/>
+    </svg>
+  );
+}
+
+// Icono de fallback por tipo de skin
 function FallbackIcon({ type }: { type: Skin['type'] }) {
   if (type === 'Tapete') {
     return (
@@ -42,7 +62,6 @@ function FallbackIcon({ type }: { type: Skin['type'] }) {
       </svg>
     );
   }
-  // Avatar
   return (
     <svg className="skin-card__fallback-icon" viewBox="0 0 24 24" fill="none"
          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -55,73 +74,92 @@ function FallbackIcon({ type }: { type: Skin['type'] }) {
 export default function SkinCard({ skin, variant, onAction, loading = false }: SkinCardProps) {
   const [imgError, setImgError] = useState(false);
 
-  const typeClass = `skin-card--${skin.type.toLowerCase()}`;
+  const typeClass    = `skin-card--${skin.type.toLowerCase()}`;
   const variantClass = `skin-card--${variant}`;
-  const isEquipped = variant === 'inventory-equipped' || variant === 'shop-equipped';
+  const showCheck    = variant === 'shop-owned' || variant === 'shop-equipped' || variant === 'inventory-equipped';
 
-  // Badge unificado: "Equipada" en tienda e inventario con el mismo estilo dorado
+  // Badge de estado debajo del nombre
   function renderBadge() {
-    if (variant === 'shop-available') {
-      return (
-        <span className="skin-card__badge skin-card__badge--price">
-          {skin.price} ◆
-        </span>
-      );
+    switch (variant) {
+      case 'shop-available':
+        return (
+          <span className="skin-card__badge skin-card__badge--price">
+            <CubeIcon /> {skin.price}
+          </span>
+        );
+      case 'shop-owned':
+        return <span className="skin-card__badge skin-card__badge--owned">Poseída</span>;
+      case 'shop-equipped':
+      case 'inventory-equipped':
+        return <span className="skin-card__badge skin-card__badge--equipped">Equipada</span>;
+      default:
+        return null;
     }
-    if (variant === 'shop-owned') {
-      return <span className="skin-card__badge skin-card__badge--owned">Poseída</span>;
-    }
-    if (isEquipped) {
-      return <span className="skin-card__badge skin-card__badge--equipped-gold">Equipada</span>;
-    }
-    return null;
   }
 
-  // Overlay de acción como <button> nativo: teclado + screen readers gratis
-  function renderOverlay() {
-    if (loading) {
-      return (
-        <div className="skin-card__overlay skin-card__overlay--loading" aria-hidden="true">
-          <span className="skin-card__overlay-spinner" />
-        </div>
-      );
-    }
+  // Botón de acción siempre visible (no overlay)
+  function renderAction() {
+    if (!onAction) return null;
 
-    const isEquipAction = variant === 'inventory-normal' || variant === 'shop-owned';
-    const isUnequipAction = variant === 'inventory-equipped' || variant === 'shop-equipped';
-
-    if (isEquipAction && onAction) {
-      return (
-        <button
-          className="skin-card__overlay"
-          onClick={onAction}
-          aria-label={`Equipar ${skin.name}`}
-        >
-          <span className="skin-card__overlay-text">Equipar</span>
-        </button>
-      );
+    switch (variant) {
+      case 'shop-available':
+        return (
+          <button
+            className="skin-card__action skin-card__action--primary"
+            onClick={onAction}
+            disabled={loading}
+            aria-label={`Comprar ${skin.name} por ${skin.price} cubitos`}
+          >
+            Comprar
+          </button>
+        );
+      case 'shop-owned':
+        return (
+          <button
+            className="skin-card__action skin-card__action--secondary"
+            onClick={onAction}
+            disabled={loading}
+            aria-label={`Equipar ${skin.name}`}
+          >
+            Equipar
+          </button>
+        );
+      case 'shop-equipped':
+      case 'inventory-equipped':
+        return (
+          <button
+            className="skin-card__action skin-card__action--danger"
+            onClick={onAction}
+            disabled={loading}
+            aria-label={`Desequipar ${skin.name}`}
+          >
+            Desequipar
+          </button>
+        );
+      case 'inventory-normal':
+        return (
+          <button
+            className="skin-card__action skin-card__action--primary"
+            onClick={onAction}
+            disabled={loading}
+            aria-label={`Equipar ${skin.name}`}
+          >
+            Equipar
+          </button>
+        );
+      default:
+        return null;
     }
-    if (isUnequipAction && onAction) {
-      return (
-        <button
-          className="skin-card__overlay skin-card__overlay--unequip"
-          onClick={onAction}
-          aria-label={`Desequipar ${skin.name}`}
-        >
-          <span className="skin-card__overlay-text">Desequipar</span>
-        </button>
-      );
-    }
-    return null;
   }
 
   return (
     <div
       className={`skin-card ${typeClass} ${variantClass}`}
-      aria-label={`${skin.name}${isEquipped ? ', equipada' : ''}`}
+      aria-label={`${skin.name}${variant.includes('equipped') ? ', equipada' : ''}`}
       aria-busy={loading || undefined}
     >
-      <div className="skin-card__image-wrap">
+      {/* Zona de imagen */}
+      <div className="skin-card__media">
         {!imgError ? (
           <img
             className="skin-card__img"
@@ -135,25 +173,28 @@ export default function SkinCard({ skin, variant, onAction, loading = false }: S
             <FallbackIcon type={skin.type} />
           </div>
         )}
-        {renderOverlay()}
+
+        {/* Checkmark: indica ítem poseído o equipado */}
+        {showCheck && (
+          <span className="skin-card__owned-badge" aria-hidden="true">✓</span>
+        )}
+
+        {/* Overlay de carga */}
+        {loading && (
+          <div className="skin-card__loading-overlay" aria-hidden="true">
+            <span className="skin-card__spinner" />
+          </div>
+        )}
       </div>
 
-      <div className="skin-card__info">
-        <span className="skin-card__name">{skin.name}</span>
-        {renderBadge()}
+      {/* Cuerpo: badge + nombre + botón */}
+      <div className="skin-card__body">
+        <div className="skin-card__meta">
+          {renderBadge()}
+          <span className="skin-card__name">{skin.name}</span>
+        </div>
+        {renderAction()}
       </div>
-
-      {/* Botón de compra solo en tienda para skins disponibles */}
-      {variant === 'shop-available' && onAction && (
-        <button
-          className={`skin-card__buy-btn${loading ? ' skin-card__buy-btn--loading' : ''}`}
-          onClick={onAction}
-          disabled={loading}
-          aria-label={`Comprar ${skin.name} por ${skin.price} cubitos`}
-        >
-          {loading ? '...' : 'Comprar'}
-        </button>
-      )}
     </div>
   );
 }
