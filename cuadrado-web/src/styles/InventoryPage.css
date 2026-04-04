@@ -1,15 +1,80 @@
 /* InventoryPage.css - Estilos específicos de la pantalla de inventario (/inventory) */
-/* Comparte .skin-page, .skin-page__*, .skin-section, .skin-toggle con ShopPage.css */
+/* Comparte .skin-page, .skin-page__*, .skin-section con ShopPage.css */
 
-/* La card "add-more" debe tener el mismo aspect-ratio que las demás de su sección */
+/* === Card "ir a tienda" (AddMoreCard) === */
+/* Mismo aspect-ratio que las skin cards de su sección */
 .skin-section--tapete .skin-card--add-more { aspect-ratio: 16 / 9; }
 .skin-section--carta  .skin-card--add-more { aspect-ratio: 2 / 3; }
-.skin-section--avatar .skin-card--add-more {
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
+.skin-section--avatar .skin-card--add-more { aspect-ratio: 1 / 1; }
+
+/* Layout interno centrado + reset de button */
+.skin-card--add-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  appearance: none;
+  border: 1.5px dashed rgba(0, 229, 255, 0.25);
+  background: rgba(0, 229, 255, 0.04);
+  border-radius: var(--radius-card);
+  width: 100%;
+  cursor: pointer;
+  transition: background 200ms, border-color 200ms, transform 200ms var(--smooth);
+  padding: 0;
+  color: inherit;
 }
 
-/* Mensaje de inventario vacío */
+.skin-card--add-more:hover {
+  background: rgba(0, 229, 255, 0.09);
+  border-color: rgba(0, 229, 255, 0.5);
+  transform: scale(1.03);
+}
+
+.skin-card--add-more:focus-visible {
+  outline: none;
+  background: rgba(0, 229, 255, 0.09);
+  border-color: rgba(0, 229, 255, 0.5);
+  transform: scale(1.03);
+  box-shadow: 0 0 0 2px var(--neon-cyan);
+}
+
+.add-more-card__icon {
+  width: 28px;
+  height: 28px;
+  color: rgba(0, 229, 255, 0.55);
+  transition: color 200ms, transform 200ms;
+}
+
+.skin-card--add-more:hover .add-more-card__icon,
+.skin-card--add-more:focus-visible .add-more-card__icon {
+  color: var(--neon-cyan);
+  transform: scale(1.15);
+}
+
+.add-more-card__label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 229, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 200ms;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.skin-card--add-more:hover .add-more-card__label,
+.skin-card--add-more:focus-visible .add-more-card__label {
+  color: var(--neon-cyan);
+}
+
+/* Ocultar texto en carta pequeña (muy poca altura disponible) */
+@media (max-width: 480px) {
+  .skin-section--carta .add-more-card__label { display: none; }
+}
+
+/* === Mensaje de inventario vacío === */
 .inventory-empty {
   display: flex;
   flex-direction: column;
