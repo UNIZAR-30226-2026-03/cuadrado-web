@@ -6,7 +6,7 @@
   background: var(--glass);
   border: 1.5px solid var(--glass-border);
   border-radius: var(--radius-card);
-  overflow: hidden;
+  overflow: hidden;             /* gestiona el clip de esquinas de la imagen */
   cursor: pointer;
   transition: transform 200ms var(--smooth), border-color 200ms var(--smooth),
               box-shadow 200ms var(--smooth);
@@ -17,11 +17,15 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
+.skin-card:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 3px;
+}
+
 /* === Imagen de la skin === */
 .skin-card__image-wrap {
   position: relative;
   width: 100%;
-  overflow: hidden;
   background: rgba(10, 22, 50, 0.6);
 }
 
@@ -30,8 +34,28 @@
 .skin-card--carta   .skin-card__image-wrap { aspect-ratio: 2 / 3; }
 .skin-card--avatar  .skin-card__image-wrap { aspect-ratio: 1 / 1; }
 
-.skin-card--avatar { border-radius: 50%; }
-.skin-card--avatar .skin-card__image-wrap { border-radius: 50%; }
+/* En avatares mantenemos tarjeta normal y miniatura circular */
+.skin-card--avatar {
+  border-radius: var(--radius-card);
+  padding: 10px 10px 0;
+}
+
+.skin-card--avatar .skin-card__image-wrap {
+  width: min(100%, 90px);
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  overflow: hidden;             /* recorte circular solo para avatares */
+  border: 1px solid rgba(0, 229, 255, 0.28);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.1);
+}
+
+.skin-card--avatar .skin-card__img {
+  object-fit: contain;
+}
+
+.skin-card--avatar .skin-card__info {
+  padding: 4px 2px 8px;
+}
 
 .skin-card__img {
   width: 100%;
@@ -60,20 +84,32 @@
   opacity: 0.5;
 }
 
-/* === Overlay de acción (equip/unequip) — solo en inventario === */
+/* === Overlay de acción (equip/unequip) — inventario y tienda para skins poseídas === */
 .skin-card__overlay {
+  /* reset de button */
+  appearance: none;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  /* layout */
   position: absolute;
   inset: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
   opacity: 0;
   transition: opacity 200ms var(--smooth);
-  border-radius: inherit;
+  cursor: pointer;
 }
 
-.skin-card:hover .skin-card__overlay {
+.skin-card:hover .skin-card__overlay,
+.skin-card:focus-within .skin-card__overlay {
+  opacity: 1;
+}
+
+.skin-card__overlay:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: -3px;
   opacity: 1;
 }
 
@@ -96,6 +132,27 @@
 .skin-card__overlay--unequip .skin-card__overlay-text {
   background: rgba(255, 90, 90, 0.2);
   border-color: rgba(255, 90, 90, 0.45);
+}
+
+/* Overlay de carga: visible siempre, sin interacción */
+.skin-card__overlay--loading {
+  opacity: 1;
+  pointer-events: none;
+  cursor: default;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.skin-card__overlay-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 229, 255, 0.25);
+  border-top-color: var(--neon-cyan);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* === Info inferior === */
@@ -145,18 +202,11 @@
   border: 1px solid rgba(134, 239, 172, 0.25);
 }
 
-/* Equipada (tienda) */
+/* Equipada — badge unificado para tienda e inventario */
 .skin-card__badge--equipped-gold {
   color: var(--neon-gold);
   background: rgba(251, 191, 36, 0.12);
   border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
-/* En uso (inventario) */
-.skin-card__badge--in-use {
-  color: var(--neon-cyan);
-  background: rgba(0, 229, 255, 0.12);
-  border: 1px solid rgba(0, 229, 255, 0.3);
 }
 
 /* === Botón de compra === */
@@ -182,12 +232,16 @@
   transform: scale(1.02);
 }
 
+.skin-card__buy-btn:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 2px;
+}
+
 .skin-card__buy-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
 
-/* Spinner en botón durante acción async */
 .skin-card__buy-btn--loading {
   opacity: 0.6;
   pointer-events: none;
@@ -204,7 +258,7 @@
   box-shadow: 0 0 18px rgba(0, 229, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
-/* shop-owned: borde verde sutil */
+/* shop-owned: borde verde sutil, equipable al hacer hover */
 .skin-card--shop-owned {
   border-color: rgba(134, 239, 172, 0.2);
   opacity: 0.75;
@@ -235,35 +289,6 @@
   animation: glow-border 5s ease-in-out infinite;
 }
 
-/* === Tarjeta especial "+" (add-more en inventario) === */
-.skin-card--add-more {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 229, 255, 0.04);
-  border: 1.5px dashed rgba(0, 229, 255, 0.25);
-  cursor: pointer;
-  transition: background 200ms, border-color 200ms, transform 200ms var(--smooth);
-}
-
-.skin-card--add-more:hover {
-  background: rgba(0, 229, 255, 0.09);
-  border-color: rgba(0, 229, 255, 0.5);
-  transform: scale(1.04);
-}
-
-.skin-card__add-icon {
-  font-size: 28px;
-  color: rgba(0, 229, 255, 0.5);
-  line-height: 1;
-  transition: color 200ms, transform 200ms;
-}
-
-.skin-card--add-more:hover .skin-card__add-icon {
-  color: var(--neon-cyan);
-  transform: scale(1.15);
-}
-
 /* === Estado de error (error-shake) === */
 .skin-card--error {
   animation: error-shake 0.5s ease;
@@ -275,4 +300,13 @@
   .skin-card__badge { font-size: 9px; padding: 2px 5px; }
   .skin-card__info { padding: 6px 8px 8px; }
   .skin-card__buy-btn { font-size: 10px; padding: 5px 0; }
+
+  .skin-card--avatar {
+    padding: 8px 8px 0;
+  }
+
+  .skin-card--avatar .skin-card__image-wrap {
+    width: min(100%, 72px);
+    margin-bottom: 6px;
+  }
 }
