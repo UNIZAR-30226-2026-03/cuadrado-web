@@ -9,4 +9,8 @@ export interface UserProfile {
   rankPlacement?: number;
   gamesPlayed?: number;
   gamesWon?: number;
+  equippedCardId?: string | null;
+  equippedAvatarId?: string | null;
+  equippedTapeteId?: string | null;
+  equippedSkinID?: string | null; // Compatibilidad con versión previa
 }

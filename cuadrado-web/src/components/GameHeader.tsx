@@ -1,8 +1,15 @@
-// components/GameHeader.tsx - Cabecera del lobby: logo + badge de cubitos + boton de ajustes
+// components/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
 
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import '../styles/GameHeader.css';
+
+interface GameHeaderProps {
+  /** Título de sección mostrado en el centro. Si se omite, no se renderiza. */
+  title?: string;
+  /** Si se provee, sustituye el logo por un botón "← Volver" que llama a esta función. */
+  onBack?: () => void;
+}
 
 /** Icono SVG de cubo wireframe (solo aristas) */
 function CubeWireframeIcon({ size = 18 }: { size?: number }) {
@@ -27,22 +34,28 @@ function CubeWireframeIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export default function GameHeader() {
+export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isSub = Boolean(title || onBack);
 
   return (
-    <header className="game-header">
-      {/* Logo estático */}
+    <header className={`game-header${isSub ? ' game-header--sub' : ''}`}>
+      {/* Izquierda: logo (home) o botón volver (sub-páginas) */}
       <div className="game-header__brand">
-        <img
-          src="/Logo.png"
-          alt="Cubo"
-          className="game-header__logo"
-        />
+        {onBack ? (
+          <button className="game-header__back" onClick={onBack} aria-label="Volver">
+            ← Volver
+          </button>
+        ) : (
+          <img src="/Logo.png" alt="Cubo" className="game-header__logo" />
+        )}
       </div>
 
-      {/* Badge de cubitos + botón de ajustes */}
+      {/* Centro: título de sección */}
+      {title && <h1 className="game-header__title">{title}</h1>}
+
+      {/* Derecha: badge de cubitos + botón de ajustes */}
       <div className="game-header__actions">
         <div className="game-header__badge game-header__badge--cubitos">
           <CubeWireframeIcon />

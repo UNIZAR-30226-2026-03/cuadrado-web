@@ -1,0 +1,215 @@
+/* InventoryPage.css - Estilos específicos de la pantalla de inventario (/inventory) */
+/* Comparte .skin-page, .skin-tabs, .skin-sort, .skin-grid con ShopPage.css */
+
+/* === Panel de equipados actualmente === */
+.equipped-panel {
+  background: var(--glass);
+  border: 1px solid rgba(0, 229, 255, 0.18);
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.equipped-panel__title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-50);
+  margin-bottom: 12px;
+  border-left: 3px solid rgba(0, 229, 255, 0.35);
+  padding-left: 8px;
+}
+
+.equipped-panel__slots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* === Slot individual — es un botón que navega a la tab de esa categoría === */
+.equipped-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  /* Reset de botón */
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 180ms;
+}
+
+.equipped-slot:hover {
+  background: rgba(0, 229, 255, 0.05);
+}
+
+.equipped-slot:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 3px;
+}
+
+.equipped-slot__label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-50);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Preview de la skin equipada */
+.equipped-slot__preview {
+  width: 100%;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1.5px solid rgba(0, 229, 255, 0.28);
+  background: rgba(10, 22, 50, 0.4);
+  overflow: hidden;
+  transition: border-color 200ms;
+}
+
+.equipped-slot__preview:hover {
+  border-color: rgba(0, 229, 255, 0.5);
+}
+
+.equipped-slot__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* Slot vacío: borde punteado */
+.equipped-slot__preview--empty {
+  border-style: dashed;
+  border-color: var(--glass-border);
+}
+
+.equipped-slot__empty-icon {
+  opacity: 0.3;
+}
+
+/* Nombre de la skin equipada */
+.equipped-slot__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-80);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.equipped-slot__name--empty {
+  color: var(--text-50);
+  font-style: italic;
+}
+
+/* === Card "+" acceso a tienda === */
+.skin-card--add-more {
+  appearance: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1.5px dashed rgba(0, 208, 255, 0.42) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition: border-color 200ms, background 200ms;
+}
+
+.skin-card--add-more:hover,
+.skin-card--add-more:focus-visible {
+  border-color: rgba(0, 224, 255, 0.75) !important;
+  background: rgba(0, 208, 255, 0.06) !important;
+}
+
+/* AddMoreCard: altura mínima para cuando es la única card del grid (sin vecinos que estiren la fila) */
+.skin-grid--tapete .skin-card--add-more { min-height: 190px; }
+.skin-grid--carta  .skin-card--add-more { min-height: 270px; }
+.skin-grid--avatar .skin-card--add-more { min-height: 210px; }
+
+.add-more-card__icon {
+  width: 36px;
+  height: 36px;
+  color: rgba(0, 208, 255, 0.65);
+  transition: color 200ms, transform 200ms;
+}
+
+.skin-card--add-more:hover .add-more-card__icon,
+.skin-card--add-more:focus-visible .add-more-card__icon {
+  color: rgba(0, 240, 255, 0.9);
+  transform: scale(1.1);
+}
+
+.add-more-card__label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(0, 208, 255, 0.7);
+  transition: color 200ms;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.skin-card--add-more:hover .add-more-card__label,
+.skin-card--add-more:focus-visible .add-more-card__label {
+  color: rgba(0, 240, 255, 0.95);
+}
+
+.skin-card--add-more:focus-visible {
+  outline: 2px solid rgba(0, 240, 255, 0.85);
+  outline-offset: 2px;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .equipped-panel__slots {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .equipped-slot__preview { height: 70px; }
+}
+
+@media (max-width: 480px) {
+  .equipped-panel { padding: 12px; margin-bottom: 12px; }
+  .equipped-slot__preview { height: 60px; }
+  .equipped-slot__name { font-size: 10px; }
+
+  .skin-grid--carta .add-more-card__label { display: none; }
+}
+
+/* Horizontal en móvil (teléfono girado, alto ≤ 500 px) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .equipped-panel {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .equipped-panel__title {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  .equipped-panel__slots { gap: 8px; }
+  .equipped-slot__preview { height: 46px; }
+  .equipped-slot__label  { font-size: 9px; }
+  .equipped-slot__name   { font-size: 9px; }
+
+  /* min-height más ajustadas para columnas más anchas en landscape */
+  .skin-grid--tapete .skin-card--add-more { min-height: 140px; }
+  .skin-grid--carta  .skin-card--add-more { min-height: 200px; }
+  .skin-grid--avatar .skin-card--add-more { min-height: 160px; }
+}

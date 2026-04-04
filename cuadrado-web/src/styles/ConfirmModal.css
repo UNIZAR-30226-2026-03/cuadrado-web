@@ -1,0 +1,127 @@
+/* ConfirmModal.css - Modal de confirmación de compra de skin */
+/* Base visual: mismo overlay/glassmorphism que ErrorModal, borde cyan */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 12, 30, 0.75);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-in 0.3s ease;
+}
+
+.confirm-modal {
+  background: var(--glass);
+  border: 1.5px solid rgba(0, 229, 255, 0.35);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 0 20px rgba(0, 229, 255, 0.12),
+    0 0 60px rgba(0, 229, 255, 0.05);
+  padding: 2rem;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  animation: modal-in 0.35s ease;
+}
+
+.confirm-modal__preview-wrap {
+  margin: 0 auto 1.25rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  background: rgba(10, 22, 50, 0.6);
+}
+
+/* Aspect ratios del preview según tipo */
+.confirm-modal__preview-wrap--tapete { max-width: 240px; aspect-ratio: 16 / 9; }
+.confirm-modal__preview-wrap--carta  { max-width: 120px; aspect-ratio: 2 / 3; }
+.confirm-modal__preview-wrap--avatar { max-width: 120px; aspect-ratio: 1 / 1; border-radius: 50%; }
+
+.confirm-modal__preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.confirm-modal__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-100);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.03em;
+}
+
+.confirm-modal__price {
+  font-size: 1rem;
+  color: var(--neon-cyan);
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.confirm-modal__insufficient {
+  font-size: 0.85rem;
+  color: var(--red);
+  margin-bottom: 0.75rem;
+}
+
+.confirm-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* Botón confirmar: btn-neon */
+.confirm-modal__btn-confirm {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--bg-void);
+  background: var(--neon-cyan);
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: opacity 200ms, transform 150ms;
+}
+
+.confirm-modal__btn-confirm:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: scale(1.02);
+}
+
+.confirm-modal__btn-confirm:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Botón cancelar: btn-ghost */
+.confirm-modal__btn-cancel {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-80);
+  background: transparent;
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  transition: background 200ms, border-color 200ms;
+}
+
+.confirm-modal__btn-cancel:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(120, 210, 255, 0.4);
+}
+
+@media (max-width: 480px) {
+  .confirm-modal { padding: 1.5rem 1.25rem; }
+  .confirm-modal__name { font-size: 1.1rem; }
+}
