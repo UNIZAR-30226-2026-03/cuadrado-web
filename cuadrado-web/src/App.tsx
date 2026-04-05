@@ -36,7 +36,7 @@ function App() {
           <Route path="/verify-code" element={<VerifyCodePage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/home" element={<HomePage />} />
-          <Route path="/shop"      element={<ShopPage />} />
+          <Route path="/shop" element={<ShopPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/join-room" element={<JoinRoomPage />} />
           <Route path="/create-room" element={<CreateRoomPage />} />

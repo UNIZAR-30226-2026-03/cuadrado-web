@@ -5,6 +5,8 @@ export interface RulesConfig {
   turnTimeSeconds: number;
   isPrivate: boolean;
   fillWithBots: boolean;
+  deckCount: number;
+  enabledPowers: string[];
 }
 
 export interface PublicRoomSummary {

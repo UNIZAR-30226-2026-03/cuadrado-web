@@ -36,7 +36,7 @@ export default function RulesPage() {
                 <br />
                 <h2>Habilidades:</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1rem' }}>
-                    <RuleCard num={"| 1 |"} />
+                    <RuleCard num={"| A |"} />
                     <p>Texto de la primera regla…</p>
                 </div>
             </div>
