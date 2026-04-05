@@ -12,6 +12,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
+import JoinRoomPage from './pages/JoinRoomPage';
+import CreateRoomPage from './pages/CreateRoomPage';
 
 import './App.css';
 
@@ -33,6 +35,8 @@ function App() {
           <Route path="/home" element={<HomePage />} />
           <Route path="/shop"      element={<ShopPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/join-room" element={<JoinRoomPage />} />
+          <Route path="/create-room" element={<CreateRoomPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
