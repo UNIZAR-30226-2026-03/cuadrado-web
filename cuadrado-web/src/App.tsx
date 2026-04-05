@@ -14,6 +14,9 @@ import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import JoinRoomPage from './pages/JoinRoomPage';
 import CreateRoomPage from './pages/CreateRoomPage';
+import WaitingRoomPage from './pages/WaitingRoomPage';
+import RulesPage from './pages/RulesPage';
+import GamePage from './pages/GamePage';
 
 import './App.css';
 
@@ -37,6 +40,9 @@ function App() {
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/join-room" element={<JoinRoomPage />} />
           <Route path="/create-room" element={<CreateRoomPage />} />
+          <Route path="/waiting-room" element={<WaitingRoomPage />} />
+          <Route path="/rules" element={<RulesPage />} />
+          <Route path="/game" element={<GamePage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
