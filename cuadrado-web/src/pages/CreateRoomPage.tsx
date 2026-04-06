@@ -9,6 +9,7 @@ import GameHeader from '../components/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import { createRoom } from '../services/room.service';
 import type { CreateRoomPayload } from '../types/room.types';
+import '../styles/RoomPages.css';
 
 // ---------------------------------------------------------------------------
 // Tipos locales
@@ -101,58 +102,34 @@ export default function CreateRoomPage() {
     setPowers(prev => prev.map(p => p.value === value ? { ...p, enabled } : p));
   }, []);
 
-const handleCreate = useCallback(async () => {
-  if (!deckCount) return;
+  const handleCreate = useCallback(async () => {
+    if (!deckCount) return;
 
-  setCreating(true);
-  setError(null);
+    setCreating(true);
+    setError(null);
 
-  const payload: CreateRoomPayload = {
-    name: 'Nueva sala', // 🔥 obligatorio según backend
-    rules: {
-      maxPlayers: 4,
-      turnTimeSeconds: 30,
-      isPrivate: !isPublic,
-      fillWithBots: false,
+    const payload: CreateRoomPayload = {
+      name: 'Nueva sala', // 🔥 obligatorio según backend
+      rules: {
+        maxPlayers: 4,
+        turnTimeSeconds: 30,
+        isPrivate: !isPublic,
+        fillWithBots: false,
 
-      deckCount,
-      enabledPowers: powers.filter(p => p.enabled).map(p => p.value),
-    },
-  };
+        deckCount,
+        enabledPowers: powers.filter(p => p.enabled).map(p => p.value),
+      },
+    };
 
-  try {
-    await createRoom(payload);
-    navigate('/waiting-room');
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Error al crear la partida');
-  } finally {
-    setCreating(false);
-  }
-}, [deckCount, isPublic, powers, navigate]);
-
-  // ── Estilos inline compartidos ──────────────────────────────────────────
-
-  const optionBtn = (hovered: boolean): React.CSSProperties => ({
-    flex: '1 1 160px',
-    maxWidth: 220,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '1rem',
-    padding: '1.5rem 1rem',
-    minHeight: 180,
-    border: '2.5px solid #f5c518',
-    borderRadius: 16,
-    background: hovered ? '#fffbe6' : '#fff',
-    cursor: 'pointer',
-    transform: hovered ? 'translateY(-3px)' : 'none',
-    boxShadow: hovered ? '0 6px 18px rgba(0,0,0,0.12)' : 'none',
-    transition: 'transform 0.15s, box-shadow 0.15s, background 0.15s',
-  });
-
-  // Botones con hover — necesitamos estado local por botón
-  const [hov, setHov] = useState<string | null>(null);
+    try {
+      await createRoom(payload);
+      navigate('/waiting-room');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear la partida');
+    } finally {
+      setCreating(false);
+    }
+  }, [deckCount, isPublic, powers, navigate]);
 
   // ---------------------------------------------------------------------------
   // Paso 1 — selector de barajas
@@ -163,11 +140,9 @@ const handleCreate = useCallback(async () => {
       <div className="skin-page">
         <GameHeader title="Crear Partida" onBack={() => navigate('/home')} />
 
-        <main className="skin-page__content">
-          <div className="skin-page__panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', padding: '2rem 1.5rem 1.5rem' }}>
-
-            <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-
+        <main className="skin-page__content room-page__content">
+          <div className="skin-page__panel room-panel room-panel--center">
+            <div className="room-option-grid">
               {([
                 { key: '1', label: '1 Baraja',   Icon: IconOneDeck,   onClick: () => setDeckCount(1) },
                 { key: '2', label: '2 Barajas',  Icon: IconTwoDecks,  onClick: () => setDeckCount(2) },
@@ -175,23 +150,17 @@ const handleCreate = useCallback(async () => {
               ] as const).map(({ key, label, Icon, onClick }) => (
                 <button
                   key={key}
-                  style={optionBtn(hov === key)}
-                  onMouseEnter={() => setHov(key)}
-                  onMouseLeave={() => setHov(null)}
+                  className="room-option"
                   onClick={onClick}
                 >
                   <Icon />
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1.3, color: '#111', whiteSpace: 'pre-line' }}>
-                    {label}
-                  </span>
+                  <span className="room-option__label">{label}</span>
                 </button>
               ))}
             </div>
 
             <button
-              style={{ padding: '0.55rem 2.5rem', border: '2px solid #f5c518', borderRadius: 999, background: hov === 'cancel' ? '#fffbe6' : 'transparent', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={() => setHov('cancel')}
-              onMouseLeave={() => setHov(null)}
+              className="room-link-btn"
               onClick={() => navigate('/home')}
             >
               Cancelar
@@ -210,12 +179,11 @@ const handleCreate = useCallback(async () => {
     <div className="skin-page">
       <GameHeader title="Configuración de Partida" onBack={() => setDeckCount(null)} />
 
-      <main className="skin-page__content">
-        <div className="skin-page__panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.5rem' }}>
-
+      <main className="skin-page__content room-page__content">
+        <div className="skin-page__panel room-panel room-panel--stack">
           {/* Toggle sala pública / privada */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.875rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: isPublic ? '#111' : '#999', transition: 'color 0.2s' }}>
+          <div className="room-toggle">
+            <span className={`room-toggle__label${isPublic ? ' is-active' : ''}`}>
               Sala Pública
             </span>
 
@@ -224,29 +192,24 @@ const handleCreate = useCallback(async () => {
               aria-checked={!isPublic}
               aria-label="Cambiar visibilidad de sala"
               onClick={() => setIsPublic(p => !p)}
-              style={{ position: 'relative', width: 48, height: 26, borderRadius: 999, border: `2px solid ${isPublic ? '#ccc' : '#f5c518'}`, background: isPublic ? '#ddd' : '#f5c518', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 0.2s, border-color 0.2s' }}
+              className={`room-toggle__switch${!isPublic ? ' is-private' : ''}`}
             >
-              <span style={{ position: 'absolute', top: 2, left: 2, width: 18, height: 18, borderRadius: '50%', background: isPublic ? '#888' : '#fff', transition: 'transform 0.2s, background 0.2s', transform: isPublic ? 'translateX(0)' : 'translateX(22px)', display: 'block' }} />
+              <span className="room-toggle__thumb" />
             </button>
 
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: !isPublic ? '#111' : '#999', transition: 'color 0.2s' }}>
+            <span className={`room-toggle__label${!isPublic ? ' is-active' : ''}`}>
               Sala Privada
             </span>
           </div>
 
           {/* Título poderes */}
-          <p style={{ fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center', margin: 0, color: '#111' }}>
-            Selecciona poderes de las cartas
-          </p>
+          <p className="room-powers__title">Selecciona poderes de las cartas</p>
 
           {/* Panel scrollable */}
-          <div
-            className="skin-page__panel"
-            style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 0, display: 'flex', flexDirection: 'column' }}
-          >
+          <div className="room-powers__list">
             {/* Fila "seleccionar todos" */}
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.875rem', cursor: 'pointer', background: '#fafafa', borderBottom: '1.5px solid #e5e5e5' }}
+              className="room-power-row room-power-row--header"
               onClick={toggleAll}
             >
               {/* Checkbox indeterminado / marcado */}
@@ -255,7 +218,7 @@ const handleCreate = useCallback(async () => {
                 aria-checked={allEnabled ? true : someEnabled ? 'mixed' : false}
                 tabIndex={0}
                 onKeyDown={e => e.key === ' ' && toggleAll()}
-                style={{ flexShrink: 0, width: 22, height: 22, border: '2.5px solid #f5c518', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', outline: 'none', cursor: 'pointer' }}
+                className="room-checkbox"
               >
                 {allEnabled && (
                   <svg viewBox="0 0 20 20" style={{ width: 14, height: 14 }} aria-hidden="true">
@@ -276,24 +239,22 @@ const handleCreate = useCallback(async () => {
                 <rect x="32" y="2"  width="22" height="30" rx="4" fill="white" stroke="black" strokeWidth="2" transform="rotate(18 43 17)" />
               </svg>
 
-              <span style={{ fontSize: '0.88rem', color: '#444', lineHeight: 1.4 }}>Seleccionar todos los poderes</span>
+              <span className="room-power__text">Seleccionar todos los poderes</span>
             </div>
 
             {/* Filas de cartas */}
-            {powers.map((power, i) => (
+            {powers.map((power) => (
               <div
                 key={power.value}
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.875rem', cursor: 'pointer', borderTop: i === 0 ? 'none' : '1px solid #f0f0f0', transition: 'background 0.12s' }}
+                className="room-power-row"
                 onClick={() => togglePower(power.value, !power.enabled)}
-                onMouseEnter={e => (e.currentTarget.style.background = '#fffbe6')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <span
                   role="checkbox"
                   aria-checked={power.enabled}
                   tabIndex={0}
                   onKeyDown={e => e.key === ' ' && togglePower(power.value, !power.enabled)}
-                  style={{ flexShrink: 0, width: 22, height: 22, border: '2.5px solid #f5c518', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', outline: 'none', cursor: 'pointer' }}
+                  className="room-checkbox"
                 >
                   {power.enabled && (
                     <svg viewBox="0 0 20 20" style={{ width: 14, height: 14 }} aria-hidden="true">
@@ -303,11 +264,11 @@ const handleCreate = useCallback(async () => {
                 </span>
 
                 {/* Badge carta */}
-                <span style={{ flexShrink: 0, minWidth: 32, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #111', borderRadius: 6, fontSize: '0.9rem', fontWeight: 800, background: '#fff', padding: '0 5px' }}>
+                <span className="room-card-badge">
                   {power.label}
                 </span>
 
-                <span style={{ fontSize: '0.88rem', color: '#444', lineHeight: 1.4 }}>{power.description}</span>
+                <span className="room-power__text">{power.description}</span>
               </div>
             ))}
           </div>
@@ -317,11 +278,9 @@ const handleCreate = useCallback(async () => {
           )}
 
           {/* Footer */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+          <div className="room-footer room-footer--spread">
             <button
-              style={{ padding: '0.55rem 1.5rem', border: '2px solid #f5c518', borderRadius: 999, background: hov === 'rules' ? '#fffbe6' : 'transparent', fontSize: '0.88rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer', transition: 'background 0.15s' }}
-              onMouseEnter={() => setHov('rules')}
-              onMouseLeave={() => setHov(null)}
+              className="room-link-btn"
               onClick={() => navigate('/rules')}
             >
               Cómo jugar
@@ -329,15 +288,12 @@ const handleCreate = useCallback(async () => {
 
             <button
               disabled={creating}
-              style={{ padding: '0.6rem 2rem', border: '2.5px solid #f5c518', borderRadius: 999, background: '#f5c518', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.5 : 1, transition: 'opacity 0.15s, transform 0.15s' }}
-              onMouseEnter={e => { if (!creating) e.currentTarget.style.opacity = '0.8'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = creating ? '0.5' : '1'; }}
+              className="room-cta"
               onClick={handleCreate}
             >
               {creating ? 'Creando…' : 'Crear Partida'}
             </button>
           </div>
-
         </div>
       </main>
     </div>
