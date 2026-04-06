@@ -6,6 +6,12 @@
 import type { Skin, SkinType } from '../types/skin.types';
 import { API_URL } from './api.config';
 
+export interface EquippedSkinUrls {
+  avatar: string | null;
+  carta: string | null;
+  tapete: string | null;
+}
+
 // Reutiliza el mismo patrón handleResponse de auth.service.ts
 async function handleResponse<T>(res: Response): Promise<T> {
   const data = await res.json();
@@ -27,6 +33,14 @@ export async function getInventory(token: string): Promise<Skin[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse<Skin[]>(res);
+}
+
+/** Devuelve URLs de skins equipadas por tipo. GET /skins/equipped */
+export async function getEquipped(token: string): Promise<EquippedSkinUrls> {
+  const res = await fetch(`${API_URL}/skins/equipped`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse<EquippedSkinUrls>(res);
 }
 
 /** Compra una skin para el usuario. POST /skins/buy/:skinId */

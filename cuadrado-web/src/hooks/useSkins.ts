@@ -1,12 +1,20 @@
 // hooks/useSkins.ts - Estado combinado de tienda e inventario de skins
 //
-// Carga en paralelo getStore y getInventory al montar.
-// equippedSkinId se deduce del perfil del usuario (AuthContext).
-// Tras buy/equip/unequip: re-fetch de inventario + fetchProfile() para actualizar cubitos.
+// Carga en paralelo getStore, getInventory y getEquipped al montar.
+// El estado de equipado se deriva de /skins/equipped para evitar desajustes con /auth/me.
+// Tras buy/equip/unequip: re-fetch de inventario y equipadas.
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getStore, getInventory, buySkin, equipSkin, unequipSkin } from '../services/skin.service';
+import {
+  getStore,
+  getInventory,
+  getEquipped,
+  buySkin,
+  equipSkin,
+  unequipSkin,
+  type EquippedSkinUrls,
+} from '../services/skin.service';
 import type { Skin, SkinType } from '../types/skin.types';
 
 type EquippedSkinIds = Record<SkinType, string | null>;
@@ -27,14 +35,29 @@ export function useSkins(): UseSkinsReturn {
   const { user, fetchProfile } = useAuth();
   const [store, setStore] = useState<Skin[]>([]);
   const [inventory, setInventory] = useState<Skin[]>([]);
+  const [equippedSkinIds, setEquippedSkinIds] = useState<EquippedSkinIds>({
+    Carta: null,
+    Avatar: null,
+    Tapete: null,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const equippedSkinIds: EquippedSkinIds = {
-    Carta: user?.equippedCardId ?? null,
-    Avatar: user?.equippedAvatarId ?? null,
-    Tapete: user?.equippedTapeteId ?? null,
-  };
+  const mapEquippedUrlsToIds = useCallback((
+    skins: Skin[],
+    equipped: EquippedSkinUrls,
+  ): EquippedSkinIds => {
+    const findIdByUrl = (url: string | null) => {
+      if (!url) return null;
+      return skins.find((skin) => skin.url === url)?.id ?? null;
+    };
+
+    return {
+      Carta: findIdByUrl(equipped.carta) ?? user?.equippedCardId ?? null,
+      Avatar: findIdByUrl(equipped.avatar) ?? user?.equippedAvatarId ?? null,
+      Tapete: findIdByUrl(equipped.tapete) ?? user?.equippedTapeteId ?? null,
+    };
+  }, [user?.equippedAvatarId, user?.equippedCardId, user?.equippedTapeteId]);
 
   /** Carga tienda e inventario en paralelo */
   const refresh = useCallback(async () => {
@@ -47,19 +70,21 @@ export function useSkins(): UseSkinsReturn {
     setLoading(true);
     setError(null);
     try {
-      const [, storeData, inventoryData] = await Promise.all([
+      const [, storeData, inventoryData, equippedData] = await Promise.all([
         fetchProfile().catch(() => {}),
         getStore(token),
         getInventory(token),
+        getEquipped(token),
       ]);
       setStore(storeData);
       setInventory(inventoryData);
+      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar skins');
     } finally {
       setLoading(false);
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, mapEquippedUrlsToIds]);
 
   // Carga inicial
   useEffect(() => {
@@ -74,16 +99,18 @@ export function useSkins(): UseSkinsReturn {
     setError(null);
     try {
       await buySkin(skinId, token);
-      const [, inventoryData] = await Promise.all([
+      const [, inventoryData, equippedData] = await Promise.all([
         fetchProfile().catch(() => {}),
         getInventory(token),
+        getEquipped(token),
       ]);
       setInventory(inventoryData);
+      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al comprar skin');
       throw err; // re-throw so ShopPage can react
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, mapEquippedUrlsToIds]);
 
   /** Equipa una skin: re-fetch inventario + actualiza perfil */
   const equip = useCallback(async (skinId: string) => {
@@ -93,16 +120,18 @@ export function useSkins(): UseSkinsReturn {
     setError(null);
     try {
       await equipSkin(skinId, token);
-      const [, inventoryData] = await Promise.all([
+      const [, inventoryData, equippedData] = await Promise.all([
         fetchProfile().catch(() => {}),
         getInventory(token),
+        getEquipped(token),
       ]);
       setInventory(inventoryData);
+      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al equipar skin');
       throw err;
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, mapEquippedUrlsToIds]);
 
   /** Desequipa la skin actual: re-fetch inventario + actualiza perfil */
   const unequip = useCallback(async (type: SkinType) => {
@@ -116,16 +145,18 @@ export function useSkins(): UseSkinsReturn {
     setError(null);
     try {
       await unequipSkin(type, token);
-      const [, inventoryData] = await Promise.all([
+      const [, inventoryData, equippedData] = await Promise.all([
         fetchProfile().catch(() => {}),
         getInventory(token),
+        getEquipped(token),
       ]);
       setInventory(inventoryData);
+      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al desequipar skin');
       throw err;
     }
-  }, [equippedSkinIds, fetchProfile]);
+  }, [equippedSkinIds, fetchProfile, mapEquippedUrlsToIds]);
 
   return { store, inventory, equippedSkinIds, loading, error, buy, equip, unequip, refresh };
 }
