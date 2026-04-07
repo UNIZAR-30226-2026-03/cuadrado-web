@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import GameHeader from '../components/GameHeader';
 import { useNavigate } from 'react-router-dom';
-import { createRoom } from '../services/room.service';
+import { createRoom, leaveRoom } from '../services/room.service';
 import type { CreateRoomPayload } from '../types/room.types';
 import '../styles/RoomPages.css';
 
@@ -109,7 +109,7 @@ export default function CreateRoomPage() {
     setError(null);
 
     const payload: CreateRoomPayload = {
-      name: 'Nueva sala', // 🔥 obligatorio según backend
+      name: 'Nueva sala',
       rules: {
         maxPlayers: 4,
         turnTimeSeconds: 30,
@@ -122,6 +122,7 @@ export default function CreateRoomPage() {
     };
 
     try {
+      await leaveRoom();
       await createRoom(payload);
       navigate('/waiting-room');
     } catch (err) {
