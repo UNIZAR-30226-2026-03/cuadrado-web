@@ -73,9 +73,19 @@ const DEFAULT_TIMEOUT_MS = 8000;
 
 let socket: RoomsSocket | null = null;
 
+function getStoredAccessToken(): string | undefined {
+  try {
+    return localStorage.getItem('accessToken') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildHandshake(auth?: RoomsAuth): Record<string, string> {
   const payload: Record<string, string> = {};
-  if (auth?.accessToken) payload.token = auth.accessToken;
+  const accessToken = auth?.accessToken ?? getStoredAccessToken();
+
+  if (accessToken) payload.token = accessToken;
   if (auth?.userId) payload.userId = auth.userId;
   return payload;
 }
@@ -90,6 +100,26 @@ function resolveSocketUrl(): string | undefined {
   }
 
   return undefined; // mismo origin (Vite proxy)
+}
+
+function extractWsErrorMessage(payload: unknown): string {
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (payload && typeof payload === 'object') {
+    const maybeMessage = (payload as { message?: unknown }).message;
+
+    if (typeof maybeMessage === 'string') {
+      return maybeMessage;
+    }
+
+    if (Array.isArray(maybeMessage) && maybeMessage.length > 0) {
+      return String(maybeMessage[0]);
+    }
+  }
+
+  return 'Error de socket en salas';
 }
 
 async function connectWithTimeout(target: RoomsSocket, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {
@@ -156,15 +186,47 @@ function emitWithAck<T>(event: keyof RoomsClientEvents, payload?: unknown): Prom
   }
 
   return new Promise<T>((resolve, reject) => {
-    activeSocket
-      .timeout(DEFAULT_TIMEOUT_MS)
-      .emit(event as any, payload, (err: Error | null, response: T) => {
+    let settled = false;
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      (activeSocket as unknown as { off: (ev: string, cb: (data: unknown) => void) => void })
+        .off('exception', onException);
+    };
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Tiempo de espera en evento de salas'));
+    }, DEFAULT_TIMEOUT_MS + 500);
+
+    const onException = (data: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error(extractWsErrorMessage(data)));
+    };
+
+    (activeSocket as unknown as { once: (ev: string, cb: (data: unknown) => void) => void })
+      .once('exception', onException);
+
+    activeSocket.timeout(DEFAULT_TIMEOUT_MS).emit(
+      event as any,
+      payload,
+      (err: Error | null, response: T) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+
         if (err) {
           reject(err);
           return;
         }
+
         resolve(response);
-      });
+      },
+    );
   });
 }
 
