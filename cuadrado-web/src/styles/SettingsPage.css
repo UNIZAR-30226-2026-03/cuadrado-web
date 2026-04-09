@@ -1,0 +1,351 @@
+/* SettingsPage.css - Estilos de la pantalla de configuración */
+
+.settings-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 8px 16px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.settings-container--modal {
+  max-width: none;
+  padding: 10px 16px 16px;
+  gap: 24px;
+}
+
+/* === Sección de settings === */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-section__title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--neon-cyan);
+  padding: 0 4px;
+}
+
+.settings-panel {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+/* === Fila de ajuste === */
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-top: 1px solid rgba(120, 210, 255, 0.10);
+  transition: background 150ms;
+}
+
+.settings-row:first-child {
+  border-top: none;
+}
+
+.settings-row:hover {
+  background: rgba(0, 229, 255, 0.04);
+}
+
+.settings-row__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(0, 229, 255, 0.10);
+  border: 1px solid rgba(0, 229, 255, 0.20);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neon-cyan);
+  flex-shrink: 0;
+}
+
+.settings-row__icon--gold {
+  background: rgba(251, 191, 36, 0.10);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: var(--neon-gold);
+}
+
+.settings-row__icon--purple {
+  background: rgba(168, 85, 247, 0.10);
+  border-color: rgba(168, 85, 247, 0.25);
+  color: var(--neon-purple);
+}
+
+.settings-row__icon--red {
+  background: rgba(255, 90, 90, 0.10);
+  border-color: rgba(255, 90, 90, 0.25);
+  color: #ff5a5a;
+}
+
+.settings-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-100);
+}
+
+.settings-row__sublabel {
+  font-size: 12px;
+  color: var(--text-50);
+}
+
+.settings-row__control {
+  flex-shrink: 0;
+}
+
+/* === Toggle switch === */
+.settings-toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(0, 229, 255, 0.3);
+  background: rgba(17, 40, 88, 0.8);
+  cursor: pointer;
+  padding: 0;
+  transition: background 200ms, border-color 200ms;
+}
+
+.settings-toggle.is-on {
+  background: rgba(0, 229, 255, 0.18);
+  border-color: var(--neon-cyan);
+}
+
+.settings-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(120, 210, 255, 0.4);
+  transition: transform 200ms var(--spring), background 200ms;
+}
+
+.settings-toggle.is-on .settings-toggle__thumb {
+  transform: translateX(22px);
+  background: var(--neon-cyan);
+}
+
+/* === Slider de volumen === */
+.settings-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-slider__track {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(120, 210, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+}
+
+.settings-slider__track::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+  cursor: pointer;
+  transition: transform 150ms;
+}
+
+.settings-slider__track::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.settings-slider__value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-50);
+  min-width: 30px;
+  text-align: right;
+}
+
+/* === Botón de acción en fila === */
+.settings-action-btn {
+  padding: 7px 16px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 229, 255, 0.35);
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--neon-cyan);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, transform 160ms var(--spring);
+}
+
+.settings-action-btn:hover {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: var(--neon-cyan);
+  transform: translateY(-1px);
+}
+
+.settings-action-btn--danger {
+  border-color: rgba(255, 90, 90, 0.35);
+  background: rgba(255, 90, 90, 0.08);
+  color: #ff5a5a;
+}
+
+.settings-action-btn--danger:hover {
+  background: rgba(255, 90, 90, 0.18);
+  border-color: #ff5a5a;
+}
+
+/* === Formulario de cambio de contraseña (expandible) === */
+.settings-password-form {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms ease;
+}
+
+.settings-password-form.is-open {
+  grid-template-rows: 1fr;
+}
+
+.settings-password-form__inner {
+  overflow: hidden;
+}
+
+.settings-password-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 18px 16px;
+  border-top: 1px solid rgba(120, 210, 255, 0.10);
+  padding-top: 14px;
+  margin-top: 2px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-field__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-50);
+}
+
+.settings-field__input {
+  background: rgba(16, 34, 76, 0.72);
+  border: 1px solid rgba(120, 210, 255, 0.22);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text-100);
+  outline: none;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.settings-field__input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.12), 0 0 18px rgba(0, 229, 255, 0.18);
+}
+
+.settings-password-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.settings-submit-btn {
+  padding: 9px 20px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(251, 191, 36, 0.8);
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--neon-gold);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms, transform 160ms var(--spring), opacity 160ms;
+}
+
+.settings-submit-btn:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.28);
+  transform: translateY(-1px);
+}
+
+.settings-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-cancel-btn {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 210, 255, 0.2);
+  background: transparent;
+  color: var(--text-50);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms, color 160ms;
+}
+
+.settings-cancel-btn:hover {
+  background: rgba(120, 210, 255, 0.06);
+  color: var(--text-80);
+}
+
+.settings-feedback {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.settings-feedback--success {
+  color: var(--green);
+  background: rgba(134, 239, 172, 0.10);
+  border: 1px solid rgba(134, 239, 172, 0.25);
+}
+
+.settings-feedback--error {
+  color: #ff5a5a;
+  background: rgba(255, 90, 90, 0.10);
+  border: 1px solid rgba(255, 90, 90, 0.25);
+}
+
+@media (max-width: 480px) {
+  .settings-container {
+    padding: 8px 10px 80px;
+  }
+
+  .settings-container--modal {
+    padding: 8px 8px 12px;
+  }
+
+  .settings-slider__track {
+    width: 90px;
+  }
+}

@@ -23,7 +23,11 @@ export default function ConfirmModal({ skin, onConfirm, onCancel, loading = fals
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className={previewClass}>
-          <img className="confirm-modal__preview-img" src={skin.url} alt={skin.name} />
+          {skin.url ? (
+            <img className="confirm-modal__preview-img" src={skin.url} alt={skin.name} />
+          ) : (
+            <div className="confirm-modal__preview-empty" aria-hidden="true">Previsualización no disponible</div>
+          )}
         </div>
 
         <p className="confirm-modal__name">{skin.name}</p>

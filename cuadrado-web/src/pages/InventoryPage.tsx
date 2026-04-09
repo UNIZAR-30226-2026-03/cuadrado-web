@@ -8,6 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import GameHeader from '../components/GameHeader';
 import SkinCard from '../components/SkinCard';
 import { useSkins } from '../hooks/useSkins';
+import {
+  DEFAULT_AVATAR_URL,
+  DEFAULT_AVATAR_DISPLAY_NAME,
+  DEFAULT_CARD_URL,
+  DEFAULT_CARD_DISPLAY_NAME,
+  TAPETE_EMPTY_LABEL,
+} from '../config/skinDefaults';
 import type { Skin, SkinType } from '../types/skin.types';
 import '../styles/ShopPage.css';
 import '../styles/InventoryPage.css';
@@ -46,7 +53,7 @@ function EquippedPanel({
   onTabSelect: (type: SkinType) => void;
 }) {
   const slots: { type: SkinType; label: string; emptyLabel: string }[] = [
-    { type: 'Tapete', label: 'Tapete',  emptyLabel: 'Ninguno' },
+    { type: 'Tapete', label: 'Tapete',  emptyLabel: TAPETE_EMPTY_LABEL },
     { type: 'Carta',  label: 'Carta',   emptyLabel: 'Ninguna' },
     { type: 'Avatar', label: 'Avatar',  emptyLabel: 'Ninguno' },
   ];
@@ -59,6 +66,10 @@ function EquippedPanel({
           const equippedId = equippedSkinIds[type];
           const skin = equippedId ? inventory.find(s => s.id === equippedId) : null;
 
+          // Fallbacks: Avatar y Carta deben mostrar siempre una skin (por defecto)
+          const showDefaultAvatar = !skin && type === 'Avatar';
+          const showDefaultCard = !skin && type === 'Carta';
+
           return (
             <button
               className="equipped-slot"
@@ -67,31 +78,49 @@ function EquippedPanel({
               aria-label={`Ver categoría ${label}`}
             >
               <span className="equipped-slot__label">{label}</span>
-              <div className={`equipped-slot__preview${skin ? '' : ' equipped-slot__preview--empty'}`}>
-                {skin ? (
-                  <img
-                    className="equipped-slot__img"
-                    src={skin.url}
-                    alt={skin.name}
-                    loading="lazy"
-                  />
+              <div className={`equipped-slot__preview${skin || showDefaultAvatar || showDefaultCard ? '' : ' equipped-slot__preview--empty'}`}>
+                {skin || showDefaultAvatar || showDefaultCard ? (
+                  // Si hay skin real la mostramos; si no, mostramos la imagen por defecto (avatar)
+                  skin ? (
+                    <img
+                      className="equipped-slot__img"
+                      src={skin.url}
+                      alt={skin.name}
+                      loading="lazy"
+                    />
+                  ) : showDefaultAvatar ? (
+                    <img
+                      className="equipped-slot__img"
+                      src={DEFAULT_AVATAR_URL}
+                      alt={DEFAULT_AVATAR_DISPLAY_NAME}
+                      loading="lazy"
+                    />
+                  ) : (
+                    // Carta por defecto: mostrar la imagen real de la skin default
+                    <img
+                      className="equipped-slot__img"
+                      src={DEFAULT_CARD_URL}
+                      alt={DEFAULT_CARD_DISPLAY_NAME}
+                      loading="lazy"
+                    />
+                  )
                 ) : (
+                  // Tapete vacío: mostrar una X estilizada (usuario pidió 'X')
                   <svg
                     className="equipped-slot__empty-icon"
                     width="28" height="28"
                     viewBox="0 0 24 24"
                     fill="none" stroke="currentColor"
-                    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                     aria-hidden="true"
                   >
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 )}
               </div>
-              <span className={`equipped-slot__name${skin ? '' : ' equipped-slot__name--empty'}`}>
-                {skin ? skin.name : emptyLabel}
+              <span className={`equipped-slot__name${skin || showDefaultAvatar || showDefaultCard ? '' : ' equipped-slot__name--empty'}`}>
+                {skin ? skin.name : (showDefaultAvatar ? DEFAULT_AVATAR_DISPLAY_NAME : showDefaultCard ? DEFAULT_CARD_DISPLAY_NAME : emptyLabel)}
               </span>
             </button>
           );

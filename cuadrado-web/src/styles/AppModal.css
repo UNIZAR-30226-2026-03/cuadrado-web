@@ -1,0 +1,119 @@
+/* AppModal.css - Capas de popup globales para Configuración y Crear Partida. */
+
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(1, 6, 18, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlay-in 180ms ease-out;
+}
+
+.app-modal {
+  width: min(960px, 96vw);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(17, 40, 88, 0.78);
+  border: 1px solid rgba(120, 210, 255, 0.3);
+  border-radius: 20px;
+  box-shadow:
+    0 24px 56px rgba(0, 0, 0, 0.5),
+    0 0 35px rgba(0, 229, 255, 0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: modal-in 260ms var(--spring);
+}
+
+.app-modal--settings {
+  width: min(760px, 96vw);
+}
+
+.app-modal--create-room {
+  width: min(940px, 96vw);
+}
+
+.app-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(120, 210, 255, 0.18);
+  background: linear-gradient(180deg, rgba(11, 23, 51, 0.9), rgba(11, 23, 51, 0.72));
+}
+
+.app-modal__back {
+  padding: 7px 14px;
+  border: 1px solid rgba(120, 210, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--text-80);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, color 160ms;
+}
+
+.app-modal__back:hover {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: rgba(0, 229, 255, 0.45);
+  color: var(--text-100);
+}
+
+.app-modal__title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-100);
+}
+
+.app-modal__spacer {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.app-modal__content {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0 8px;
+}
+
+.app-modal__content--tight {
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .app-modal-overlay {
+    padding: 10px;
+  }
+
+  .app-modal {
+    max-height: 96vh;
+    border-radius: 16px;
+  }
+
+  .app-modal__header {
+    padding: 10px 12px;
+  }
+
+  .app-modal__title {
+    font-size: 16px;
+  }
+
+  .app-modal__spacer {
+    width: 80px;
+  }
+}

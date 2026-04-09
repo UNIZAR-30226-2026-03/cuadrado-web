@@ -211,8 +211,16 @@ function emitWithAck<T>(event: keyof RoomsClientEvents, payload?: unknown): Prom
     (activeSocket as unknown as { once: (ev: string, cb: (data: unknown) => void) => void })
       .once('exception', onException);
 
-    activeSocket.timeout(DEFAULT_TIMEOUT_MS).emit(
-      event as any,
+    const socketWithTimeout = activeSocket.timeout(DEFAULT_TIMEOUT_MS) as unknown as {
+      emit: (
+        eventName: string,
+        eventPayload: unknown,
+        callback: (err: Error | null, response: T) => void,
+      ) => void;
+    };
+
+    socketWithTimeout.emit(
+      String(event),
       payload,
       (err: Error | null, response: T) => {
         if (settled) return;
