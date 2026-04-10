@@ -9,7 +9,7 @@ export default function SettingsPage() {
 
   return (
     <div className="skin-page">
-      <GameHeader title="Configuración" onBack={() => navigate('/home')} />
+      <GameHeader title="Configuración" onBack={() => navigate(-1)} />
 
       <main className="skin-page__content">
         <SettingsContent onClose={() => navigate('/home')} />

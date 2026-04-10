@@ -6,7 +6,7 @@ export default function WaitingRoomPage() {
     const navigate   = useNavigate();
     return (
     <div>
-        <GameHeader title="Sala de espera" onBack={() => navigate('/home')} />
+        <GameHeader title="Sala de espera" onBack={() => navigate(-1)} />
     </div>
     )
 }

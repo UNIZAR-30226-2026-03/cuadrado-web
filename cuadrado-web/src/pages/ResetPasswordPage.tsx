@@ -8,6 +8,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { resetPasswordRequest } from '../services/auth.service';
 import ErrorModal from '../components/ErrorModal';
 import { useAuthForm, useFieldErrors } from '../hooks/useAuthForm';
+import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';
 
 export default function ResetPasswordPage() {
@@ -22,6 +23,7 @@ export default function ResetPasswordPage() {
 
   const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
   const { fieldErrors, setFieldErrors, clearFieldError }               = useFieldErrors();
+  const containerRef = useAuthEntrance();
 
   useEffect(() => {
     if (!email || !authCode) navigate('/forgot-password', { replace: true });
@@ -58,8 +60,8 @@ export default function ResetPasswordPage() {
   if (!email || !authCode) return null;
 
   return (
-    <div className="page">
-      <Link to="/forgot-password" className="auth-back">Volver</Link>
+    <div className="page" ref={containerRef}>
+      <button className="auth-back" onClick={() => navigate(-1)}>Volver</button>
 
       <div className="auth-card">
         <div className="auth-logo">

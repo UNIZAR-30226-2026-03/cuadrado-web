@@ -8,6 +8,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { verifyCodeRequest } from '../services/auth.service';
 import ErrorModal from '../components/ErrorModal';
 import { useAuthForm } from '../hooks/useAuthForm';
+import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';
 
 const RECOVERY_CODE_REGEX = /^[a-f0-9]{9}$/i;
@@ -23,6 +24,7 @@ export default function VerifyCodePage() {
   const [loading, setLoading]     = useState(false);
 
   const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
+  const containerRef = useAuthEntrance();
 
   // Sin email en el state → acceso directo sin seguir el flujo
   useEffect(() => {
@@ -54,8 +56,8 @@ export default function VerifyCodePage() {
   if (!email) return null;
 
   return (
-    <div className="page">
-      <Link to="/forgot-password" className="auth-back">Volver</Link>
+    <div className="page" ref={containerRef}>
+      <button className="auth-back" onClick={() => navigate(-1)}>Volver</button>
 
       <div className="auth-card">
         <div className="auth-logo">

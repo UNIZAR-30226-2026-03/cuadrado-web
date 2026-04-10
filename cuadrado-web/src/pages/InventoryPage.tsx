@@ -3,8 +3,9 @@
 // Panel superior: resumen de los 3 ítems equipados actualmente.
 // Navegación por categoría mediante tabs. Controles de ordenado.
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
 import GameHeader from '../components/GameHeader';
 import SkinCard from '../components/SkinCard';
 import { useSkins } from '../hooks/useSkins';
@@ -162,6 +163,55 @@ export default function InventoryPage() {
   const [sortBy,         setSortBy]         = useState<SortKey>('price-asc');
   const [loadingSkinId,  setLoadingSkinId]  = useState<string | null>(null);
 
+  const pageRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Entrada de la página: panel de equipados + tabs deslizan desde abajo
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+      tl.from('.equipped-panel', {
+        y: -20,
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power2.out',
+        clearProps: 'all',
+      });
+      tl.from('.skin-tabs', {
+        y: -14,
+        autoAlpha: 0,
+        duration: 0.35,
+        ease: 'power2.out',
+        clearProps: 'all',
+      }, 0.1);
+      tl.from('.skin-page__panel', {
+        y: 24,
+        autoAlpha: 0,
+        duration: 0.4,
+        ease: 'power3.out',
+        clearProps: 'all',
+      }, 0.15);
+    }, pageRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Stagger de cards al cambiar de tab
+  useEffect(() => {
+    if (!gridRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.skin-card', {
+        y: 14,
+        autoAlpha: 0,
+        scale: 0.9,
+        duration: 0.28,
+        ease: 'power2.out',
+        stagger: { each: 0.04, from: 'start' },
+        clearProps: 'all',
+      });
+    }, gridRef);
+    return () => ctx.revert();
+  }, [activeTab]);
+
   function showAddMore(type: SkinType): boolean {
     const storeCount = store.filter(s => s.type === type).length;
     const invCount   = inventory.filter(s => s.type === type).length;
@@ -188,8 +238,8 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="skin-page">
-      <GameHeader title="Inventario" onBack={() => navigate('/home')} />
+    <div className="skin-page" ref={pageRef}>
+      <GameHeader title="Inventario" onBack={() => navigate(-1)} />
 
       <main className="skin-page__content">
         {loading ? (
@@ -248,7 +298,7 @@ export default function InventoryPage() {
                   <p>No tienes {TABS.find(t => t.type === activeTab)?.label.toLowerCase()} todavía.</p>
                 </div>
               ) : (
-                <div className={`skin-grid skin-grid--${activeTab.toLowerCase()}`}>
+                <div className={`skin-grid skin-grid--${activeTab.toLowerCase()}`} ref={gridRef}>
                   {visibleSkins.map(skin => (
                     <SkinCard
                       key={skin.id}

@@ -196,14 +196,27 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.settings-section', {
+      const tl = gsap.timeline();
+
+      // Secciones deslizan desde abajo escalonadas
+      tl.from('.settings-section', {
         y: 28,
         autoAlpha: 0,
-        duration: 0.5,
-        stagger: 0.1,
+        duration: 0.45,
+        stagger: 0.08,
         ease: 'power2.out',
         clearProps: 'all',
       });
+
+      // Filas dentro de cada sección: stagger fino con entrada desde la izquierda
+      tl.from('.settings-row', {
+        x: -12,
+        autoAlpha: 0,
+        duration: 0.3,
+        stagger: 0.04,
+        ease: 'power2.out',
+        clearProps: 'all',
+      }, 0.1);
     }, containerRef);
 
     return () => ctx.revert();

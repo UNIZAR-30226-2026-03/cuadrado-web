@@ -5,15 +5,17 @@
 // Sección inferior: campo de código de 7 dígitos para salas privadas.
 // Ambas acciones llaman a room.service::joinRoom y navegan a /waiting-room.
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import GameHeader from '../components/GameHeader';
 import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
 import { listPublicRooms, joinRoom } from '../services/room.service';
 import type { PublicRoomSummary } from '../types/room.types';
 import '../styles/RoomPages.css';
 
 export default function JoinRoomPage() {
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
+  const pageRef     = useRef<HTMLDivElement>(null);
 
   // ── Salas públicas ────────────────────────────────────────────────────
   const [rooms,       setRooms]       = useState<PublicRoomSummary[]>([]);
@@ -26,6 +28,37 @@ export default function JoinRoomPage() {
   const [joiningPrivate, setJoiningPrivate] = useState(false);
   const [privateError,   setPrivateError]   = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Entrada escalonada de secciones
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('.room-section', {
+        y: 28,
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power2.out',
+        stagger: 0.1,
+        clearProps: 'all',
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Stagger de filas cuando la lista carga
+  useLayoutEffect(() => {
+    if (loadingList || rooms.length === 0) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.room-row', {
+        x: -16,
+        autoAlpha: 0,
+        duration: 0.3,
+        ease: 'power2.out',
+        stagger: 0.04,
+        clearProps: 'all',
+      });
+    }, pageRef);
+    return () => ctx.revert();
+  }, [loadingList, rooms.length]);
 
   // ── Carga inicial de salas públicas ───────────────────────────────────
   const fetchRooms = useCallback(async () => {
@@ -79,8 +112,8 @@ export default function JoinRoomPage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="skin-page">
-      <GameHeader title="Buscar Partida" onBack={() => navigate('/home')} />
+    <div className="skin-page" ref={pageRef}>
+      <GameHeader title="Buscar Partida" onBack={() => navigate(-1)} />
 
       <main className="skin-page__content room-page__content">
         {/* ── Salas Públicas ─────────────────────────────────────────── */}

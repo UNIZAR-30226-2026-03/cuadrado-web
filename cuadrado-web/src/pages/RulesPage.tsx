@@ -230,7 +230,7 @@ export default function RulesPage() {
 
   return (
     <div className="skin-page">
-      <GameHeader title="Reglas de Cubo" onBack={() => navigate('/home')} />
+      <GameHeader title="Reglas de Cubo" onBack={() => navigate(-1)} />
 
       <main className="skin-page__content rules-page-content" ref={contentRef}>
         <div className="rules-container" ref={containerRef}>

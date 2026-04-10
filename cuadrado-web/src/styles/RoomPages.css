@@ -41,6 +41,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Sin max-height: el scroll lo gestiona el contenedor padre */
 }
 
 /* === JoinRoom: lista de salas === */
@@ -277,10 +278,25 @@
   transition: transform 160ms var(--spring), box-shadow 160ms, border-color 160ms;
 }
 
+/* Idle: flotación suave escalonada para cada opción */
+.room-option {
+  animation: option-float 5s ease-in-out infinite alternate;
+}
+.room-option:nth-child(1) { animation-delay: 0s; }
+.room-option:nth-child(2) { animation-delay: 0.7s; }
+.room-option:nth-child(3) { animation-delay: 1.4s; }
+
+@keyframes option-float {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-7px); }
+}
+
 .room-option:hover {
-  transform: translateY(-4px);
+  /* Pausa la flotación en hover para que el :hover translateY tome el control */
+  animation-play-state: paused;
+  transform: translateY(-6px);
   border-color: var(--glass-border-lit);
-  box-shadow: 0 10px 24px rgba(0, 229, 255, 0.14);
+  box-shadow: 0 10px 28px rgba(0, 229, 255, 0.18);
 }
 
 .room-option__label {
@@ -361,12 +377,11 @@
 }
 
 .room-powers__list {
-  flex: 1;
-  min-height: 0;
+  /* flex: 1 y min-height: 0 eliminados — el scroll lo gestiona el padre */
+  overflow-y: visible;
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   background: rgba(17, 40, 88, 0.5);
-  overflow-y: auto;
 }
 
 .room-power-row {
@@ -425,6 +440,25 @@
   font-size: 12px;
   color: var(--text-50);
   line-height: 1.5;
+}
+
+/* === 2 columnas de poderes en pantallas anchas === */
+@media (min-width: 860px) {
+  .room-powers__list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: min-content;
+  }
+
+  /* La fila "seleccionar todos" ocupa ambas columnas */
+  .room-power-row--header {
+    grid-column: 1 / -1;
+  }
+
+  /* El primer item de cada columna no necesita borde superior */
+  .room-power-row:nth-child(2) {
+    border-top: none;
+  }
 }
 
 /* === Responsive === */

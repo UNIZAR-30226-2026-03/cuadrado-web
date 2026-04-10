@@ -183,7 +183,7 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--text-50);
-  min-width: 30px;
+  width: 36px;
   text-align: right;
 }
 

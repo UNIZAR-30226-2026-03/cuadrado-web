@@ -6,7 +6,7 @@
   flex-shrink: 0;
   padding: 20px 40px 24px;
   background: linear-gradient(0deg, rgba(8, 18, 42, 0.98) 0%, rgba(8, 18, 42, 0.7) 50%, transparent 100%);
-  animation: field-slide-up 0.6s var(--spring) 0.3s both;
+  /* Entrada gestionada por GSAP en HomePage.tsx */
 }
 
 .game-nav__track {

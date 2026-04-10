@@ -83,55 +83,92 @@
   gap: 10px;
 }
 
-.room-turntime__pills {
+.room-turntime__cards {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.room-turntime__pill {
-  padding: 7px 16px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(120, 210, 255, 0.25);
+.room-turntime__card {
+  flex: 1 1 72px;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(120, 210, 255, 0.22);
   background: rgba(17, 40, 88, 0.5);
   color: var(--text-50);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   cursor: pointer;
   transition: background 160ms, border-color 160ms, color 160ms, transform 160ms var(--spring);
 }
 
-.room-turntime__pill:hover {
+.room-turntime__card:hover {
   background: rgba(0, 229, 255, 0.08);
   border-color: rgba(0, 229, 255, 0.4);
   color: var(--text-80);
 }
 
-.room-turntime__pill.is-active {
-  background: rgba(0, 229, 255, 0.15);
+.room-turntime__card.is-active {
+  background: rgba(0, 229, 255, 0.14);
   border-color: var(--neon-cyan);
   color: var(--neon-cyan);
-  transform: translateY(-1px);
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.22);
+}
+
+.room-turntime__card-time {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.room-turntime__card-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.room-turntime__card svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.room-turntime__card.is-active svg {
+  opacity: 1;
 }
 
 /* === Responsive === */
 @media (max-width: 480px) {
-  .room-turntime__pills {
+  .room-turntime__cards {
     gap: 6px;
   }
 
-  .room-turntime__pill {
-    padding: 6px 12px;
-    font-size: 11px;
+  .room-turntime__card {
+    flex: 1 1 58px;
+    min-width: 52px;
+    padding: 8px 6px 6px;
+  }
+
+  .room-turntime__card-time {
+    font-size: 15px;
   }
 
   .room-stepper__value {
     width: 34px;
     font-size: 15px;
   }
+}
+
+/* === Modificador: contenido de configuración de partida con scroll propio === */
+.skin-page__content--room-config {
+  overflow-y: auto;
+  padding-bottom: 24px;
 }
 
 /* === Modo popup de crear partida === */

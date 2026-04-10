@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { forgotPasswordRequest } from '../services/auth.service';
 import ErrorModal from '../components/ErrorModal';
 import { useAuthForm } from '../hooks/useAuthForm';
+import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';
 
 export default function ForgotPasswordPage() {
@@ -18,6 +19,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading]     = useState(false);
 
   const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
+  const containerRef = useAuthEntrance();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,8 +44,8 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="page">
-      <Link to="/login" className="auth-back">Volver</Link>
+    <div className="page" ref={containerRef}>
+      <button className="auth-back" onClick={() => navigate(-1)}>Volver</button>
 
       <div className="auth-card">
         <div className="auth-logo">

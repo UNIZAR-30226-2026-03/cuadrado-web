@@ -36,6 +36,7 @@ interface AuthContextType {
   logout: () => void;
   changePassword: (data: ChangePasswordPayload) => Promise<void>;
   fetchProfile: () => Promise<void>;
+  updateUser: (patch: Partial<UserProfile>) => void;
 }
 
 // undefined como valor por defecto: useAuth lo detecta si se usa fuera del Provider
@@ -106,9 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await changePasswordRequest(data, token);
   }
 
+  /** Actualiza el perfil del usuario en memoria (no toca el backend). */
+  function updateUser(patch: Partial<UserProfile>) {
+    setUser(prev => (prev ? { ...prev, ...patch } : prev));
+  }
+
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, login, register, logout, changePassword, fetchProfile }}
+      value={{ isAuthenticated, user, login, register, logout, changePassword, fetchProfile, updateUser }}
     >
       {children}
     </AuthContext.Provider>

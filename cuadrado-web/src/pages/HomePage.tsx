@@ -2,8 +2,10 @@
 //
 // Compone: GameHeader (stats), GameTable (mesa decorativa) y GameNavBar (navegacion).
 // Incluye cubos 3D efimeros y un overlay de orientacion para moviles verticales.
+// Entrada animada: GameHeader baja, GameTable escala, GameNavBar sube (GSAP timeline).
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import gsap from 'gsap';
 import '../styles/HomePage.css';
 import type { CSSProperties } from 'react';
 import GameHeader from '../components/GameHeader';
@@ -114,8 +116,45 @@ function SpawningCubes() {
 
 // --- HomePage: pagina principal del lobby ---
 export default function HomePage() {
+  const lobbyRef = useRef<HTMLDivElement>(null);
+
+  // Timeline de entrada: cabecera baja, mesa escala, navbar sube
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      // GameHeader desliza desde arriba
+      tl.from('.game-header', {
+        y: -72,
+        autoAlpha: 0,
+        duration: 0.55,
+        clearProps: 'all',
+      });
+
+      // GameTable aparece desde el centro con escala + opacidad
+      tl.from('.game-table', {
+        scale: 0.88,
+        autoAlpha: 0,
+        duration: 0.65,
+        ease: 'back.out(1.3)',
+        clearProps: 'all',
+      }, 0.15);
+
+      // GameNavBar sube desde abajo con ligero rebote
+      tl.from('.game-nav', {
+        y: 80,
+        autoAlpha: 0,
+        duration: 0.5,
+        ease: 'back.out(1.4)',
+        clearProps: 'all',
+      }, 0.2);
+    }, lobbyRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="lobby">
+    <div className="lobby" ref={lobbyRef}>
       {/* Fondo: grid isométrico pulsante + cubos efímeros */}
       <div className="iso-grid" aria-hidden="true" />
       <SpawningCubes />

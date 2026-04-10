@@ -67,7 +67,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="skin-page profile-page">
-        <GameHeader title="Perfil" onBack={() => navigate('/home')} />
+        <GameHeader title="Perfil" onBack={() => navigate(-1)} />
         <main className="skin-page__content">
           <div className="profile-container">
             <p style={{ textAlign: 'center', color: 'var(--text-50)', paddingTop: 40 }}>
@@ -81,7 +81,7 @@ export default function ProfilePage() {
 
   return (
     <div className="skin-page profile-page">
-      <GameHeader title="Mi Perfil" onBack={() => navigate('/home')} />
+      <GameHeader title="Mi Perfil" onBack={() => navigate(-1)} />
 
       <main className="skin-page__content">
         <div className="profile-container" ref={containerRef}>

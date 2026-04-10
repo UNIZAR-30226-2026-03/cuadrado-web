@@ -1,4 +1,6 @@
-/* WelcomePage.css - Estilos de la pantalla de bienvenida */
+/* WelcomePage.css - Estilos de la pantalla de bienvenida
+   Idle: breathe (orbe), breathe-glow (logo).
+   Entrada: logo-dramatic (CSS), resto via GSAP en WelcomePage.tsx. */
 
 /* === Orbe y logo === */
 

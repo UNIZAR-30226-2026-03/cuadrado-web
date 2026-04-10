@@ -4,6 +4,11 @@
 // Paso 2: configuración de sala — maxPlayers, turnTime, visibilidad + poderes de cartas.
 //   Llama a room.service::createRoom y navega a /waiting-room.
 
+// pages/CreateRoomPage.tsx - Menú para crear salas
+//
+// Paso 1: selector de barajas animado con GSAP stagger.
+// Paso 2: configuración de sala con entrada animada.
+
 import { useState, useCallback, useLayoutEffect, useRef } from 'react';
 import GameHeader from '../components/GameHeader';
 import { useNavigate } from 'react-router-dom';
@@ -89,6 +94,15 @@ const INITIAL_POWERS: CardPower[] = [
 ];
 
 const TURN_TIME_OPTIONS = [15, 20, 30, 45, 60] as const;
+
+/** Etiquetas descriptivas para cada opción de tiempo de turno */
+const TURN_TIME_LABELS: Record<number, string> = {
+  15: 'Relámpago',
+  20: 'Rápido',
+  30: 'Estándar',
+  45: 'Calmado',
+  60: 'Estratégico',
+};
 
 // ---------------------------------------------------------------------------
 // Iconos SVG — estilo Neon Casino (colores neón, sin blanco/negro)
@@ -224,8 +238,9 @@ function Stepper({ value, min, max, onChange, label }: StepperProps) {
 // ---------------------------------------------------------------------------
 
 export default function CreateRoomPage() {
-  const navigate = useNavigate();
-  const step2Ref = useRef<HTMLDivElement>(null);
+  const navigate   = useNavigate();
+  const step1Ref   = useRef<HTMLDivElement>(null);
+  const step2Ref   = useRef<HTMLDivElement>(null);
 
   const [deckCount,    setDeckCount]    = useState<DeckCount | null>(null);
   const [isPublic,     setIsPublic]     = useState(true);
@@ -238,11 +253,29 @@ export default function CreateRoomPage() {
   const allEnabled  = powers.every(p => p.enabled);
   const someEnabled = powers.some(p => p.enabled);
 
+  // Animación de entrada al paso 1: stagger en las opciones de baraja
+  useLayoutEffect(() => {
+    if (deckCount !== null || !step1Ref.current) return;
+    const ctx = gsap.context(() => {
+      gsap.from('.room-option', {
+        y: 32,
+        autoAlpha: 0,
+        scale: 0.88,
+        duration: 0.5,
+        ease: 'back.out(1.5)',
+        stagger: 0.08,
+        clearProps: 'all',
+      });
+    }, step1Ref);
+    return () => ctx.revert();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Animación de entrada al paso 2
   useLayoutEffect(() => {
     if (deckCount === null || !step2Ref.current) return;
     gsap.from(step2Ref.current, {
-      y: 24, autoAlpha: 0, duration: 0.45, ease: 'power2.out',
+      y: 24, autoAlpha: 0, duration: 0.45, ease: 'power2.out', clearProps: 'all',
     });
   }, [deckCount]);
 
@@ -291,10 +324,10 @@ export default function CreateRoomPage() {
   if (deckCount === null) {
     return (
       <div className="skin-page">
-        <GameHeader title="Crear Partida" onBack={() => navigate('/home')} />
+        <GameHeader title="Crear Partida" onBack={() => navigate(-1)} />
 
         <main className="skin-page__content room-page__content">
-          <div className="skin-page__panel room-panel room-panel--center">
+          <div className="skin-page__panel room-panel room-panel--center" ref={step1Ref}>
             <div className="room-option-grid">
               {([
                 {
@@ -335,7 +368,7 @@ export default function CreateRoomPage() {
     <div className="skin-page">
       <GameHeader title="Configuración de Partida" onBack={() => setDeckCount(null)} />
 
-      <main className="skin-page__content room-page__content">
+      <main className="skin-page__content room-page__content skin-page__content--room-config">
         <div className="skin-page__panel room-panel room-panel--stack" ref={step2Ref}>
 
           {/* Toggle sala pública / privada */}
@@ -371,14 +404,16 @@ export default function CreateRoomPage() {
           {/* Selector de tiempo de turno */}
           <div className="room-turntime">
             <span className="room-powers__title">Tiempo de turno</span>
-            <div className="room-turntime__pills">
+            <div className="room-turntime__cards">
               {TURN_TIME_OPTIONS.map(t => (
                 <button
                   key={t}
-                  className={`room-turntime__pill${turnTime === t ? ' is-active' : ''}`}
+                  className={`room-turntime__card${turnTime === t ? ' is-active' : ''}`}
                   onClick={() => setTurnTime(t)}
                 >
-                  {t}s
+                  <ClockIcon />
+                  <span className="room-turntime__card-time">{t}s</span>
+                  <span className="room-turntime__card-label">{TURN_TIME_LABELS[t]}</span>
                 </button>
               ))}
             </div>
@@ -475,6 +510,22 @@ function DashIcon() {
   return (
     <svg viewBox="0 0 20 20" style={{ width: 13, height: 13 }} aria-hidden="true">
       <line x1="4" y1="10" x2="16" y2="10" stroke="var(--neon-cyan)" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Icono de reloj analógico para las tarjetas de tiempo de turno */
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+      {/* Esfera */}
+      <circle cx="10" cy="10" r="8" stroke="var(--neon-cyan)" strokeWidth="1.5" />
+      {/* Manecilla de minutos (apunta hacia arriba) */}
+      <line x1="10" y1="10" x2="10" y2="4"  stroke="var(--neon-cyan)" strokeWidth="1.8" strokeLinecap="round" />
+      {/* Manecilla de horas (apunta a las 3) */}
+      <line x1="10" y1="10" x2="14" y2="10" stroke="var(--neon-cyan)" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Centro */}
+      <circle cx="10" cy="10" r="1" fill="var(--neon-cyan)" />
     </svg>
   );
 }

@@ -6,7 +6,7 @@ export default function GamePage() {
     const navigate   = useNavigate();
     return (
     <div>
-        <GameHeader title="Juego" onBack={() => navigate('/home')} />
+        <GameHeader title="Juego" onBack={() => navigate(-1)} />
     </div>
     )
 }

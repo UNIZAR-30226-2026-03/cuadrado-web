@@ -92,7 +92,7 @@ export default function RankingPage() {
 
   return (
     <div className="skin-page">
-      <GameHeader title="Ranking Global" onBack={() => navigate('/profile')} />
+      <GameHeader title="Ranking Global" onBack={() => navigate(-1)} />
 
       <div className="ranking-page__content">
         {loading ? (
