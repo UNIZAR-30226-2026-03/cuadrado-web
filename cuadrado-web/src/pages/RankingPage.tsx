@@ -29,7 +29,7 @@ export default function RankingPage() {
   useEffect(() => {
     if (!accessToken) return;
 
-    getRanking(accessToken)
+    getRanking(accessToken, 50)
       .then(data => {
         setEntries(data);
       })

@@ -7,23 +7,29 @@
 import type { RankingEntry } from '../types/ranking.types';
 import { API_URL } from './api.config';
 
-const RANKING_API_ENABLED = import.meta.env.VITE_ENABLE_RANKING_API === 'true';
-
-/** Devuelve los primeros 50 jugadores del ranking global. GET /api/ranking */
-export async function getRanking(token: string): Promise<RankingEntry[]> {
-  // Mientras backend no publique /ranking, evitar peticiones que solo generan 404 en consola.
-  if (!RANKING_API_ENABLED) {
-    return [];
-  }
-
+/** Devuelve los top usuarios del ranking. GET /api/users/top?limit=X */
+export async function getRanking(token: string, limit: number = 50): Promise<RankingEntry[]> {
   try {
-    const res = await fetch(`${API_URL}/ranking`, {
+    const res = await fetch(`${API_URL}/users/top?limit=${limit}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return [];
     return (await res.json()) as RankingEntry[];
   } catch {
-    // Endpoint no implementado aún — devolver vacío
     return [];
+  }
+}
+
+/** Devuelve la posición del usuario autenticado en el ranking. GET /api/users/me/position */
+export async function getMyPosition(token: string): Promise<number> {
+  try {
+    const res = await fetch(`${API_URL}/users/me/position`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return 999;
+    const data = await res.json() as { position: number };
+    return data.position;
+  } catch {
+    return 999;
   }
 }

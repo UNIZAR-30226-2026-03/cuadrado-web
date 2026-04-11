@@ -9,6 +9,7 @@ import gsap from 'gsap';
 import GameHeader from '../components/GameHeader';
 import { useAuth } from '../context/AuthContext';
 import { getEquipped } from '../services/skin.service';
+import { getMyPosition } from '../services/ranking.service';
 import { DEFAULT_AVATAR_URL } from '../config/skinDefaults';
 import '../styles/ProfilePage.css';
 
@@ -19,20 +20,22 @@ export default function ProfilePage() {
   const ratioBarRef  = useRef<HTMLDivElement>(null);
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [rankPosition, setRankPosition] = useState<number | null>(null);
 
-  // Carga la URL real del avatar equipado
+  // Carga la URL real del avatar equipado y la posición en el ranking
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
     getEquipped(token).then(eq => setAvatarUrl(eq.avatar)).catch(() => {});
+    getMyPosition(token).then(pos => setRankPosition(pos)).catch(() => {});
   }, []);
 
   // Datos derivados del perfil
   const gamesPlayed = user?.gamesPlayed ?? 0;
   const gamesWon    = user?.gamesWon    ?? 0;
   const winRatio    = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
-  const rankPlacementLabel = user?.rankPlacement != null
-    ? `#${user.rankPlacement}`
+  const rankPlacementLabel = rankPosition != null && rankPosition !== 999
+    ? `#${rankPosition}`
     : 'Sin clasificar';
 
   // Animaciones de entrada
