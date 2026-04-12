@@ -508,3 +508,140 @@
     justify-content: center;
   }
 }
+
+/* === Waiting Room Grid === */
+.waiting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 720px;
+}
+
+/* Slot */
+.waiting-slot {
+  height: 70px;
+  border-radius: 16px;
+  border: 1.5px solid var(--glass-border);
+  background: var(--glass-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  transition: all 160ms;
+}
+
+/* Hover suave */
+.waiting-slot:hover {
+  border-color: var(--glass-border-lit);
+  transform: translateY(-2px);
+}
+
+/* Estados */
+.waiting-slot.empty {
+  opacity: 0.6;
+}
+
+.waiting-slot.blocked {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+/* Texto */
+.waiting-slot__empty {
+  font-size: 12px;
+  color: var(--text-50);
+}
+
+.waiting-slot__blocked {
+  font-size: 16px;
+}
+
+.waiting-slot__player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.waiting-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(120, 210, 255, 0.5);
+  background: rgba(17, 40, 88, 0.6);
+  position: relative;
+}
+
+/* Corona */
+.waiting-crown {
+  position: absolute;
+  top: -10px;
+  left: -6px;
+  font-size: 14px;
+}
+
+/* Nombre */
+.waiting-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-100);
+}
+
+.room-code {
+  font-size: 12px;
+  color: var(--text-50);
+}
+
+.waiting-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.waiting-modal {
+  background: var(--glass-light);
+  border: 1.5px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.waiting-modal__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin-bottom: 18px;
+}
+
+/* Cartas */
+.waiting-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.waiting-card {
+  width: 36px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(251, 191, 36, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+/* Botones modal */
+.waiting-modal__actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
