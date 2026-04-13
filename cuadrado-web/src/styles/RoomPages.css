@@ -820,8 +820,48 @@
 
 /* === Waiting Room: modal de poderes ampliado === */
 .waiting-modal--powers {
-  max-width: 520px;
+  --power-cyan: #00e5ff;
+  --power-magenta: #a855f7;
+  max-width: 560px;
   text-align: center;
+  transition: max-width 220ms ease;
+}
+
+.waiting-modal--powers.waiting-modal--powers-detail {
+  max-width: 860px;
+}
+
+.powers-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.powers-fan-panel {
+  width: 100%;
+}
+
+@media (min-width: 920px) {
+  .waiting-modal--powers.waiting-modal--powers-detail .powers-layout {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .waiting-modal--powers.waiting-modal--powers-detail .powers-fan-panel {
+    flex: 0 0 280px;
+  }
+
+  .waiting-modal--powers.waiting-modal--powers-detail .power-detail {
+    flex: 1;
+    margin-bottom: 0;
+    text-align: left;
+  }
+
+  .waiting-modal--powers.waiting-modal--powers-detail .power-detail__suits {
+    justify-content: flex-start;
+  }
 }
 
 /* Icono en el modal de sala cerrada */
@@ -851,41 +891,44 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 20px;
 }
 
 .fan-card {
-  width: 44px;
-  height: 60px;
+  width: 48px;
+  height: 66px;
   border-radius: 8px;
-  border: 1.5px solid rgba(120, 210, 255, 0.45);
-  background: rgba(17, 40, 88, 0.7);
+  border: 1.5px solid rgba(0, 229, 255, 0.35);
+  background:
+    linear-gradient(160deg, rgba(0, 229, 255, 0.16) 0%, rgba(168, 85, 247, 0.08) 55%, rgba(7, 16, 37, 0.92) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: transform 160ms var(--spring, ease), border-color 160ms, box-shadow 160ms;
   font-family: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .fan-card:hover {
   transform: translateY(-5px);
-  border-color: var(--neon-cyan);
-  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.2);
+  border-color: var(--power-cyan);
+  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.22), 0 6px 22px rgba(168, 85, 247, 0.16);
 }
 
 .fan-card--selected {
-  border-color: var(--neon-cyan);
-  background: rgba(0, 229, 255, 0.12);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+  border-color: rgba(168, 85, 247, 0.78);
+  background:
+    linear-gradient(160deg, rgba(0, 229, 255, 0.24) 0%, rgba(168, 85, 247, 0.24) 72%, rgba(9, 18, 42, 0.9) 100%);
+  box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.44), 0 0 18px rgba(0, 229, 255, 0.24), 0 0 24px rgba(168, 85, 247, 0.2);
   transform: translateY(-6px);
 }
 
 .fan-card__value {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--text-100);
   font-family: var(--font-display);
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.28), 0 0 10px rgba(168, 85, 247, 0.2);
 }
 
 /* === Detalle de palo al seleccionar una carta === */
@@ -893,9 +936,20 @@
   margin-bottom: 20px;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid var(--glass-border);
-  background: rgba(17, 40, 88, 0.4);
+  border: 1px solid rgba(0, 229, 255, 0.26);
+  background:
+    linear-gradient(145deg, rgba(0, 229, 255, 0.08) 0%, rgba(168, 85, 247, 0.08) 55%, rgba(11, 23, 51, 0.78) 100%);
+  box-shadow: inset 0 0 24px rgba(0, 229, 255, 0.05), inset 0 0 28px rgba(168, 85, 247, 0.05);
   animation: fadeSlideIn 200ms ease-out;
+}
+
+.power-detail__title {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--power-cyan);
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.34), 0 0 12px rgba(168, 85, 247, 0.2);
 }
 
 @keyframes fadeSlideIn {
@@ -919,8 +973,9 @@
   width: 52px;
   height: 70px;
   border-radius: 8px;
-  border: 1.5px solid rgba(120, 210, 255, 0.35);
-  background: rgba(11, 23, 51, 0.7);
+  border: 1.5px solid rgba(0, 229, 255, 0.3);
+  background:
+    linear-gradient(145deg, rgba(10, 18, 39, 0.82) 0%, rgba(15, 28, 60, 0.76) 100%);
   font-size: 15px;
   font-weight: 800;
   gap: 2px;
@@ -933,10 +988,29 @@
 }
 
 /* Colores por palo */
-.suit-card--hearts   { color: #f87171; border-color: rgba(248, 113, 113, 0.5); }
-.suit-card--diamonds { color: #fb923c; border-color: rgba(251, 146, 60, 0.5); }
-.suit-card--clubs    { color: var(--text-80); border-color: rgba(120, 210, 255, 0.35); }
-.suit-card--spades   { color: var(--text-80); border-color: rgba(120, 210, 255, 0.35); }
+.suit-card--hearts {
+  color: #ff79cf;
+  border-color: rgba(255, 121, 207, 0.55);
+  background: linear-gradient(145deg, rgba(255, 121, 207, 0.16) 0%, rgba(14, 22, 45, 0.76) 100%);
+}
+
+.suit-card--diamonds {
+  color: #d69bff;
+  border-color: rgba(214, 155, 255, 0.55);
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.18) 0%, rgba(14, 22, 45, 0.76) 100%);
+}
+
+.suit-card--clubs {
+  color: #75f2ff;
+  border-color: rgba(117, 242, 255, 0.5);
+  background: linear-gradient(145deg, rgba(0, 229, 255, 0.18) 0%, rgba(14, 22, 45, 0.76) 100%);
+}
+
+.suit-card--spades {
+  color: #9fd8ff;
+  border-color: rgba(159, 216, 255, 0.5);
+  background: linear-gradient(145deg, rgba(120, 210, 255, 0.18) 0%, rgba(14, 22, 45, 0.76) 100%);
+}
 
 .power-detail__desc {
   font-size: 13px;

@@ -179,6 +179,23 @@
   background-position: center 70%;
 }
 
+.game-tapete--skin {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.game-tapete__skin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(58%, 420px);
+  max-height: 78%;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 /* === CenterPiles === */
 .center-piles {
   position: absolute;
@@ -188,6 +205,7 @@
   display: flex;
   align-items: center;
   gap: 28px;
+  z-index: 2;
 }
 
 .game-pile {
@@ -298,10 +316,12 @@
   align-items: center;
   gap: 5px;
   pointer-events: none;
+  z-index: 3;
 }
 
 /* Anillo de avatar */
 .player-avatar {
+  position: relative;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -318,10 +338,17 @@
   flex-shrink: 0;
 }
 
+.player-avatar__fallback {
+  line-height: 1;
+}
+
 .player-avatar img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 1;
 }
 
 .player-avatar--me {
@@ -389,6 +416,7 @@
       -45deg, transparent, transparent 2.5px,
       rgba(0, 229, 255, 0.09) 2.5px, rgba(0, 229, 255, 0.09) 3.5px
     );
+  z-index: 1;
 }
 
 /* Imagen de skin superpuesta al patrón */
@@ -398,7 +426,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* Slot propio (pos 4 — abajo): cartas más grandes y prominentes */

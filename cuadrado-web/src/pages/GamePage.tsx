@@ -32,6 +32,7 @@ interface MockPlayer {
   avatarUrl: string | null;
   cardSkinUrl: string | null;
   isMe?: boolean;
+  isBot?: boolean;
 }
 
 const MOCK_TURN_SECONDS = 30;
@@ -108,10 +109,16 @@ function PlayerSlot({
       style={{ left, top }}
     >
       <div className={`player-avatar${player.isMe ? ' player-avatar--me' : ''}`}>
-        {player.avatarUrl
-          ? <img src={player.avatarUrl} alt={player.name} />
-          : player.name.charAt(0).toUpperCase()
-        }
+        <span className="player-avatar__fallback" aria-hidden="true">
+          {player.name.charAt(0).toUpperCase() || '?'}
+        </span>
+        {player.avatarUrl && (
+          <img
+            src={player.avatarUrl}
+            alt={player.name}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
       </div>
       <div className="player-info">
         <span className="player-name">{player.name}</span>
@@ -158,7 +165,8 @@ export default function GamePage() {
     getEquipped(token).then(setEquippedSkins).catch(() => {});
   }, []);
 
-  // Lista dinámica de jugadores: usuario real + otros jugadores de sala + bots
+  // Lista dinámica de jugadores: usuario local + resto de jugadores recibidos por socket
+  // (incluye bots si el backend los ha añadido al iniciar la partida).
   const allPlayers = useMemo((): MockPlayer[] => {
     const me: MockPlayer = {
       id: currentUserId || 'me',
@@ -170,37 +178,22 @@ export default function GamePage() {
       isMe: true,
     };
 
-    if (!roomState) {
-      return [
-        me,
-        { id: 'bot1', name: 'Bot 1', elo: 1200, cardCount: 4, avatarUrl: DEFAULT_AVATAR_URL, cardSkinUrl: DEFAULT_CARD_URL },
-        { id: 'bot2', name: 'Bot 2', elo: 1200, cardCount: 4, avatarUrl: DEFAULT_AVATAR_URL, cardSkinUrl: DEFAULT_CARD_URL },
-        { id: 'bot3', name: 'Bot 3', elo: 1200, cardCount: 4, avatarUrl: DEFAULT_AVATAR_URL, cardSkinUrl: DEFAULT_CARD_URL },
-      ];
-    }
+    if (!roomState) return [me];
 
-    const realOthers: MockPlayer[] = roomState.players
+    const others: MockPlayer[] = roomState.players
       .filter(p => p.userId !== currentUserId)
       .map(p => ({
         id: p.userId,
-        name: p.userId,
+        name: p.controlador === 'bot' ? (p.nombreEnPartida ?? 'Bot') : p.userId,
         elo: 1200,
         cardCount: 4,
+        // No hay endpoint para skins equipadas de terceros: usar defaults visibles.
         avatarUrl: DEFAULT_AVATAR_URL,
         cardSkinUrl: DEFAULT_CARD_URL,
+        isBot: p.controlador === 'bot',
       }));
 
-    const botCount = Math.max(0, roomState.rules.maxPlayers - roomState.players.length);
-    const bots: MockPlayer[] = Array.from({ length: botCount }, (_, i) => ({
-      id: `bot-${i + 1}`,
-      name: `Bot ${i + 1}`,
-      elo: 1200,
-      cardCount: 4,
-      avatarUrl: DEFAULT_AVATAR_URL,
-      cardSkinUrl: DEFAULT_CARD_URL,
-    }));
-
-    return [me, ...realOthers, ...bots];
+    return [me, ...others];
   }, [currentUserId, user?.eloRating, equippedSkins, roomState]);
 
   // URL del tapete equipado (null → degradado CSS por defecto)
@@ -402,9 +395,17 @@ export default function GamePage() {
       {/* ── Tablero ── */}
       <div className="game-board" ref={boardRef}>
         <div
-          className="game-tapete"
-          style={tapeteUrl ? { backgroundImage: `url(${tapeteUrl})` } : undefined}
+          className={`game-tapete${tapeteUrl ? ' game-tapete--skin' : ''}`}
         >
+          {tapeteUrl && (
+            <img
+              className="game-tapete__skin"
+              src={tapeteUrl}
+              alt="Tapete equipado"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
+
           {/* Pilas centrales */}
           <div className="center-piles" ref={pilesRef}>
             {/* Mazo de robar: 5 capas de profundidad + carta superior */}

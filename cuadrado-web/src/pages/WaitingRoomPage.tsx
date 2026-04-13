@@ -64,21 +64,30 @@ export default function WaitingRoomPage() {
   useEffect(() => {
     let isMounted = true;
 
+    // Handlers nombrados para poder eliminarlos individualmente en cleanup.
+    // socket.off sin referencia de función eliminaría TODOS los listeners del evento,
+    // incluyendo el listener permanente de caché de room.service.ts.
+    const handleRoomUpdate = (state: RoomState) => {
+      if (!isMounted) return;
+      setRoom(state);
+      // Navegar a /game para todos los jugadores (no solo el host) cuando inicia la partida
+      if (state.started) {
+        navigate('/game');
+      }
+    };
+
+    const handleRoomClosed = () => {
+      if (!isMounted) return;
+      if (isLeavingRef.current) return;
+      disconnectRoomsSocket();
+      setRoom(null);
+      setClosedByHost(true);
+    };
+
     const init = async () => {
       const socket = await connectRoomsSocket();
-
-      socket.on('room:update', (state: RoomState) => {
-        if (!isMounted) return;
-        setRoom(state);
-      });
-
-      socket.on('room:closed', () => {
-        if (!isMounted) return;
-        if (isLeavingRef.current) return;
-        disconnectRoomsSocket();
-        setRoom(null);
-        setClosedByHost(true);
-      });
+      socket.on('room:update', handleRoomUpdate);
+      socket.on('room:closed', handleRoomClosed);
     };
 
     init();
@@ -86,8 +95,8 @@ export default function WaitingRoomPage() {
     return () => {
       isMounted = false;
       const socket = getRoomsSocket();
-      socket?.off('room:update');
-      socket?.off('room:closed');
+      socket?.off('room:update', handleRoomUpdate);
+      socket?.off('room:closed', handleRoomClosed);
     };
   }, [navigate]);
 
@@ -126,14 +135,17 @@ export default function WaitingRoomPage() {
       }
       setLocalBots(prev => [...prev, { userId: `Bot ${i + 1}`, isBot: true }]);
     }
-    setTimeout(async () => {
-      try {
-        await startRoom(room.code);
-        navigate('/game');
-      } catch (err) {
-        console.error(err);
-      }
-    }, 600);
+    // Esperar a que la animación del último bot termine antes de enviar la señal
+    await new Promise<void>(r => setTimeout(r, 600));
+    try {
+      await startRoom(room.code, true);  // fillBots=true: el backend añadirá los bots reales
+      navigate('/game');
+    } catch (err) {
+      console.error(err);
+      // Restaurar estado para que el usuario pueda reintentar
+      setFillingBots(false);
+      setLocalBots([]);
+    }
   };
 
   const handleBack = async () => {
@@ -387,7 +399,7 @@ export default function WaitingRoomPage() {
           onClick={() => setShowPowers(false)}
         >
           <div
-            className="waiting-modal waiting-modal--powers"
+            className={`waiting-modal waiting-modal--powers${selectedPower ? ' waiting-modal--powers-detail' : ''}`}
             onClick={e => e.stopPropagation()}
           >
             <h3 className="waiting-modal__title">Cartas con poderes activos</h3>
@@ -395,40 +407,45 @@ export default function WaitingRoomPage() {
             {room.rules.enabledPowers.length === 0 ? (
               <p className="powers-empty">No hay poderes activos en esta sala.</p>
             ) : (
-              <div className="powers-fan">
-                {room.rules.enabledPowers.map((p, i) => (
-                  <button
-                    key={p}
-                    className={`fan-card${selectedPower === p ? ' fan-card--selected' : ''}`}
-                    style={{ '--fan-index': i, '--fan-total': room.rules.enabledPowers.length } as React.CSSProperties}
-                    onClick={() => setSelectedPower(prev => prev === p ? null : p)}
-                  >
-                    <span className="fan-card__value">{p}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Detalle de la carta seleccionada: los 4 palos */}
-            {selectedPower && (
-              <div className="power-detail">
-                <div className="power-detail__suits">
-                  <span className="suit-card suit-card--hearts">
-                    {selectedPower}<span className="suit">♥</span>
-                  </span>
-                  <span className="suit-card suit-card--diamonds">
-                    {selectedPower}<span className="suit">♦</span>
-                  </span>
-                  <span className="suit-card suit-card--clubs">
-                    {selectedPower}<span className="suit">♣</span>
-                  </span>
-                  <span className="suit-card suit-card--spades">
-                    {selectedPower}<span className="suit">♠</span>
-                  </span>
+              <div className="powers-layout">
+                <div className="powers-fan-panel">
+                  <div className="powers-fan">
+                    {room.rules.enabledPowers.map((p, i) => (
+                      <button
+                        key={p}
+                        className={`fan-card${selectedPower === p ? ' fan-card--selected' : ''}`}
+                        style={{ '--fan-index': i, '--fan-total': room.rules.enabledPowers.length } as React.CSSProperties}
+                        onClick={() => setSelectedPower(prev => prev === p ? null : p)}
+                      >
+                        <span className="fan-card__value">{p}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p className="power-detail__desc">
-                  {POWER_DESCRIPTIONS[selectedPower] ?? 'Poder activo en esta sala.'}
-                </p>
+
+                {/* Detalle de la carta seleccionada: los 4 palos */}
+                {selectedPower && (
+                  <div className="power-detail">
+                    <h4 className="power-detail__title">Carta {selectedPower}</h4>
+                    <div className="power-detail__suits">
+                      <span className="suit-card suit-card--hearts">
+                        {selectedPower}<span className="suit">♥</span>
+                      </span>
+                      <span className="suit-card suit-card--diamonds">
+                        {selectedPower}<span className="suit">♦</span>
+                      </span>
+                      <span className="suit-card suit-card--clubs">
+                        {selectedPower}<span className="suit">♣</span>
+                      </span>
+                      <span className="suit-card suit-card--spades">
+                        {selectedPower}<span className="suit">♠</span>
+                      </span>
+                    </div>
+                    <p className="power-detail__desc">
+                      {POWER_DESCRIPTIONS[selectedPower] ?? 'Poder activo en esta sala.'}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

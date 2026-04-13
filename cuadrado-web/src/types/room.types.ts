@@ -25,6 +25,9 @@ export interface RoomPlayerState {
   /** ISO string en el cliente (Date en el backend) */
   joinedAt: string;
   connected: boolean;
+  controlador: 'humano' | 'bot';
+  /** Solo presente si controlador === 'bot' (ej: "bot1") */
+  nombreEnPartida?: string;
 }
 
 export interface RoomState {
