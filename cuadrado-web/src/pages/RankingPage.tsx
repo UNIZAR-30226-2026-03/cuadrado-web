@@ -7,19 +7,20 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import GameHeader from '../components/GameHeader';
+import GameHeader from '../components/game/GameHeader';
 import { useAuth } from '../context/AuthContext';
 import { getRanking } from '../services/ranking.service';
 import { getEquipped } from '../services/skin.service';
 import type { RankingEntry } from '../types/ranking.types';
 import '../styles/RankingPage.css';
 import { DEFAULT_AVATAR_URL } from '../config/skinDefaults';
+import { getAccessToken } from '../utils/token';
 
 export default function RankingPage() {
   const navigate = useNavigate();
   const { user }  = useAuth();
   const listRef   = useRef<HTMLDivElement>(null);
-  const accessToken = localStorage.getItem('accessToken');
+  const accessToken = getAccessToken();
 
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(() => Boolean(accessToken));
@@ -91,7 +92,7 @@ export default function RankingPage() {
       : null;
 
   return (
-    <div className="skin-page">
+    <div className="app-page">
       <GameHeader title="Ranking Global" onBack={() => navigate(-1)} />
 
       <div className="ranking-page__content">
@@ -201,3 +202,4 @@ function RankingRow({ entry, isMe = false }: RankingRowProps) {
     </div>
   );
 }
+

@@ -26,6 +26,7 @@ import type {
 } from '../types/auth.types';
 
 import type { UserProfile } from '../types/user.types';
+import { getAccessToken, setTokens, clearTokens } from '../utils/token';
 
 /** Contrato del contexto: estado y acciones expuestos a los hijos */
 interface AuthContextType {
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Carga el perfil del usuario desde el backend. Fallo silencioso para evitar logout en cascada. */
   async function fetchProfile() {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) return;
     try {
       const profile = await getProfileRequest(token);
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Al montar: si hay token guardado, restauramos la sesion
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (token) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsAuthenticated(true);
@@ -74,8 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** Autentica al usuario, guarda tokens y carga el perfil completo */
   async function login(data: LoginPayload) {
     const res = await loginRequest(data);
-    localStorage.setItem('accessToken', res.accessToken);
-    localStorage.setItem('refreshToken', res.refreshToken);
+    setTokens(res.accessToken, res.refreshToken);
     if (res.user) {
       setUser({
         username:  res.user.username,
@@ -94,15 +94,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Elimina los tokens y limpia el estado */
   function logout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearTokens();
     setUser(null);
     setIsAuthenticated(false);
   }
 
   /** Cambia la contrasena del usuario autenticado */
   async function changePassword(data: ChangePasswordPayload) {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) throw new Error('No autenticado');
     await changePasswordRequest(data, token);
   }

@@ -1,11 +1,11 @@
-// components/ErrorModal.tsx - Modal de error de conexion con el backend
+// components/modals/ErrorModal.tsx - Modal de error de conexión con el backend.
 //
-// Patron de cierre:
-//   - Clic en el overlay → cierra el modal
-//   - Clic dentro del modal → stopPropagation() evita propagacion al overlay
-//   - Boton "Volver" → cierra explicitamente
+// Patrón de cierre:
+//   - Clic en overlay → cierra el modal
+//   - Clic dentro del modal → stopPropagation() evita propagación al overlay
+//   - Botón "Volver" → cierra explícitamente
 
-import '../styles/ErrorModal.css';
+import '../../styles/ErrorModal.css';
 
 interface ErrorModalProps {
   onClose: () => void;
@@ -20,7 +20,7 @@ export default function ErrorModal({ onClose }: ErrorModalProps) {
         <h2 className="error-modal__title">ERROR DE CONEXION</h2>
         <p className="error-modal__text">
           No se ha podido conectar con el servidor.<br />
-          Comprueba tu conexion e intentalo de nuevo.
+          Comprueba tu conexión e inténtalo de nuevo.
         </p>
         <button className="error-modal__btn" onClick={onClose}>
           Volver

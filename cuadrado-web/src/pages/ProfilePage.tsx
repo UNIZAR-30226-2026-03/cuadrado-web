@@ -6,11 +6,12 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import GameHeader from '../components/GameHeader';
+import GameHeader from '../components/game/GameHeader';
 import { useAuth } from '../context/AuthContext';
 import { getEquipped } from '../services/skin.service';
 import { getMyPosition } from '../services/ranking.service';
 import { DEFAULT_AVATAR_URL } from '../config/skinDefaults';
+import { getAccessToken } from '../utils/token';
 import '../styles/ProfilePage.css';
 
 export default function ProfilePage() {
@@ -24,7 +25,7 @@ export default function ProfilePage() {
 
   // Carga la URL real del avatar equipado y la posición en el ranking
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) return;
     getEquipped(token).then(eq => setAvatarUrl(eq.avatar)).catch(() => {});
     getMyPosition(token).then(pos => setRankPosition(pos)).catch(() => {});
@@ -69,9 +70,9 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="skin-page profile-page">
+      <div className="app-page profile-page">
         <GameHeader title="Perfil" onBack={() => navigate(-1)} />
-        <main className="skin-page__content">
+        <main className="app-page__content">
           <div className="profile-container">
             <p style={{ textAlign: 'center', color: 'var(--text-50)', paddingTop: 40 }}>
               Cargando perfil…
@@ -83,10 +84,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="skin-page profile-page">
+    <div className="app-page profile-page">
       <GameHeader title="Mi Perfil" onBack={() => navigate(-1)} />
 
-      <main className="skin-page__content">
+      <main className="app-page__content">
         <div className="profile-container" ref={containerRef}>
 
           {/* === Hero === */}
@@ -184,3 +185,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

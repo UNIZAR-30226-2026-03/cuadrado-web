@@ -6,7 +6,7 @@
 // Ambas acciones llaman a room.service::joinRoom y navegan a /waiting-room.
 
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import GameHeader from '../components/GameHeader';
+import GameHeader from '../components/game/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { listPublicRooms, joinRoom } from '../services/room.service';
@@ -31,6 +31,9 @@ export default function JoinRoomPage() {
 
   // Entrada escalonada de secciones
   useLayoutEffect(() => {
+    const scope = pageRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       gsap.from('.room-section', {
         y: 28,
@@ -40,13 +43,17 @@ export default function JoinRoomPage() {
         stagger: 0.1,
         clearProps: 'all',
       });
-    }, pageRef);
+    }, scope);
     return () => ctx.revert();
   }, []);
 
   // Stagger de filas cuando la lista carga
   useLayoutEffect(() => {
     if (loadingList || rooms.length === 0) return;
+
+    const scope = pageRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       gsap.from('.room-row', {
         x: -16,
@@ -56,7 +63,7 @@ export default function JoinRoomPage() {
         stagger: 0.04,
         clearProps: 'all',
       });
-    }, pageRef);
+    }, scope);
     return () => ctx.revert();
   }, [loadingList, rooms.length]);
 
@@ -112,21 +119,21 @@ export default function JoinRoomPage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="skin-page" ref={pageRef}>
+    <div className="app-page" ref={pageRef}>
       <GameHeader title="Buscar Partida" onBack={() => navigate('/home')} />
 
-      <main className="skin-page__content room-page__content">
+      <main className="app-page__content room-page__content">
         {/* ── Salas Públicas ─────────────────────────────────────────── */}
         <section className="room-section">
           <p className="room-section__title">Salas Públicas</p>
 
-          <div className="skin-page__panel room-panel room-panel--list">
+          <div className="app-page__panel room-panel room-panel--list">
             {loadingList && (
-              <div className="skin-page__loading">Cargando salas…</div>
+              <div className="app-page__loading">Cargando salas…</div>
             )}
 
             {!loadingList && listError && (
-              <div className="skin-page__error" role="alert">
+              <div className="app-page__error" role="alert">
                 {listError}
                 <button
                   onClick={fetchRooms}
@@ -138,7 +145,7 @@ export default function JoinRoomPage() {
             )}
 
             {!loadingList && !listError && rooms.length === 0 && (
-              <div className="skin-empty">
+              <div className="app-page__empty">
                 <p>No hay salas públicas disponibles.</p>
               </div>
             )}
@@ -188,7 +195,7 @@ export default function JoinRoomPage() {
         <section className="room-section">
           <p className="room-section__title">Salas Privadas</p>
 
-          <div className="skin-page__panel room-panel">
+          <div className="app-page__panel room-panel">
             <div className="room-private">
               <div className="room-private__field">
                 <input
@@ -213,7 +220,7 @@ export default function JoinRoomPage() {
               </div>
 
               {privateError && (
-                <div className="skin-page__error" role="alert">{privateError}</div>
+                <div className="app-page__error" role="alert">{privateError}</div>
               )}
             </div>
           </div>
@@ -232,3 +239,4 @@ export default function JoinRoomPage() {
     </div>
   );
 }
+

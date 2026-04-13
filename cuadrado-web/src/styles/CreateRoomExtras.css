@@ -166,7 +166,7 @@
 }
 
 /* === Modificador: contenido de configuración de partida con scroll propio === */
-.skin-page__content--room-config {
+.app-page__content--room-config {
   overflow-y: auto;
   padding-bottom: 24px;
 }
@@ -271,3 +271,4 @@
     max-height: calc(96vh - 138px);
   }
 }
+

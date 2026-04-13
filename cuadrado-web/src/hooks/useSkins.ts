@@ -21,6 +21,7 @@ import {
   DEFAULT_AVATAR_URL,
   DEFAULT_CARD_URL,
 } from '../config/skinDefaults';
+import { getAccessToken } from '../utils/token';
 import type { Skin, SkinType } from '../types/skin.types';
 
 type EquippedSkinIds = Record<SkinType, string | null>;
@@ -86,7 +87,7 @@ export function useSkins(): UseSkinsReturn {
 
   /** Carga tienda e inventario en paralelo */
   const refresh = useCallback(async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       setLoading(false);
       return;
@@ -116,6 +117,19 @@ export function useSkins(): UseSkinsReturn {
     }
   }, [fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
 
+  /** Re-sincroniza inventario + equipadas tras comprar/equipar/desequipar */
+  const syncInventory = useCallback(async (token: string) => {
+    const [, rawInventory, equipped] = await Promise.all([
+      fetchProfile().catch(() => {}),
+      getInventory(token),
+      getEquipped(token),
+    ]);
+
+    const filteredInventory = (rawInventory ?? []).filter((s: Skin) => !isDefaultSkin(s));
+    setInventory(filteredInventory);
+    setEquippedSkinIds(mapEquippedUrlsToIds(filteredInventory, equipped));
+  }, [fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
+
   // Carga inicial
   useEffect(() => {
     refresh();
@@ -123,20 +137,13 @@ export function useSkins(): UseSkinsReturn {
 
   /** Compra una skin: re-fetch inventario + actualiza cubitos en header */
   const buy = useCallback(async (skinId: string) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) throw new Error('No autenticado');
 
     setError(null);
     try {
       await buySkin(skinId, token);
-      const [, inventoryDataRaw, equippedData] = await Promise.all([
-        fetchProfile().catch(() => {}),
-        getInventory(token),
-        getEquipped(token),
-      ]);
-      const inventoryData = (inventoryDataRaw ?? []).filter((s: Skin) => !isDefaultSkin(s));
-      setInventory(inventoryData);
-      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
+      await syncInventory(token);
     } catch (err) {
       // Si el backend falla con 500, ofrecemos un fallback local (simulación)
       const msg = err instanceof Error ? err.message : String(err);
@@ -153,9 +160,7 @@ export function useSkins(): UseSkinsReturn {
           });
 
           // Actualizar saldo en el contexto local
-          try {
-            updateUser?.({ cubitos: (user?.cubitos ?? 0) - skinObj.price });
-          } catch {}
+          updateUser?.({ cubitos: (user?.cubitos ?? 0) - skinObj.price });
 
           setError('Compra simulada localmente (backend no disponible)');
           return; // no re-throw: consider purchase handled locally
@@ -165,33 +170,26 @@ export function useSkins(): UseSkinsReturn {
       setError(err instanceof Error ? err.message : 'Error al comprar skin');
       throw err; // re-throw for other error types
     }
-  }, [fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
+  }, [store, syncInventory, updateUser, user?.cubitos]);
 
   /** Equipa una skin: re-fetch inventario + actualiza perfil */
   const equip = useCallback(async (skinId: string) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) throw new Error('No autenticado');
 
     setError(null);
     try {
       await equipSkin(skinId, token);
-      const [, inventoryDataRaw, equippedData] = await Promise.all([
-        fetchProfile().catch(() => {}),
-        getInventory(token),
-        getEquipped(token),
-      ]);
-      const inventoryData = (inventoryDataRaw ?? []).filter((s: Skin) => !isDefaultSkin(s));
-      setInventory(inventoryData);
-      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
+      await syncInventory(token);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al equipar skin');
       throw err;
     }
-  }, [fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
+  }, [syncInventory]);
 
   /** Desequipa la skin actual: re-fetch inventario + actualiza perfil */
   const unequip = useCallback(async (type: SkinType) => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) throw new Error('No autenticado');
 
     if (!equippedSkinIds[type]) {
@@ -201,19 +199,12 @@ export function useSkins(): UseSkinsReturn {
     setError(null);
     try {
       await unequipSkin(type, token);
-      const [, inventoryDataRaw, equippedData] = await Promise.all([
-        fetchProfile().catch(() => {}),
-        getInventory(token),
-        getEquipped(token),
-      ]);
-      const inventoryData = (inventoryDataRaw ?? []).filter((s: Skin) => !isDefaultSkin(s));
-      setInventory(inventoryData);
-      setEquippedSkinIds(mapEquippedUrlsToIds(inventoryData, equippedData));
+      await syncInventory(token);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al desequipar skin');
       throw err;
     }
-  }, [equippedSkinIds, fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
+  }, [equippedSkinIds, syncInventory]);
 
   return { store, inventory, equippedSkinIds, loading, error, buy, equip, unequip, refresh };
 }

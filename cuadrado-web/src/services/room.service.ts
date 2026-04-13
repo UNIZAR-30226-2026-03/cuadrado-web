@@ -8,13 +8,14 @@
 
 import { io, type Socket } from 'socket.io-client';
 import { API_URL } from './api.config';
+import { getAccessToken } from '../utils/token';
 import type {
   CreateRoomPayload,
   PublicRoomSummary,
   RoomState,
 } from '../types/room.types';
 
-interface RoomsAuth {
+interface SocketAuthOptions {
   accessToken?: string;
   userId?: string;
 }
@@ -82,14 +83,10 @@ export function getLastRoomState(): RoomState | null {
 }
 
 function getStoredAccessToken(): string | undefined {
-  try {
-    return localStorage.getItem('accessToken') || undefined;
-  } catch {
-    return undefined;
-  }
+  return getAccessToken() ?? undefined;
 }
 
-function buildHandshake(auth?: RoomsAuth): Record<string, string> {
+function buildHandshake(auth?: SocketAuthOptions): Record<string, string> {
   const payload: Record<string, string> = {};
   const accessToken = auth?.accessToken ?? getStoredAccessToken();
 
@@ -161,7 +158,7 @@ async function connectWithTimeout(target: RoomsSocket, timeoutMs = DEFAULT_TIMEO
   });
 }
 
-async function ensureSocketConnected(auth?: RoomsAuth): Promise<RoomsSocket> {
+async function ensureSocketConnected(auth?: SocketAuthOptions): Promise<RoomsSocket> {
   const handshake = buildHandshake(auth);
 
   if (!socket) {
@@ -251,7 +248,7 @@ function emitWithAck<T>(event: keyof RoomsClientEvents, payload?: unknown): Prom
   });
 }
 
-export async function connectRoomsSocket(auth?: RoomsAuth): Promise<RoomsSocket> {
+export async function connectRoomsSocket(auth?: SocketAuthOptions): Promise<RoomsSocket> {
   return ensureSocketConnected(auth);
 }
 
@@ -269,7 +266,7 @@ export function disconnectRoomsSocket(): void {
 
 export async function createRoom(
   payload: CreateRoomPayload,
-  auth?: RoomsAuth,
+  auth?: SocketAuthOptions,
 ): Promise<{ roomCode: string; roomName: string }> {
   await ensureSocketConnected(auth);
   const res = await emitWithAck<CreateRoomResponse>('rooms:create', payload);
@@ -278,26 +275,26 @@ export async function createRoom(
 
 export async function joinRoom(
   roomCode: string,
-  auth?: RoomsAuth,
+  auth?: SocketAuthOptions,
 ): Promise<{ roomCode: string; roomName: string }> {
   await ensureSocketConnected(auth);
   const res = await emitWithAck<JoinRoomResponse>('rooms:join', { roomCode });
   return { roomCode: res.roomCode, roomName: res.roomName };
 }
 
-export async function listPublicRooms(auth?: RoomsAuth): Promise<PublicRoomSummary[]> {
+export async function listPublicRooms(auth?: SocketAuthOptions): Promise<PublicRoomSummary[]> {
   await ensureSocketConnected(auth);
   const res = await emitWithAck<ListPublicRoomsResponse>('rooms:list-public');
   return res.rooms;
 }
 
-export async function leaveRoom(auth?: RoomsAuth): Promise<void> {
+export async function leaveRoom(auth?: SocketAuthOptions): Promise<void> {
   await ensureSocketConnected(auth);
   await emitWithAck<LeaveRoomResponse>('rooms:leave');
   lastRoomState = null;
 }
 
-export async function startRoom(roomCode: string, auth?: RoomsAuth): Promise<void> {
+export async function startRoom(roomCode: string, auth?: SocketAuthOptions): Promise<void> {
   await ensureSocketConnected(auth);
   await emitWithAck<StartRoomResponse>('rooms:start', { roomCode });
 }

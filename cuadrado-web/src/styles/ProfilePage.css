@@ -400,7 +400,7 @@
 /* ===============================
    Ajustes para pantallas de poca altura
    Permiten que la pantalla de perfil haga scroll vertical
-   sin afectar otras páginas que usan `.skin-page`.
+   sin afectar otras páginas que usan `.app-page`.
    =============================== */
 @media (max-height: 720px) {
   .profile-page {
@@ -410,7 +410,7 @@
   }
 
   /* Hacer scroll interno si el contenido supera la altura disponible */
-  .profile-page .skin-page__content {
+  .profile-page .app-page__content {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -420,3 +420,4 @@
     padding-bottom: 120px;
   }
 }
+

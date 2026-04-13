@@ -3,8 +3,8 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
-import SettingsModal from './components/SettingsModal';
-import CreateRoomModal from './components/CreateRoomModal';
+import SettingsModal from './components/modals/SettingsModal';
+import CreateRoomModal from './components/modals/CreateRoomModal';
 
 import WelcomePage from './pages/WelcomePage';
 import LoginPage from './pages/LoginPage';
@@ -16,7 +16,6 @@ import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import InventoryPage from './pages/InventoryPage';
 import JoinRoomPage from './pages/JoinRoomPage';
-import CreateRoomPage from './pages/CreateRoomPage';
 import WaitingRoomPage from './pages/WaitingRoomPage';
 import RulesPage from './pages/RulesPage';
 import GamePage from './pages/GamePage';
@@ -58,7 +57,6 @@ function AppInner() {
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/join-room" element={<JoinRoomPage />} />
-        <Route path="/create-room" element={<CreateRoomPage />} />
         <Route path="/waiting-room" element={<WaitingRoomPage />} />
         <Route path="/rules" element={<RulesPage />} />
         <Route path="/game" element={<GamePage />} />

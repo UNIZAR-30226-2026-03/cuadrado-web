@@ -1,12 +1,12 @@
-// components/SkinCard.tsx - Tarjeta reutilizable de skin cosmética
+// components/skins/SkinCard.tsx - Tarjeta reutilizable de skin cosmética.
 //
 // 5 variantes: shop-available, shop-owned, shop-equipped,
 //              inventory-normal, inventory-equipped.
 // Estructura vertical: imagen → badge de estado + nombre → botón de acción.
 
 import { useState } from 'react';
-import type { Skin } from '../types/skin.types';
-import '../styles/SkinCard.css';
+import type { Skin } from '../../types/skin.types';
+import '../../styles/SkinCard.css';
 
 export type SkinVariant =
   | 'shop-available'

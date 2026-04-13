@@ -6,7 +6,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import PortraitOverlay from '../components/PortraitOverlay/PortraitOverlay';
+import PlayerSlot, { type GamePlayer } from '../components/room/PlayerSlot';
 import {
   connectRoomsSocket,
   disconnectRoomsSocket,
@@ -19,23 +19,13 @@ import type { EquippedSkinUrls } from '../services/skin.service';
 import type { RoomState } from '../types/room.types';
 import { useAuth } from '../context/AuthContext';
 import { DEFAULT_AVATAR_URL, DEFAULT_CARD_URL } from '../config/skinDefaults';
+import { getAccessToken } from '../utils/token';
 import '../styles/AppModal.css';
 import '../styles/GamePage.css';
 
 // ── Tipos locales ─────────────────────────────────────────────────────────────
 
-interface MockPlayer {
-  id: string;
-  name: string;
-  elo: number;
-  cardCount: number;
-  avatarUrl: string | null;
-  cardSkinUrl: string | null;
-  isMe?: boolean;
-  isBot?: boolean;
-}
-
-const MOCK_TURN_SECONDS = 30;
+const DEMO_TURN_SECONDS = 30;
 
 // ── Constantes de posicionamiento ─────────────────────────────────────────────
 // Ángulos en grados (0°=derecha, 90°=abajo, 180°=izquierda, 270°=arriba)
@@ -48,85 +38,32 @@ function getActivePositionIndices(n: number): number[] {
   return Array.from({ length: n }, (_, i) => (4 + i * step) % 8);
 }
 
-// ── Componentes auxiliares ────────────────────────────────────────────────────
+/**
+ * Ordena jugadores para fijar siempre al usuario local en la posición inferior (índice angular 4).
+ * Si no se encuentra una posición válida, mantiene el orden original.
+ */
+function orderPlayers(players: GamePlayer[], posIndices: number[]): GamePlayer[] {
+  const orderedPlayers: GamePlayer[] = new Array(players.length);
 
-/** Reverso de una carta individual */
-function CardBack({ skinUrl }: { skinUrl: string | null }) {
-  return (
-    <div className="card-back">
-      {skinUrl && (
-        <img
-          className="card-back__skin"
-          src={skinUrl}
-          alt=""
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-        />
-      )}
-    </div>
-  );
-}
+  const mePlayers = players.filter(player => player.isMe);
+  const restPlayers = players.filter(player => !player.isMe);
+  const mePosInSlots = posIndices.findIndex(index => index === 4);
 
-/** Columnas del grid según número de cartas: 1→1, 2→2, 3-4→2, 5-6→3 */
-function getCardCols(count: number): number {
-  if (count <= 2) return count;
-  if (count <= 4) return 2;
-  return 3;
-}
+  if (mePosInSlots === -1 || mePlayers.length === 0) {
+    players.forEach((player, index) => {
+      orderedPlayers[index] = player;
+    });
+    return orderedPlayers;
+  }
 
-/** Mano de cartas en cuadrícula 2 filas × N cols (columnas por estilo inline) */
-function CardHand({ count, skinUrl }: { count: number; skinUrl: string | null }) {
-  const cols = getCardCols(count);
-  return (
-    <div className="card-hand" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-      {Array.from({ length: count }, (_, i) => (
-        <CardBack key={i} skinUrl={skinUrl} />
-      ))}
-    </div>
-  );
-}
+  orderedPlayers[mePosInSlots] = mePlayers[0];
+  let restIndex = 0;
+  for (let slotIndex = 0; slotIndex < players.length; slotIndex++) {
+    if (slotIndex === mePosInSlots) continue;
+    orderedPlayers[slotIndex] = restPlayers[restIndex++];
+  }
 
-/** Slot de jugador posicionado absolutamente sobre el tapete */
-function PlayerSlot({
-  player,
-  angleRad,
-  rx,
-  ry,
-  slotRef,
-}: {
-  player: MockPlayer;
-  angleRad: number;
-  rx: number;
-  ry: number;
-  slotRef?: (el: HTMLDivElement | null) => void;
-}) {
-  const left = `calc(50% + ${Math.cos(angleRad) * rx}px)`;
-  const top  = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
-
-  return (
-    <div
-      ref={slotRef}
-      className={`player-slot${player.isMe ? ' player-slot--me' : ''}`}
-      style={{ left, top }}
-    >
-      <div className={`player-avatar${player.isMe ? ' player-avatar--me' : ''}`}>
-        <span className="player-avatar__fallback" aria-hidden="true">
-          {player.name.charAt(0).toUpperCase() || '?'}
-        </span>
-        {player.avatarUrl && (
-          <img
-            src={player.avatarUrl}
-            alt={player.name}
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-        )}
-      </div>
-      <div className="player-info">
-        <span className="player-name">{player.name}</span>
-        <span className="player-elo">{player.elo} ELO</span>
-      </div>
-      <CardHand count={player.cardCount} skinUrl={player.cardSkinUrl} />
-    </div>
-  );
+  return orderedPlayers;
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -160,15 +97,15 @@ export default function GamePage() {
 
   // Carga las skins equipadas del jugador local al montar
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) return;
     getEquipped(token).then(setEquippedSkins).catch(() => {});
   }, []);
 
   // Lista dinámica de jugadores: usuario local + resto de jugadores recibidos por socket
   // (incluye bots si el backend los ha añadido al iniciar la partida).
-  const allPlayers = useMemo((): MockPlayer[] => {
-    const me: MockPlayer = {
+  const allPlayers = useMemo((): GamePlayer[] => {
+    const me: GamePlayer = {
       id: currentUserId || 'me',
       name: currentUserId || 'Tú',
       elo: user?.eloRating ?? 1200,
@@ -180,7 +117,7 @@ export default function GamePage() {
 
     if (!roomState) return [me];
 
-    const others: MockPlayer[] = roomState.players
+    const others: GamePlayer[] = roomState.players
       .filter(p => p.userId !== currentUserId)
       .map(p => ({
         id: p.userId,
@@ -256,11 +193,11 @@ export default function GamePage() {
         });
       }
 
-      // 6. TurnTimerBar: animación demo de 100% → 0% en MOCK_TURN_SECONDS
+      // 6. TurnTimerBar: animación demo de 100% → 0% en DEMO_TURN_SECONDS
       if (timerFillRef.current) {
         gsap.to(timerFillRef.current, {
           scaleX: 0,
-          duration: MOCK_TURN_SECONDS,
+          duration: DEMO_TURN_SECONDS,
           ease: 'none',
           onUpdate() {
             const el = timerFillRef.current;
@@ -289,7 +226,7 @@ export default function GamePage() {
       setRoomState(state);
     };
 
-    const onRoomClosed = (_payload: { reason: string; roomCode: string }) => {
+    const onRoomClosed = () => {
       if (!isMounted) return;
       disconnectRoomsSocket();
       setRoomState(null);
@@ -355,25 +292,10 @@ export default function GamePage() {
     }
   };
 
-  // Ordenar jugadores: 'isMe' siempre en la posición angular 4 (abajo, centro)
-  const orderedPlayers: MockPlayer[] = new Array(n);
-  const mePlayers   = allPlayers.filter(p => p.isMe);
-  const restPlayers = allPlayers.filter(p => !p.isMe);
-  const mePosInSlots = posIndices.findIndex(idx => idx === 4);
-  if (mePosInSlots !== -1 && mePlayers.length > 0) {
-    orderedPlayers[mePosInSlots] = mePlayers[0];
-    let ri = 0;
-    for (let i = 0; i < n; i++) {
-      if (i !== mePosInSlots) orderedPlayers[i] = restPlayers[ri++];
-    }
-  } else {
-    allPlayers.forEach((p, i) => { orderedPlayers[i] = p; });
-  }
+  const orderedPlayers = orderPlayers(allPlayers, posIndices);
 
   return (
     <div className="game-page">
-      <PortraitOverlay />
-
       {/* ── Barra temporizador ── */}
       <div className="turn-timer-bar">
         <div className="turn-timer-bar__fill" ref={timerFillRef} />
@@ -381,7 +303,7 @@ export default function GamePage() {
 
       {/* ── Configuracion de partida ── */}
       <button
-        className="game-config-btn"
+        className="leave-game-btn"
         onClick={() => {
           setConfigError(null);
           setShowConfigModal(true);
@@ -475,7 +397,7 @@ export default function GamePage() {
           role="presentation"
         >
           <section
-            className="app-modal game-config-modal"
+            className="app-modal leave-game-modal"
             role="dialog"
             aria-modal="true"
             aria-label="Configuracion de partida"
@@ -497,19 +419,19 @@ export default function GamePage() {
             </header>
 
             <div className="app-modal__content app-modal__content--tight">
-              <div className="game-config-modal__content">
-                <p className="game-config-modal__headline">{actionLabel}</p>
-                <p className="game-config-modal__text">{actionDescription}</p>
+              <div className="leave-game-modal__content">
+                <p className="leave-game-modal__headline">{actionLabel}</p>
+                <p className="leave-game-modal__text">{actionDescription}</p>
 
                 {configError && (
-                  <div className="game-config-modal__error" role="alert">
+                  <div className="leave-game-modal__error" role="alert">
                     {configError}
                   </div>
                 )}
 
-                <div className="game-config-modal__actions">
+                <div className="leave-game-modal__actions">
                   <button
-                    className="game-config-modal__btn game-config-modal__btn--ghost"
+                    className="leave-game-modal__btn leave-game-modal__btn--ghost"
                     onClick={() => {
                       if (isLeavingRoom) return;
                       setShowConfigModal(false);
@@ -521,7 +443,7 @@ export default function GamePage() {
                   </button>
 
                   <button
-                    className="game-config-modal__btn game-config-modal__btn--danger"
+                    className="leave-game-modal__btn leave-game-modal__btn--danger"
                     onClick={handleLeaveOrCloseGame}
                     disabled={isLeavingRoom}
                   >
@@ -556,3 +478,4 @@ export default function GamePage() {
     </div>
   );
 }
+

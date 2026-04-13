@@ -6,8 +6,8 @@
 import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import GameHeader from '../components/GameHeader';
-import SkinCard from '../components/SkinCard';
+import GameHeader from '../components/game/GameHeader';
+import SkinCard from '../components/skins/SkinCard';
 import { useSkins } from '../hooks/useSkins';
 import {
   DEFAULT_AVATAR_URL,
@@ -168,6 +168,11 @@ export default function InventoryPage() {
 
   // Entrada de la página: panel de equipados + tabs deslizan desde abajo
   useLayoutEffect(() => {
+    if (loading) return;
+
+    const scope = pageRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
       tl.from('.equipped-panel', {
@@ -184,20 +189,22 @@ export default function InventoryPage() {
         ease: 'power2.out',
         clearProps: 'all',
       }, 0.1);
-      tl.from('.skin-page__panel', {
+      tl.from('.app-page__panel', {
         y: 24,
         autoAlpha: 0,
         duration: 0.4,
         ease: 'power3.out',
         clearProps: 'all',
       }, 0.15);
-    }, pageRef);
+    }, scope);
     return () => ctx.revert();
-  }, []);
+  }, [loading]);
 
   // Stagger de cards al cambiar de tab
   useEffect(() => {
-    if (!gridRef.current) return;
+    const scope = gridRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       gsap.from('.skin-card', {
         y: 14,
@@ -208,7 +215,7 @@ export default function InventoryPage() {
         stagger: { each: 0.04, from: 'start' },
         clearProps: 'all',
       });
-    }, gridRef);
+    }, scope);
     return () => ctx.revert();
   }, [activeTab]);
 
@@ -238,12 +245,12 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="skin-page" ref={pageRef}>
+    <div className="app-page" ref={pageRef}>
       <GameHeader title="Inventario" onBack={() => navigate(-1)} />
 
-      <main className="skin-page__content">
+      <main className="app-page__content">
         {loading ? (
-          <div className="skin-page__loading">Cargando inventario…</div>
+          <div className="app-page__loading">Cargando inventario…</div>
         ) : (
           <>
             {/* Panel de equipados */}
@@ -270,12 +277,12 @@ export default function InventoryPage() {
 
             {/* Panel con sort + grid */}
             <div
-              className="skin-page__panel"
+              className="app-page__panel"
               role="tabpanel"
               aria-live="polite"
               aria-atomic="false"
             >
-              {error && <div className="skin-page__error" role="alert">{error}</div>}
+              {error && <div className="app-page__error" role="alert">{error}</div>}
 
               {/* Controles de ordenado */}
               <div className="skin-sort" aria-label="Ordenar por">
@@ -294,7 +301,7 @@ export default function InventoryPage() {
 
               {/* Grid del inventario */}
               {visibleSkins.length === 0 && !showAddMore(activeTab) ? (
-                <div className="skin-empty">
+                <div className="app-page__empty">
                   <p>No tienes {TABS.find(t => t.type === activeTab)?.label.toLowerCase()} todavía.</p>
                 </div>
               ) : (
@@ -329,3 +336,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+

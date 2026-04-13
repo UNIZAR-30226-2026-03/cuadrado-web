@@ -8,7 +8,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import GameHeader from '../components/GameHeader';
+import GameHeader from '../components/game/GameHeader';
 import '../styles/RulesPage.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -229,10 +229,10 @@ export default function RulesPage() {
   }, []);
 
   return (
-    <div className="skin-page">
+    <div className="app-page">
       <GameHeader title="Reglas de Cubo" onBack={() => navigate(-1)} />
 
-      <main className="skin-page__content rules-page-content" ref={contentRef}>
+      <main className="app-page__content rules-page-content" ref={contentRef}>
         <div className="rules-container" ref={containerRef}>
 
           {/* Hero */}
@@ -486,3 +486,4 @@ export default function RulesPage() {
     </div>
   );
 }
+

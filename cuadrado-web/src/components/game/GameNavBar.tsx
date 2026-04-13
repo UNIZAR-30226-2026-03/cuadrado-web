@@ -1,19 +1,21 @@
-// components/GameNavBar.tsx - Barra de navegacion inferior del lobby
+// components/game/GameNavBar.tsx - Barra de navegación inferior del lobby
 //
-// 5 botones: Inventario, Tienda, Unirse (primario/dorado, central),
-// Crear Partida y Perfil. Iconos line-art SVG monocromaticos con glow en hover.
+// 5 botones: Tienda, Inventario, Unirse (primario/dorado, central),
+// Crear Partida y Perfil. Iconos line-art SVG monocromáticos con glow en hover.
 
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useModal } from '../context/ModalContext';
-import '../styles/GameNavBar.css';
+import { useModal } from '../../context/ModalContext';
+import '../../styles/GameNavBar.css';
 
 interface NavItem {
   icon: string; // clave del mapa de iconos SVG
   label: string;
   route: string;
-  primary?: boolean; // true solo para el boton central destacado
+  primary?: boolean; // true solo para el botón central destacado
 }
+
+const OPEN_CREATE_ROOM_TARGET = '__open_create_room_modal__';
 
 // Iconos SVG line-art (estilo Feather/Lucide): trazo fino, sin relleno
 const NAV_ICONS: Record<string, ReactNode> = {
@@ -61,11 +63,11 @@ const NAV_ICONS: Record<string, ReactNode> = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: 'shop',      label: 'Tienda',          route: '/shop' },
-  { icon: 'inventory', label: 'Inventario',      route: '/inventory' },
-  { icon: 'join',      label: 'Unirse\na sala',  route: '/join-room', primary: true },
-  { icon: 'create',    label: 'Crear\nPartida',  route: '/create-room' },
-  { icon: 'profile',   label: 'Perfil',          route: '/profile' },
+  { icon: 'shop',      label: 'Tienda',         route: '/shop' },
+  { icon: 'inventory', label: 'Inventario',     route: '/inventory' },
+  { icon: 'join',      label: 'Unirse\na sala', route: '/join-room', primary: true },
+  { icon: 'create',    label: 'Crear\nPartida', route: OPEN_CREATE_ROOM_TARGET },
+  { icon: 'profile',   label: 'Perfil',         route: '/profile' },
 ];
 
 export default function GameNavBar() {
@@ -73,7 +75,7 @@ export default function GameNavBar() {
   const { openCreateRoomModal } = useModal();
 
   const handleClick = (route: string) => {
-    if (route === '/create-room') {
+    if (route === OPEN_CREATE_ROOM_TARGET) {
       openCreateRoomModal();
       return;
     }

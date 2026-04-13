@@ -26,10 +26,10 @@
   border-radius: var(--radius-card);
 }
 
-/* Cuando skin-page__panel y room-panel se combinan, restauramos bordes completos
-   (skin-page__panel quita el borde superior y cuadra la esquina superior-izquierda
+/* Cuando app-page__panel y room-panel se combinan, restauramos bordes completos
+   (app-page__panel quita el borde superior y cuadra la esquina superior-izquierda
    para el efecto "tab"; en páginas de sala no hay tabs, así que lo revertimos). */
-.skin-page__panel.room-panel {
+.app-page__panel.room-panel {
   border-top: 1px solid rgba(0, 229, 255, 0.22);
   border-radius: var(--radius-card);
 }
@@ -601,7 +601,7 @@
   color: var(--text-50);
 }
 
-.waiting-modal-overlay {
+.room-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.6);
@@ -611,7 +611,7 @@
   z-index: 100;
 }
 
-.waiting-modal {
+.room-modal {
   background: var(--glass-light);
   border: 1.5px solid var(--glass-border);
   border-radius: 20px;
@@ -621,14 +621,14 @@
   text-align: center;
 }
 
-.waiting-modal__title {
+.room-modal__title {
   font-family: var(--font-display);
   font-size: 18px;
   margin-bottom: 18px;
 }
 
 /* Cartas */
-.waiting-cards {
+.room-modal-cards {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -636,7 +636,7 @@
   margin-bottom: 20px;
 }
 
-.waiting-card {
+.room-modal-card {
   width: 36px;
   height: 48px;
   border-radius: 8px;
@@ -648,7 +648,7 @@
 }
 
 /* Botones modal */
-.waiting-modal__actions {
+.room-modal__actions {
   display: flex;
   justify-content: center;
   gap: 12px;
@@ -717,8 +717,9 @@
 }
 
 /* === Waiting Room: slot propio destacado === */
-.waiting-slot--self {
-  border-color: var(--neon-cyan) !important;
+.waiting-slot--self,
+.waiting-slot--self:hover {
+  border-color: var(--neon-cyan);
   box-shadow: 0 0 12px rgba(0, 229, 255, 0.25), inset 0 0 8px rgba(0, 229, 255, 0.08);
 }
 
@@ -819,7 +820,7 @@
 }
 
 /* === Waiting Room: modal de poderes ampliado === */
-.waiting-modal--powers {
+.room-modal--powers {
   --power-cyan: #00e5ff;
   --power-magenta: #a855f7;
   max-width: 560px;
@@ -827,7 +828,7 @@
   transition: max-width 220ms ease;
 }
 
-.waiting-modal--powers.waiting-modal--powers-detail {
+.room-modal--powers.room-modal--powers-detail {
   max-width: 860px;
 }
 
@@ -843,35 +844,35 @@
 }
 
 @media (min-width: 920px) {
-  .waiting-modal--powers.waiting-modal--powers-detail .powers-layout {
+  .room-modal--powers.room-modal--powers-detail .powers-layout {
     flex-direction: row;
     align-items: stretch;
     gap: 20px;
   }
 
-  .waiting-modal--powers.waiting-modal--powers-detail .powers-fan-panel {
+  .room-modal--powers.room-modal--powers-detail .powers-fan-panel {
     flex: 0 0 280px;
   }
 
-  .waiting-modal--powers.waiting-modal--powers-detail .power-detail {
+  .room-modal--powers.room-modal--powers-detail .power-detail {
     flex: 1;
     margin-bottom: 0;
     text-align: left;
   }
 
-  .waiting-modal--powers.waiting-modal--powers-detail .power-detail__suits {
+  .room-modal--powers.room-modal--powers-detail .power-detail__suits {
     justify-content: flex-start;
   }
 }
 
 /* Icono en el modal de sala cerrada */
-.waiting-modal__icon {
+.room-modal__icon {
   font-size: 36px;
   margin-bottom: 8px;
 }
 
 /* Texto del cuerpo del modal */
-.waiting-modal__body {
+.room-modal__body {
   font-size: 14px;
   color: var(--text-80);
   line-height: 1.6;
@@ -1034,11 +1035,11 @@
 }
 
 /* === WaitingRoom: modal fill-bots === */
-.waiting-modal--fill-bots {
+.room-modal--fill-bots {
   max-width: 400px;
 }
 
-.waiting-modal--fill-bots .room-cta {
+.room-modal--fill-bots .room-cta {
   min-width: 0;
   white-space: nowrap;
   font-size: 12px;

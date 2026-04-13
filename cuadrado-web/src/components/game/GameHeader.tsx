@@ -1,8 +1,8 @@
-// components/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
+// components/game/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
 
-import { useAuth } from '../context/AuthContext';
-import { useModal } from '../context/ModalContext';
-import '../styles/GameHeader.css';
+import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
+import '../../styles/GameHeader.css';
 
 interface GameHeaderProps {
   /** Título de sección mostrado en el centro. Si se omite, no se renderiza. */

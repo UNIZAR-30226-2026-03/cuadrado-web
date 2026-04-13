@@ -11,6 +11,9 @@ export function useAuthEntrance() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    const scope = containerRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
 
@@ -41,7 +44,7 @@ export function useAuthEntrance() {
         ease: 'back.out(1.8)',
         clearProps: 'all',
       }, 0.2);
-    }, containerRef);
+    }, scope);
 
     return () => ctx.revert();
   }, []);

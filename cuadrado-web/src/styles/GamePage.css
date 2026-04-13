@@ -50,7 +50,7 @@
 }
 
 /* === Boton configuracion partida === */
-.game-config-btn {
+.leave-game-btn {
   position: fixed;
   top: 18px;
   right: 18px;
@@ -68,24 +68,24 @@
   transition: background 160ms, border-color 160ms, transform 160ms;
 }
 
-.game-config-btn:hover {
+.leave-game-btn:hover {
   background: rgba(0, 229, 255, 0.16);
   border-color: rgba(0, 229, 255, 0.45);
   transform: translateY(-1px);
 }
 
-.game-config-modal {
+.leave-game-modal {
   width: min(580px, 96vw);
 }
 
-.game-config-modal__content {
+.leave-game-modal__content {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 20px 22px 22px;
 }
 
-.game-config-modal__headline {
+.leave-game-modal__headline {
   margin: 0;
   font-family: var(--font-display);
   font-size: 15px;
@@ -95,14 +95,14 @@
   color: var(--text-100);
 }
 
-.game-config-modal__text {
+.leave-game-modal__text {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-50);
 }
 
-.game-config-modal__error {
+.leave-game-modal__error {
   margin: 0;
   padding: 9px 11px;
   border-radius: 12px;
@@ -112,14 +112,14 @@
   font-size: 12px;
 }
 
-.game-config-modal__actions {
+.leave-game-modal__actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.game-config-modal__btn {
+.leave-game-modal__btn {
   border: none;
   border-radius: 999px;
   padding: 10px 18px;
@@ -131,29 +131,29 @@
   transition: transform 160ms, opacity 160ms, background 160ms;
 }
 
-.game-config-modal__btn:disabled {
+.leave-game-modal__btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
 }
 
-.game-config-modal__btn--ghost {
+.leave-game-modal__btn--ghost {
   border: 1px solid rgba(120, 210, 255, 0.35);
   background: rgba(0, 229, 255, 0.06);
   color: var(--text-80);
 }
 
-.game-config-modal__btn--ghost:hover:not(:disabled) {
+.leave-game-modal__btn--ghost:hover:not(:disabled) {
   background: rgba(0, 229, 255, 0.14);
 }
 
-.game-config-modal__btn--danger {
+.leave-game-modal__btn--danger {
   border: 1px solid rgba(255, 90, 90, 0.5);
   background: rgba(255, 90, 90, 0.18);
   color: #ffd8d8;
 }
 
-.game-config-modal__btn--danger:hover:not(:disabled) {
+.leave-game-modal__btn--danger:hover:not(:disabled) {
   background: rgba(255, 90, 90, 0.3);
   transform: translateY(-1px);
 }
@@ -419,6 +419,17 @@
   z-index: 1;
 }
 
+/* Placeholder invisible: conserva el slot para mantener memoria espacial */
+.card-back--ghost {
+  visibility: hidden;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.card-back--ghost::after {
+  display: none;
+}
+
 /* Imagen de skin superpuesta al patrón */
 .card-back__skin {
   position: absolute;
@@ -537,7 +548,7 @@
 
 /* === Responsive: portrait mobile === */
 @media (orientation: portrait) and (max-width: 600px) {
-  .game-config-btn {
+  .leave-game-btn {
     top: 12px;
     right: 12px;
     width: 38px;
@@ -545,15 +556,15 @@
     font-size: 18px;
   }
 
-  .game-config-modal__content {
+  .leave-game-modal__content {
     padding: 16px;
   }
 
-  .game-config-modal__actions {
+  .leave-game-modal__actions {
     justify-content: stretch;
   }
 
-  .game-config-modal__btn {
+  .leave-game-modal__btn {
     width: 100%;
   }
 
@@ -587,3 +598,4 @@
 
   .game-pile-card__label { font-size: 18px; }
 }
+

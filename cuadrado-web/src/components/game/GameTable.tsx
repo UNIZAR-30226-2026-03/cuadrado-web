@@ -1,4 +1,4 @@
-// components/GameTable.tsx - Mesa de juego ovalada con animacion idle automatica
+// components/game/GameTable.tsx - Mesa de juego ovalada con animacion idle automatica
 //
 // Mesa stadium con 4 jugadores (2 en movil), pilas centrales y una animacion
 // continua que simula el flujo de una partida:
@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import '../styles/GameTable.css';
+import '../../styles/GameTable.css';
 
 // --- Tipos ---
 

@@ -15,7 +15,7 @@
 
 /* Grid isometrico de fondo: desactivado por diseno */
 .iso-grid {
-  display: none !important;
+  display: none;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -25,7 +25,7 @@
 
 .iso-grid::before,
 .iso-grid::after {
-  display: none !important;
+  display: none;
 }
 
 /* Zona central: la mesa llena todo el espacio disponible entre header y navbar */

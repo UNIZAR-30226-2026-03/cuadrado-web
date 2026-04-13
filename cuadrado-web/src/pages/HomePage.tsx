@@ -8,9 +8,9 @@ import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react
 import gsap from 'gsap';
 import '../styles/HomePage.css';
 import type { CSSProperties } from 'react';
-import GameHeader from '../components/GameHeader';
-import GameTable from '../components/GameTable';
-import GameNavBar from '../components/GameNavBar';
+import GameHeader from '../components/game/GameHeader';
+import GameTable from '../components/game/GameTable';
+import GameNavBar from '../components/game/GameNavBar';
 
 // --- CubeMesh: cubo 3D CSS puro con 6 caras wireframe ---
 function CubeMesh({ size }: { size: number }) {

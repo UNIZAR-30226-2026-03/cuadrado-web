@@ -7,9 +7,9 @@
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
-import GameHeader from '../components/GameHeader';
-import SkinCard from '../components/SkinCard';
-import ConfirmModal from '../components/ConfirmModal';
+import GameHeader from '../components/game/GameHeader';
+import SkinCard from '../components/skins/SkinCard';
+import ConfirmModal from '../components/modals/ConfirmModal';
 import { useSkins } from '../hooks/useSkins';
 import type { Skin, SkinType } from '../types/skin.types';
 import '../styles/ShopPage.css';
@@ -54,6 +54,11 @@ export default function ShopPage() {
 
   // Entrada de la página: tabs + panel deslizan desde abajo
   useLayoutEffect(() => {
+    if (loading) return;
+
+    const scope = pageRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
       tl.from('.skin-tabs', {
@@ -63,20 +68,22 @@ export default function ShopPage() {
         ease: 'power2.out',
         clearProps: 'all',
       });
-      tl.from('.skin-page__panel', {
+      tl.from('.app-page__panel', {
         y: 24,
         autoAlpha: 0,
         duration: 0.45,
         ease: 'power3.out',
         clearProps: 'all',
       }, 0.1);
-    }, pageRef);
+    }, scope);
     return () => ctx.revert();
-  }, []);
+  }, [loading]);
 
   // Stagger de cards al cambiar de tab
   useEffect(() => {
-    if (!gridRef.current) return;
+    const scope = gridRef.current;
+    if (!scope) return;
+
     const ctx = gsap.context(() => {
       gsap.from('.skin-card', {
         y: 16,
@@ -87,7 +94,7 @@ export default function ShopPage() {
         stagger: { each: 0.05, from: 'start' },
         clearProps: 'all',
       });
-    }, gridRef);
+    }, scope);
     return () => ctx.revert();
   }, [activeTab]);
 
@@ -158,12 +165,12 @@ export default function ShopPage() {
   );
 
   return (
-    <div className="skin-page" ref={pageRef}>
+    <div className="app-page" ref={pageRef}>
       <GameHeader title="Tienda" onBack={() => navigate(-1)} />
 
-      <main className="skin-page__content">
+      <main className="app-page__content">
         {loading ? (
-          <div className="skin-page__loading">Cargando tienda…</div>
+          <div className="app-page__loading">Cargando tienda…</div>
         ) : (
           <>
             {/* Barra de tabs */}
@@ -183,12 +190,12 @@ export default function ShopPage() {
 
             {/* Panel con sort + grid */}
             <div
-              className="skin-page__panel"
+              className="app-page__panel"
               role="tabpanel"
               aria-live="polite"
               aria-atomic="false"
             >
-              {error && <div className="skin-page__error" role="alert">{error}</div>}
+              {error && <div className="app-page__error" role="alert">{error}</div>}
 
               {/* Controles de ordenado */}
               <div className="skin-sort" aria-label="Ordenar por">
@@ -207,7 +214,7 @@ export default function ShopPage() {
 
               {/* Grid de skins */}
               {visibleSkins.length === 0 ? (
-                <div className="skin-empty">
+                <div className="app-page__empty">
                   <p>No hay artículos en esta categoría.</p>
                 </div>
               ) : (
@@ -249,3 +256,4 @@ export default function ShopPage() {
     </div>
   );
 }
+

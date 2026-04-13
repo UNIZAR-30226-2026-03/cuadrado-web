@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { forgotPasswordRequest } from '../services/auth.service';
-import ErrorModal from '../components/ErrorModal';
+import ErrorModal from '../components/modals/ErrorModal';
 import { useAuthForm } from '../hooks/useAuthForm';
 import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';

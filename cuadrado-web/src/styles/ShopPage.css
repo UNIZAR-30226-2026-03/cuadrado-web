@@ -1,7 +1,7 @@
 /* ShopPage.css - Layout compartido de tienda e inventario (/shop, /inventory) */
 
 /* === Estructura de página === */
-.skin-page {
+.app-page {
   position: relative;
   width: 100%;
   height: 100vh;
@@ -11,7 +11,7 @@
   z-index: 1;
 }
 
-.skin-page__content {
+.app-page__content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -118,7 +118,7 @@
 }
 
 /* === Panel scrollable con el grid (se "conecta" al tab activo) === */
-.skin-page__panel {
+.app-page__panel {
   flex: 1;
   background: var(--glass);
   border: 1px solid rgba(0, 229, 255, 0.22);
@@ -150,7 +150,7 @@
 }
 
 /* === Error / loading === */
-.skin-page__error {
+.app-page__error {
   margin: 0 0 12px;
   padding: 10px 16px;
   background: rgba(255, 90, 90, 0.1);
@@ -161,7 +161,7 @@
   text-align: center;
 }
 
-.skin-page__loading {
+.app-page__loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -173,7 +173,7 @@
 }
 
 /* === Estado vacío === */
-.skin-empty {
+.app-page__empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -194,16 +194,16 @@
 
 @media (max-width: 768px) {
   /* Scroll sobre la pantalla completa en móvil */
-  .skin-page {
+  .app-page {
     height: auto;
     min-height: 100vh;
     overflow: visible;
   }
-  .skin-page__content {
+  .app-page__content {
     padding: 16px 12px 24px;
     overflow: visible;
   }
-  .skin-page__panel {
+  .app-page__panel {
     flex: none;
     overflow: visible;
     height: auto;
@@ -216,7 +216,7 @@
 }
 
 @media (max-width: 480px) {
-  .skin-page__content { padding: 12px 8px 20px; }
+  .app-page__content { padding: 12px 8px 20px; }
   .skin-grid { gap: 8px; }
   .skin-grid--tapete  { grid-template-columns: repeat(2, 1fr); }
   .skin-grid--carta   { grid-template-columns: repeat(3, 1fr); }
@@ -227,16 +227,16 @@
 /* Horizontal en móvil (teléfono girado, alto ≤ 500 px) */
 @media (orientation: landscape) and (max-height: 500px) {
   /* Scroll sobre la pantalla completa también en landscape (algunos teléfonos superan 768 px de ancho) */
-  .skin-page {
+  .app-page {
     height: auto;
     min-height: 100vh;
     overflow: visible;
   }
-  .skin-page__content {
+  .app-page__content {
     padding: 8px 12px 20px;
     overflow: visible;
   }
-  .skin-page__panel {
+  .app-page__panel {
     flex: none;
     overflow: visible;
     height: auto;
@@ -247,3 +247,4 @@
   .skin-tab  { padding: 6px 14px; font-size: 11px; }
   .skin-sort { padding: 6px 0 4px; }
 }
+

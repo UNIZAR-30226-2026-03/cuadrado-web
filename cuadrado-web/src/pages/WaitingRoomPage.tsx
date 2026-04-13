@@ -2,11 +2,11 @@
 //
 // Muestra el estado en tiempo real de la sala de espera via WebSocket.
 // Incluye: indicador del jugador propio, info de sala, poderes con detalle
-// por palo, código copiable en esquina, botón de listo y popup si el admin cierra.
+// por palo, código copiable en esquina y flujo de relleno con bots.
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import gsap from 'gsap';
-import GameHeader from '../components/GameHeader';
+import GameHeader from '../components/game/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,28 +17,25 @@ import {
   leaveRoom,
   getLastRoomState,
 } from '../services/room.service';
+import { POWER_MAP } from '../data/cardPowers';
 import type { RoomState } from '../types/room.types';
 import '../styles/RoomPages.css';
 
-interface BotPlayer {
+interface LocalBot {
   userId: string;
   isBot: true;
 }
 
-// Descripciones de poderes para el modal de detalle
-const POWER_DESCRIPTIONS: Record<string, string> = {
-  'A':  'Intercambia TODAS tus cartas por TODAS las cartas de otro jugador.',
-  '2':  'Elige un jugador para que robe una carta extra y la añada a su mano.',
-  '3':  'Protege una de tus cartas: esa carta no puede ser intercambiada por nadie hasta el final.',
-  '4':  'Salta el siguiente turno de un jugador a tu elección.',
-  '5':  'Elige una carta de cada jugador de la partida para verla en secreto.',
-  '6':  'Roba otra carta del mazo para tener una segunda oportunidad de intercambiar o descartar.',
-  '7':  '(Guardable) Revela quién tiene la mano con menos puntos. Puedes activarlo en cualquier momento.',
-  '8':  '(Guardable) Anula la siguiente habilidad que se active en la partida. Puedes activarlo en cualquier momento.',
-  '9':  'Propones un intercambio ciego a otro jugador: ambos elegís una carta para dar sin saber qué recibiréis.',
-  '10': 'Puedes ver una de tus propias cartas durante 5 segundos para refrescar la memoria.',
-  'J':  'Ve una de tus cartas y una de otro jugador. Decide si quieres intercambiarlas o no.',
-};
+// Función pura fuera del componente: formatea segundos a "m:ss" o "Xs"
+function formatTurnTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0s';
+  if (seconds >= 60) {
+    const minutes = Math.floor(seconds / 60);
+    const sec = String(seconds % 60).padStart(2, '0');
+    return `${minutes}:${sec}`;
+  }
+  return `${seconds}s`;
+}
 
 export default function WaitingRoomPage() {
   const navigate = useNavigate();
@@ -52,7 +49,7 @@ export default function WaitingRoomPage() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [showFillBots, setShowFillBots] = useState(false);
   const [fillingBots, setFillingBots] = useState(false);
-  const [localBots, setLocalBots] = useState<BotPlayer[]>([]);
+  const [localBots, setLocalBots] = useState<LocalBot[]>([]);
 
   const isLeavingRef = useRef(false);
   const slotRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -174,12 +171,12 @@ export default function WaitingRoomPage() {
   // ── Popup: sala cerrada por el admin ────────────────────────────────
   if (closedByHost) {
     return (
-      <div className="skin-page">
-        <div className="waiting-modal-overlay">
-          <div className="waiting-modal">
-            <p className="waiting-modal__icon">🚪</p>
-            <h3 className="waiting-modal__title">Sala cerrada</h3>
-            <p className="waiting-modal__body">
+      <div className="app-page">
+        <div className="room-modal-overlay">
+          <div className="room-modal">
+            <p className="room-modal__icon">🚪</p>
+            <h3 className="room-modal__title">Sala cerrada</h3>
+            <p className="room-modal__body">
               El administrador ha abandonado la sala. Has sido expulsado de la partida.
             </p>
             <button className="room-cta" onClick={() => navigate('/home')}>
@@ -194,7 +191,7 @@ export default function WaitingRoomPage() {
   // ── Estado de carga ─────────────────────────────────────────────────
   if (!room) {
     return (
-      <div className="skin-page">
+      <div className="app-page">
         <GameHeader title="Sala de espera" onBack={handleBack} />
         <p style={{ textAlign: 'center' }}>Cargando sala…</p>
       </div>
@@ -204,24 +201,14 @@ export default function WaitingRoomPage() {
   const maxPlayers = room.rules.maxPlayers;
   const isHost = currentUserId === room.hostId;
   
-  // Formatea segundos a "m:ss" o "Xs"
-  const formatSeconds = (s: number) => {
-    if (!Number.isFinite(s) || s <= 0) return '0s';
-    if (s >= 60) {
-      const m = Math.floor(s / 60);
-      const sec = String(s % 60).padStart(2, '0');
-      return `${m}:${sec}`;
-    }
-    return `${s}s`;
-  };
   // ── Construir slots ─────────────────────────────────────────────────
   type Slot =
     | { type: 'blocked' }
     | { type: 'empty' }
     | { type: 'player'; data: RoomState['players'][number] }
-    | { type: 'bot'; data: BotPlayer };
+    | { type: 'bot'; data: LocalBot };
 
-  const allPlayers: (RoomState['players'][number] | BotPlayer)[] = [
+  const allPlayers: (RoomState['players'][number] | LocalBot)[] = [
     ...room.players,
     ...localBots,
   ];
@@ -230,15 +217,15 @@ export default function WaitingRoomPage() {
     if (i >= maxPlayers) return { type: 'blocked' };
     const p = allPlayers[i];
     if (!p) return { type: 'empty' };
-    if ('isBot' in p) return { type: 'bot', data: p as BotPlayer };
+    if ('isBot' in p) return { type: 'bot', data: p as LocalBot };
     return { type: 'player', data: p as RoomState['players'][number] };
   });
 
   return (
-    <div className="skin-page">
+    <div className="app-page">
       <GameHeader title="Sala de espera" onBack={handleBack} />
 
-      <main className="skin-page__content room-page__content">
+      <main className="app-page__content room-page__content">
 
         {/* ── Título ────────────────────────────────────────────── */}
         <section className="room-section">
@@ -255,7 +242,7 @@ export default function WaitingRoomPage() {
               🃏 {room.rules.deckCount} {room.rules.deckCount === 1 ? 'baraja' : 'barajas'}
             </span>
             <span className="room-info-badge">
-              ⏱️ {formatSeconds(room.rules.turnTimeSeconds)} por turno
+              ⏱️ {formatTurnTime(room.rules.turnTimeSeconds)} por turno
             </span>
             <span className="room-info-badge">
               👥 {room.players.length}/{maxPlayers} jugadores
@@ -263,7 +250,7 @@ export default function WaitingRoomPage() {
           </div>
 
           {/* ── Panel de slots ─────────────────────────────────── */}
-          <div className="skin-page__panel room-panel room-panel--center">
+          <div className="app-page__panel room-panel room-panel--center">
             <div className="waiting-grid">
               {slots.map((slot, index) => {
                 const isSelf = slot.type === 'player' && slot.data.userId === currentUserId;
@@ -357,22 +344,22 @@ export default function WaitingRoomPage() {
       {/* ── Modal: rellenar con bots ─────────────────────────────────── */}
       {showFillBots && (
         <div
-          className="waiting-modal-overlay"
+          className="room-modal-overlay"
           onClick={() => { if (!fillingBots) setShowFillBots(false); }}
         >
           <div
-            className="waiting-modal waiting-modal--fill-bots"
+            className="room-modal room-modal--fill-bots"
             onClick={e => e.stopPropagation()}
           >
-            <p className="waiting-modal__icon">⚠️</p>
-            <h3 className="waiting-modal__title">Sala incompleta</h3>
-            <p className="waiting-modal__body">
+            <p className="room-modal__icon">⚠️</p>
+            <h3 className="room-modal__title">Sala incompleta</h3>
+            <p className="room-modal__body">
               Hay {room.rules.maxPlayers - room.players.length} hueco
               {room.rules.maxPlayers - room.players.length !== 1 ? 's' : ''} libre
               {room.rules.maxPlayers - room.players.length !== 1 ? 's' : ''}.
               ¿Rellenar con bots y comenzar?
             </p>
-            <div className="waiting-modal__actions">
+            <div className="room-modal__actions">
               <button
                 className="room-link-btn"
                 disabled={fillingBots}
@@ -385,7 +372,7 @@ export default function WaitingRoomPage() {
                 disabled={fillingBots}
                 onClick={handleFillBots}
               >
-                {fillingBots ? 'Rellenando…' : 'Comenzar con bots'}
+                {fillingBots ? 'Rellenando…' : 'Rellenar con bots y empezar'}
               </button>
             </div>
           </div>
@@ -395,14 +382,14 @@ export default function WaitingRoomPage() {
       {/* ── Modal de poderes ─────────────────────────────────────────── */}
       {showPowers && (
         <div
-          className="waiting-modal-overlay"
+          className="room-modal-overlay"
           onClick={() => setShowPowers(false)}
         >
           <div
-            className={`waiting-modal waiting-modal--powers${selectedPower ? ' waiting-modal--powers-detail' : ''}`}
+            className={`room-modal room-modal--powers${selectedPower ? ' room-modal--powers-detail' : ''}`}
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="waiting-modal__title">Cartas con poderes activos</h3>
+            <h3 className="room-modal__title">Cartas con poderes activos</h3>
 
             {room.rules.enabledPowers.length === 0 ? (
               <p className="powers-empty">No hay poderes activos en esta sala.</p>
@@ -442,14 +429,14 @@ export default function WaitingRoomPage() {
                       </span>
                     </div>
                     <p className="power-detail__desc">
-                      {POWER_DESCRIPTIONS[selectedPower] ?? 'Poder activo en esta sala.'}
+                      {POWER_MAP[selectedPower]?.shortDesc ?? 'Poder activo en esta sala.'}
                     </p>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="waiting-modal__actions">
+            <div className="room-modal__actions">
               <button
                 className="room-link-btn"
                 onClick={() => navigate('/rules')}

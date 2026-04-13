@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { verifyCodeRequest } from '../services/auth.service';
-import ErrorModal from '../components/ErrorModal';
+import ErrorModal from '../components/modals/ErrorModal';
 import { useAuthForm } from '../hooks/useAuthForm';
 import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';
