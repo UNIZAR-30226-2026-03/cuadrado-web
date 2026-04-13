@@ -138,7 +138,7 @@ export default function WaitingRoomPage() {
     // Esperar a que la animación del último bot termine antes de enviar la señal
     await new Promise<void>(r => setTimeout(r, 600));
     try {
-      await startRoom(room.code, true);  // fillBots=true: el backend añadirá los bots reales
+      await startRoom(room.code);
       navigate('/game');
     } catch (err) {
       console.error(err);

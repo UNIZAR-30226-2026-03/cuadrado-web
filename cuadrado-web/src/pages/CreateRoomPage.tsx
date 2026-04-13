@@ -302,7 +302,7 @@ export default function CreateRoomPage() {
         maxPlayers,
         turnTimeSeconds: turnTime,
         isPrivate: !isPublic,
-        fillWithBots: false,
+        fillWithBots: true,
         deckCount,
         enabledPowers: powers.filter(p => p.enabled).map(p => p.value),
       },

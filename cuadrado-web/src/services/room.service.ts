@@ -63,7 +63,7 @@ interface RoomsClientEvents {
   'rooms:join': (payload: { roomCode: string }, ack: (res: JoinRoomResponse) => void) => void;
   'rooms:list-public': (payload: undefined, ack: (res: ListPublicRoomsResponse) => void) => void;
   'rooms:leave': (payload: undefined, ack: (res: LeaveRoomResponse) => void) => void;
-  'rooms:start': (payload: { roomCode: string; fillBots?: boolean }, ack: (res: StartRoomResponse) => void) => void;
+  'rooms:start': (payload: { roomCode: string }, ack: (res: StartRoomResponse) => void) => void;
 }
 
 type RoomsSocket = Socket<RoomsServerEvents, RoomsClientEvents>;
@@ -297,7 +297,7 @@ export async function leaveRoom(auth?: RoomsAuth): Promise<void> {
   lastRoomState = null;
 }
 
-export async function startRoom(roomCode: string, fillBots = false, auth?: RoomsAuth): Promise<void> {
+export async function startRoom(roomCode: string, auth?: RoomsAuth): Promise<void> {
   await ensureSocketConnected(auth);
-  await emitWithAck<StartRoomResponse>('rooms:start', { roomCode, fillBots });
+  await emitWithAck<StartRoomResponse>('rooms:start', { roomCode });
 }

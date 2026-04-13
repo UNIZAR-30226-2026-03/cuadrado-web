@@ -499,7 +499,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
         maxPlayers,
         turnTimeSeconds: turnTime,
         isPrivate: !isPublic,
-        fillWithBots: false,
+        fillWithBots: true,
         deckCount,
         enabledPowers: powers.filter(power => power.enabled).map(power => power.value),
       },
