@@ -26,6 +26,14 @@
   border-radius: var(--radius-card);
 }
 
+/* Cuando skin-page__panel y room-panel se combinan, restauramos bordes completos
+   (skin-page__panel quita el borde superior y cuadra la esquina superior-izquierda
+   para el efecto "tab"; en páginas de sala no hay tabs, así que lo revertimos). */
+.skin-page__panel.room-panel {
+  border-top: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: var(--radius-card);
+}
+
 .room-panel--list {
   padding: 0;
 }
@@ -644,4 +652,321 @@
   display: flex;
   justify-content: center;
   gap: 12px;
+}
+
+/* === Waiting Room: footer centrado === */
+.room-footer--waiting {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.room-footer__row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+/* En móvil los botones ocupan todo el ancho */
+@media (max-width: 480px) {
+  .room-footer__row {
+    width: 100%;
+  }
+
+  .room-footer__row .room-link-btn,
+  .room-footer__row .room-cta {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* === Waiting Room: barra de info de sala === */
+.room-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-light);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-80);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.room-info-badge--public {
+  border-color: rgba(0, 229, 255, 0.35);
+  color: var(--neon-cyan);
+}
+
+.room-info-badge--private {
+  border-color: rgba(251, 191, 36, 0.35);
+  color: var(--neon-gold, #fbbf24);
+}
+
+/* === Waiting Room: slot propio destacado === */
+.waiting-slot--self {
+  border-color: var(--neon-cyan) !important;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.25), inset 0 0 8px rgba(0, 229, 255, 0.08);
+}
+
+/* === Waiting Room: avatar con inicial === */
+.waiting-avatar__initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+  font-family: var(--font-display);
+  border-radius: 50%;
+}
+
+/* === Waiting Room: info del jugador en fila === */
+.waiting-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Badge "(Tú)" junto al nombre */
+.waiting-you-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Badge "Listo" verde */
+.waiting-ready-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4ade80;
+  letter-spacing: 0.02em;
+}
+
+/* Variante de room-link-btn cuando el jugador está listo */
+.room-link-btn--ready {
+  border-color: rgba(74, 222, 128, 0.6);
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+}
+
+.room-link-btn--ready:hover {
+  background: rgba(74, 222, 128, 0.22);
+  border-color: rgba(74, 222, 128, 0.8);
+  color: #4ade80;
+}
+
+/* === Waiting Room: código copiable (esquina inferior derecha) === */
+.room-code-corner {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--glass-border);
+  background: rgba(11, 23, 51, 0.85);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: border-color 160ms, box-shadow 160ms;
+  z-index: 50;
+  font-family: inherit;
+}
+
+.room-code-corner:hover {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+}
+
+.room-code-corner__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-50);
+}
+
+.room-code-corner__value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+  letter-spacing: 0.2em;
+  font-family: var(--font-display);
+}
+
+.room-code-corner__copy {
+  font-size: 14px;
+}
+
+/* === Waiting Room: modal de poderes ampliado === */
+.waiting-modal--powers {
+  max-width: 520px;
+  text-align: center;
+}
+
+/* Icono en el modal de sala cerrada */
+.waiting-modal__icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+/* Texto del cuerpo del modal */
+.waiting-modal__body {
+  font-size: 14px;
+  color: var(--text-80);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Mensaje cuando no hay poderes */
+.powers-empty {
+  font-size: 13px;
+  color: var(--text-50);
+  margin-bottom: 16px;
+}
+
+/* === Abanico de cartas de poderes === */
+.powers-fan {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.fan-card {
+  width: 44px;
+  height: 60px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(120, 210, 255, 0.45);
+  background: rgba(17, 40, 88, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 160ms var(--spring, ease), border-color 160ms, box-shadow 160ms;
+  font-family: inherit;
+}
+
+.fan-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 6px 18px rgba(0, 229, 255, 0.2);
+}
+
+.fan-card--selected {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.12);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+  transform: translateY(-6px);
+}
+
+.fan-card__value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-100);
+  font-family: var(--font-display);
+}
+
+/* === Detalle de palo al seleccionar una carta === */
+.power-detail {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(17, 40, 88, 0.4);
+  animation: fadeSlideIn 200ms ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.power-detail__suits {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Carta individual de palo */
+.suit-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 70px;
+  border-radius: 8px;
+  border: 1.5px solid rgba(120, 210, 255, 0.35);
+  background: rgba(11, 23, 51, 0.7);
+  font-size: 15px;
+  font-weight: 800;
+  gap: 2px;
+  font-family: var(--font-display);
+}
+
+.suit-card .suit {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Colores por palo */
+.suit-card--hearts   { color: #f87171; border-color: rgba(248, 113, 113, 0.5); }
+.suit-card--diamonds { color: #fb923c; border-color: rgba(251, 146, 60, 0.5); }
+.suit-card--clubs    { color: var(--text-80); border-color: rgba(120, 210, 255, 0.35); }
+.suit-card--spades   { color: var(--text-80); border-color: rgba(120, 210, 255, 0.35); }
+
+.power-detail__desc {
+  font-size: 13px;
+  color: var(--text-80);
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* === WaitingRoom: slots de bots === */
+.waiting-avatar--bot {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.waiting-bot-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--neon-purple);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* === WaitingRoom: modal fill-bots === */
+.waiting-modal--fill-bots {
+  max-width: 400px;
+}
+
+.waiting-modal--fill-bots .room-cta {
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 10px 16px;
 }

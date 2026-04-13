@@ -34,7 +34,10 @@ export default function CreateRoomModal() {
         aria-label="Crear partida"
         onClick={event => event.stopPropagation()}
       >
-        <div className="app-modal__content app-modal__content--tight">
+        {/* Usar el contenedor estándar para que el padding-bottom específico
+            de .app-modal--create-room .app-modal__content se aplique y deje
+            espacio bajo los botones al hacer scroll. */}
+        <div className="app-modal__content">
           <CreateRoomModalContent onClose={closeModal} />
         </div>
       </section>

@@ -234,6 +234,11 @@
   flex: 1;
 }
 
+/* Separación inferior en fase 2 para que los CTAs no queden pegados al borde */
+.create-room-embedded .room-footer--spread {
+  padding-bottom: 10px;
+}
+
 .room-option--disabled {
   opacity: 0.45;
   cursor: not-allowed;

@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { createRoom, leaveRoom } from '../../services/room.service';
+import { useAuth } from '../../context/AuthContext';
 import type { CreateRoomPayload } from '../../types/room.types';
 import '../../styles/RoomPages.css';
 import '../../styles/CreateRoomExtras.css';
@@ -91,6 +92,14 @@ const INITIAL_POWERS: CardPower[] = [
 ];
 
 const TURN_TIME_OPTIONS = [15, 20, 30, 45, 60] as const;
+
+const TURN_TIME_LABELS: Record<number, string> = {
+  15: 'Relámpago',
+  20: 'Rápido',
+  30: 'Estándar',
+  45: 'Calmado',
+  60: 'Estratégico',
+};
 
 interface StepperProps {
   value: number;
@@ -444,6 +453,7 @@ function Stepper({ value, min, max, onChange, label }: StepperProps) {
 
 export default function CreateRoomModalContent({ onClose }: CreateRoomModalContentProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const step2Ref = useRef<HTMLDivElement>(null);
 
   const [deckCount, setDeckCount] = useState<DeckCount | null>(null);
@@ -484,7 +494,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     setError(null);
 
     const payload: CreateRoomPayload = {
-      name: 'Nueva sala',
+      name: user?.username || 'Nueva sala',
       rules: {
         maxPlayers,
         turnTimeSeconds: turnTime,
@@ -591,14 +601,16 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
 
           <div className="room-turntime">
             <span className="room-powers__title">Tiempo de turno</span>
-            <div className="room-turntime__pills">
+            <div className="room-turntime__cards">
               {TURN_TIME_OPTIONS.map(time => (
                 <button
                   key={time}
-                  className={`room-turntime__pill${turnTime === time ? ' is-active' : ''}`}
+                  className={`room-turntime__card${turnTime === time ? ' is-active' : ''}`}
                   onClick={() => setTurnTime(time)}
                 >
-                  {time}s
+                  <ClockIcon />
+                  <span className="room-turntime__card-time">{time}s</span>
+                  <span className="room-turntime__card-label">{TURN_TIME_LABELS[time]}</span>
                 </button>
               ))}
             </div>
@@ -624,7 +636,11 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
                 {!allEnabled && someEnabled && <DashIcon />}
               </span>
 
-              <span className="room-card-badge">ALL</span>
+              <svg viewBox="0 0 56 44" style={{ width: 34, height: 26, flexShrink: 0 }} aria-hidden="true">
+                <rect x="2"  y="10" width="22" height="30" rx="4" fill="rgba(17,40,88,0.7)" stroke="rgba(0,229,255,0.5)" strokeWidth="1.8" transform="rotate(-10 13 25)" />
+                <rect x="18" y="6"  width="22" height="30" rx="4" fill="rgba(17,40,88,0.8)" stroke="rgba(0,229,255,0.7)" strokeWidth="1.8" transform="rotate(5 29 21)" />
+                <rect x="32" y="2"  width="22" height="30" rx="4" fill="rgba(17,40,88,0.9)" stroke="rgba(0,229,255,0.9)" strokeWidth="1.8" transform="rotate(18 43 17)" />
+              </svg>
 
               <span className="room-power__text" style={{ fontWeight: 600, color: 'var(--text-80)' }}>
                 Seleccionar todos los poderes
@@ -680,6 +696,17 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
         </div>
       </div>
     </div>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+      <circle cx="10" cy="10" r="8" stroke="var(--neon-cyan)" strokeWidth="1.5" />
+      <line x1="10" y1="10" x2="10" y2="4"  stroke="var(--neon-cyan)" strokeWidth="1.8" strokeLinecap="round" />
+      <line x1="10" y1="10" x2="14" y2="10" stroke="var(--neon-cyan)" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="10" cy="10" r="1" fill="var(--neon-cyan)" />
+    </svg>
   );
 }
 

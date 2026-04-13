@@ -91,6 +91,14 @@
   padding: 4px 0 8px;
 }
 
+/* Espacio adicional en la zona scrollable del modal de crear partida
+   para que los botones no queden pegados al borde al hacer scroll. */
+.app-modal--create-room .app-modal__content {
+  /* Espacio adicional para que los CTA no queden pegados al borde al scrollear.
+     Se aumenta para soportar distintos tamaños de fuente y alturas de viewport. */
+  padding-bottom: 96px;
+}
+
 .app-modal__content--tight {
   padding: 0;
 }

@@ -103,9 +103,9 @@ export default function JoinRoomPage() {
     }
   }, [privateCode, navigate]);
 
-  // Solo permite dígitos, máximo 7
+  // Permite caracteres alfanuméricos (letras y dígitos), máximo 7, en mayúsculas
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 7);
+    const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 7).toUpperCase();
     setPrivateCode(val);
     setPrivateError(null);
   };
@@ -113,7 +113,7 @@ export default function JoinRoomPage() {
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="skin-page" ref={pageRef}>
-      <GameHeader title="Buscar Partida" onBack={() => navigate(-1)} />
+      <GameHeader title="Buscar Partida" onBack={() => navigate('/home')} />
 
       <main className="skin-page__content room-page__content">
         {/* ── Salas Públicas ─────────────────────────────────────────── */}
@@ -194,13 +194,13 @@ export default function JoinRoomPage() {
                 <input
                   ref={inputRef}
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  inputMode="text"
+                  autoCapitalize="characters"
                   maxLength={7}
                   value={privateCode}
                   onChange={handleCodeChange}
                   placeholder="_ _ _ _ _ _ _"
-                  aria-label="Código de sala privada (7 dígitos)"
+                  aria-label="Código de sala privada (7 caracteres)"
                   className="room-private__input"
                 />
                 <button

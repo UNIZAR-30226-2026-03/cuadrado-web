@@ -14,6 +14,7 @@ import GameHeader from '../components/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { createRoom, leaveRoom } from '../services/room.service';
+import { useAuth } from '../context/AuthContext';
 import type { CreateRoomPayload } from '../types/room.types';
 import '../styles/RoomPages.css';
 import '../styles/CreateRoomExtras.css';
@@ -239,6 +240,7 @@ function Stepper({ value, min, max, onChange, label }: StepperProps) {
 
 export default function CreateRoomPage() {
   const navigate   = useNavigate();
+  const { user }   = useAuth();
   const step1Ref   = useRef<HTMLDivElement>(null);
   const step2Ref   = useRef<HTMLDivElement>(null);
 
@@ -295,7 +297,7 @@ export default function CreateRoomPage() {
     setError(null);
 
     const payload: CreateRoomPayload = {
-      name: 'Nueva sala',
+      name: user?.username || 'Nueva sala',
       rules: {
         maxPlayers,
         turnTimeSeconds: turnTime,

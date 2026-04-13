@@ -73,6 +73,14 @@ const DEFAULT_TIMEOUT_MS = 8000;
 
 let socket: RoomsSocket | null = null;
 
+// Caché del último estado de sala recibido vía room:update.
+// Permite a WaitingRoomPage leer el estado inicial sin esperar al siguiente evento.
+let lastRoomState: RoomState | null = null;
+
+export function getLastRoomState(): RoomState | null {
+  return lastRoomState;
+}
+
 function getStoredAccessToken(): string | undefined {
   try {
     return localStorage.getItem('accessToken') || undefined;
@@ -166,6 +174,11 @@ async function ensureSocketConnected(auth?: RoomsAuth): Promise<RoomsSocket> {
     };
 
     socket = socketUrl ? io(socketUrl, options) : io(options);
+
+    // Listener permanente para cachear el estado de sala entre navegaciones
+    socket.on('room:update', (state: RoomState) => {
+      lastRoomState = state;
+    });
   } else if (Object.keys(handshake).length > 0) {
     socket.auth = { ...(socket.auth as Record<string, unknown>), ...handshake };
   }
@@ -250,6 +263,7 @@ export function disconnectRoomsSocket(): void {
   if (socket) {
     socket.disconnect();
     socket = null;
+    lastRoomState = null;
   }
 }
 
@@ -280,6 +294,7 @@ export async function listPublicRooms(auth?: RoomsAuth): Promise<PublicRoomSumma
 export async function leaveRoom(auth?: RoomsAuth): Promise<void> {
   await ensureSocketConnected(auth);
   await emitWithAck<LeaveRoomResponse>('rooms:leave');
+  lastRoomState = null;
 }
 
 export async function startRoom(roomCode: string, auth?: RoomsAuth): Promise<void> {

@@ -1,7 +1,7 @@
 // PortraitOverlay.tsx - Overlay que pide girar el dispositivo en móvil vertical
 // Muestra un pequeño SVG y el texto: "Gira tu dispositivo / Para una mejor experiencia de juego"
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../../styles/PortraitOverlay.css';
 
 /**
