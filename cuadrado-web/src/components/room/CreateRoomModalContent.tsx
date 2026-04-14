@@ -108,7 +108,9 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
   const step2Ref = useRef<HTMLDivElement>(null);
 
   const [deckCount, setDeckCount] = useState<DeckCount | null>(null);
+  const [roomName, setRoomName] = useState(user?.username ?? '');
   const [isPublic, setIsPublic] = useState(true);
+  const [fillWithBots, setFillWithBots] = useState(true);
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [turnTime, setTurnTime] = useState<15 | 20 | 30 | 45 | 60>(30);
   const [powers, setPowers] = useState<RoomPower[]>(DEFAULT_POWERS);
@@ -145,12 +147,12 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     setError(null);
 
     const payload: CreateRoomPayload = {
-      name: user?.username || 'Nueva sala',
+      name: roomName.trim() || user?.username || 'Nueva sala',
       rules: {
         maxPlayers,
         turnTimeSeconds: turnTime,
         isPrivate: !isPublic,
-        fillWithBots: true,
+        fillWithBots,
         deckCount,
         enabledPowers: powers.filter(power => power.enabled).map(power => power.value),
       },
@@ -166,7 +168,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     } finally {
       setCreating(false);
     }
-  }, [deckCount, isPublic, maxPlayers, navigate, onClose, powers, turnTime, user?.username]);
+  }, [deckCount, fillWithBots, isPublic, maxPlayers, navigate, onClose, powers, roomName, turnTime, user?.username]);
 
   // ── Paso 1: Selección de barajas ─────────────────────────────────────────
 
@@ -186,7 +188,13 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
             <h4 className="room-powers__title">Selecciona el número de barajas</h4>
 
             <div className="room-option-grid">
-              <button className="room-option" onClick={() => setDeckCount(1)}>
+              <button
+                className="room-option"
+                onClick={() => {
+                  setDeckCount(1);
+                  setMaxPlayers(prev => Math.min(prev, 4)); //Por si cambias a 1 baraja de algun modo
+                }}
+              >
                 <IconOneDeck />
                 <span className="room-option__label">1 Baraja</span>
                 <span className="room-option__sublabel">Partida estándar</span>
@@ -230,6 +238,20 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
           className="room-panel--stack create-room-embedded__panel"
           ref={step2Ref}
         >
+          {/* ── Nombre de la sala ── */}
+          <div className="room-settings-row">
+            <label className="room-input__label" htmlFor="room-name-input">Nombre de la sala</label>
+            <input
+              id="room-name-input"
+              className="room-input"
+              value={roomName}
+              onChange={event => setRoomName(event.target.value)}
+              maxLength={40}
+              placeholder={user?.username || 'Nueva sala'}
+              autoComplete="off"
+            />
+          </div>
+
           {/* ── Visibilidad de sala ── */}
           <div className="room-toggle">
             <span className={`room-toggle__label${isPublic ? ' is-active' : ''}`}>Sala pública</span>
@@ -245,13 +267,28 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
             <span className={`room-toggle__label${!isPublic ? ' is-active' : ''}`}>Sala privada</span>
           </div>
 
+          {/* ── Completar sala con bots ── */}
+          <div className="room-toggle">
+            <span className={`room-toggle__label${!fillWithBots ? ' is-active' : ''}`}>Sin bots</span>
+            <button
+              role="switch"
+              aria-checked={fillWithBots}
+              aria-label="Cambiar bots automáticos"
+              onClick={() => setFillWithBots(prev => !prev)}
+              className={`room-toggle__switch${fillWithBots ? ' is-private' : ''}`}
+            >
+              <span className="room-toggle__thumb" />
+            </button>
+            <span className={`room-toggle__label${fillWithBots ? ' is-active' : ''}`}>Completar con bots</span>
+          </div>
+
           {/* ── Número de jugadores ── */}
           <div className="room-settings-row">
             <Stepper
               label="Jugadores máximos"
               value={maxPlayers}
               min={2}
-              max={8}
+              max={deckCount === 1 ? 4 : 8}
               onChange={setMaxPlayers}
             />
           </div>

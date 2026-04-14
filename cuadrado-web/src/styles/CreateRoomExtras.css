@@ -17,6 +17,36 @@
   gap: 12px;
 }
 
+.room-input__label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-50);
+}
+
+.room-input {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 999px;
+  background: var(--input-bg);
+  color: var(--text-100);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+
+.room-input::placeholder {
+  color: var(--text-50);
+}
+
+.room-input:focus {
+  border-color: rgba(0, 229, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.14);
+}
+
 /* === Stepper (selector numérico +/-) === */
 .room-stepper {
   display: flex;
