@@ -110,6 +110,10 @@ export default function WaitingRoomPage() {
   // ── Comenzar partida ────────────────────────────────────────────────
   const handleStart = async () => {
     if (!room) return;
+    if (room.players.length === 1 && !room.rules.fillWithBots) {
+      return;
+    }
+
     if (room.players.length >= room.rules.maxPlayers) {
       try {
         await startRoom(room.code);
@@ -117,8 +121,15 @@ export default function WaitingRoomPage() {
       } catch (err) {
         console.error(err);
       }
-    } else {
+    } else if (room.rules.fillWithBots) {
       setShowFillBots(true);
+    } else {
+      try {
+        await startRoom(room.code);
+        navigate('/game');
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -199,7 +210,9 @@ export default function WaitingRoomPage() {
   }
 
   const maxPlayers = room.rules.maxPlayers;
+  const deckCount = room.rules.deckCount;
   const isHost = currentUserId === room.hostId;
+  const blockedSoloStart = room.players.length === 1 && !room.rules.fillWithBots;
   
   // ── Construir slots ─────────────────────────────────────────────────
   type Slot =
@@ -239,7 +252,7 @@ export default function WaitingRoomPage() {
               {room.rules.isPrivate ? '🔒 Privada' : '🌐 Pública'}
             </span>
             <span className="room-info-badge">
-              🃏 {room.rules.deckCount} {room.rules.deckCount === 1 ? 'baraja' : 'barajas'}
+              🃏 {deckCount} {deckCount === 1 ? 'baraja' : 'barajas'}
             </span>
             <span className="room-info-badge">
               ⏱️ {formatTurnTime(room.rules.turnTimeSeconds)} por turno
@@ -321,7 +334,9 @@ export default function WaitingRoomPage() {
             {isHost && (
               <button
                 className="room-cta"
+                disabled={blockedSoloStart}
                 onClick={handleStart}
+                title={blockedSoloStart ? 'Necesitas al menos otro jugador o tener completar con bots activo' : undefined}
               >
                 Comenzar partida
               </button>
