@@ -1,18 +1,21 @@
-// components/GameNavBar.tsx - Barra de navegacion inferior del lobby
+// components/game/GameNavBar.tsx - Barra de navegación inferior del lobby
 //
-// 5 botones: Inventario, Tienda, Unirse (primario/dorado, central),
-// Crear Partida y Perfil. Iconos line-art SVG monocromaticos con glow en hover.
+// 5 botones: Tienda, Inventario, Unirse (primario/dorado, central),
+// Crear Partida y Perfil. Iconos line-art SVG monocromáticos con glow en hover.
 
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/GameNavBar.css';
+import { useModal } from '../../context/ModalContext';
+import '../../styles/GameNavBar.css';
 
 interface NavItem {
   icon: string; // clave del mapa de iconos SVG
   label: string;
   route: string;
-  primary?: boolean; // true solo para el boton central destacado
+  primary?: boolean; // true solo para el botón central destacado
 }
+
+const OPEN_CREATE_ROOM_TARGET = '__open_create_room_modal__';
 
 // Iconos SVG line-art (estilo Feather/Lucide): trazo fino, sin relleno
 const NAV_ICONS: Record<string, ReactNode> = {
@@ -51,18 +54,33 @@ const NAV_ICONS: Record<string, ReactNode> = {
       <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
     </svg>
   ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: 'inventory', label: 'Inventario',    route: '/inventory' },
-  { icon: 'shop',      label: 'Tienda',        route: '/shop' },
-  { icon: 'join',      label: 'Unirse \na sala', route: '/join-room', primary: true },
-  { icon: 'create',    label: 'Crear\nPartida', route: '/create-room' },
-  { icon: 'profile',   label: 'Perfil',        route: '/profile' },
+  { icon: 'shop',      label: 'Tienda',         route: '/shop' },
+  { icon: 'inventory', label: 'Inventario',     route: '/inventory' },
+  { icon: 'join',      label: 'Unirse\na sala', route: '/join-room', primary: true },
+  { icon: 'create',    label: 'Crear\nPartida', route: OPEN_CREATE_ROOM_TARGET },
+  { icon: 'profile',   label: 'Perfil',         route: '/profile' },
 ];
 
 export default function GameNavBar() {
   const navigate = useNavigate();
+  const { openCreateRoomModal } = useModal();
+
+  const handleClick = (route: string) => {
+    if (route === OPEN_CREATE_ROOM_TARGET) {
+      openCreateRoomModal();
+      return;
+    }
+    navigate(route);
+  };
 
   return (
     <nav className="game-nav">
@@ -71,7 +89,7 @@ export default function GameNavBar() {
           <button
             key={item.route}
             className={`game-nav__btn ${item.primary ? 'game-nav__btn--primary' : ''}`}
-            onClick={() => navigate(item.route)}
+            onClick={() => handleClick(item.route)}
           >
             <span className="game-nav__btn-icon">{NAV_ICONS[item.icon]}</span>
             <span className="game-nav__btn-label">{item.label}</span>

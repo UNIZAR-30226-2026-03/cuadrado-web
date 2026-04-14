@@ -295,7 +295,8 @@
 .auth-links a:hover { color: var(--neon-cyan); }
 .auth-links a:hover::after { width: 100%; }
 
-/* Link "Volver": posicionado arriba a la izquierda de la pagina */
+/* Botón "Volver": posicionado arriba a la izquierda de la página.
+   Funciona tanto como <a> como <button> gracias al reset de estilos. */
 .auth-back {
   position: absolute;
   top: 28px;
@@ -304,11 +305,16 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
+  font-family: var(--font-body);
   color: var(--text-80);
   z-index: 3;
   transition: color 200ms, transform 200ms;
   cursor: pointer;
   text-decoration: none;
+  /* reset de botón */
+  background: none;
+  border: none;
+  padding: 0;
 }
 
 .auth-back::before {

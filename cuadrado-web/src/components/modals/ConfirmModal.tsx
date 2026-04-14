@@ -1,11 +1,11 @@
-// components/ConfirmModal.tsx - Modal de confirmación de compra de skin
+// components/modals/ConfirmModal.tsx - Modal de confirmación de compra de skin.
 //
 // Solo aparece para la acción "Comprar".
 // Si cubitos insuficientes: botón confirmar deshabilitado + mensaje de error.
 
-import type { Skin } from '../types/skin.types';
-import { useAuth } from '../context/AuthContext';
-import '../styles/ConfirmModal.css';
+import type { Skin } from '../../types/skin.types';
+import { useAuth } from '../../context/AuthContext';
+import '../../styles/ConfirmModal.css';
 
 interface ConfirmModalProps {
   skin: Skin;
@@ -23,7 +23,11 @@ export default function ConfirmModal({ skin, onConfirm, onCancel, loading = fals
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
         <div className={previewClass}>
-          <img className="confirm-modal__preview-img" src={skin.url} alt={skin.name} />
+          {skin.url ? (
+            <img className="confirm-modal__preview-img" src={skin.url} alt={skin.name} />
+          ) : (
+            <div className="confirm-modal__preview-empty" aria-hidden="true">Previsualización no disponible</div>
+          )}
         </div>
 
         <p className="confirm-modal__name">{skin.name}</p>

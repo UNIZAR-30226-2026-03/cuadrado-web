@@ -5,8 +5,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ErrorModal from '../components/ErrorModal';
+import ErrorModal from '../components/modals/ErrorModal';
 import { useAuthForm, useFieldErrors } from '../hooks/useAuthForm';
+import { useAuthEntrance } from '../hooks/useAuthEntrance';
 import '../styles/auth.css';
 
 export default function RegisterPage() {
@@ -21,6 +22,7 @@ export default function RegisterPage() {
 
   const { apiError, showNetworkError, dismissNetworkError, withSubmit } = useAuthForm();
   const { fieldErrors, setFieldErrors, clearFieldError }               = useFieldErrors();
+  const containerRef = useAuthEntrance();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,8 +59,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="page">
-      <Link to="/" className="auth-back">Volver</Link>
+    <div className="page" ref={containerRef}>
+      <button className="auth-back" onClick={() => navigate(-1)}>Volver</button>
 
       <div className="auth-card">
         <div className="auth-logo">

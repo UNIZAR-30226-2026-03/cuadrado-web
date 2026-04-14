@@ -3,11 +3,19 @@
 // Panel superior: resumen de los 3 ítems equipados actualmente.
 // Navegación por categoría mediante tabs. Controles de ordenado.
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import GameHeader from '../components/GameHeader';
-import SkinCard from '../components/SkinCard';
+import gsap from 'gsap';
+import GameHeader from '../components/game/GameHeader';
+import SkinCard from '../components/skins/SkinCard';
 import { useSkins } from '../hooks/useSkins';
+import {
+  DEFAULT_AVATAR_URL,
+  DEFAULT_AVATAR_DISPLAY_NAME,
+  DEFAULT_CARD_URL,
+  DEFAULT_CARD_DISPLAY_NAME,
+  TAPETE_EMPTY_LABEL,
+} from '../config/skinDefaults';
 import type { Skin, SkinType } from '../types/skin.types';
 import '../styles/ShopPage.css';
 import '../styles/InventoryPage.css';
@@ -46,7 +54,7 @@ function EquippedPanel({
   onTabSelect: (type: SkinType) => void;
 }) {
   const slots: { type: SkinType; label: string; emptyLabel: string }[] = [
-    { type: 'Tapete', label: 'Tapete',  emptyLabel: 'Ninguno' },
+    { type: 'Tapete', label: 'Tapete',  emptyLabel: TAPETE_EMPTY_LABEL },
     { type: 'Carta',  label: 'Carta',   emptyLabel: 'Ninguna' },
     { type: 'Avatar', label: 'Avatar',  emptyLabel: 'Ninguno' },
   ];
@@ -59,6 +67,10 @@ function EquippedPanel({
           const equippedId = equippedSkinIds[type];
           const skin = equippedId ? inventory.find(s => s.id === equippedId) : null;
 
+          // Fallbacks: Avatar y Carta deben mostrar siempre una skin (por defecto)
+          const showDefaultAvatar = !skin && type === 'Avatar';
+          const showDefaultCard = !skin && type === 'Carta';
+
           return (
             <button
               className="equipped-slot"
@@ -67,31 +79,49 @@ function EquippedPanel({
               aria-label={`Ver categoría ${label}`}
             >
               <span className="equipped-slot__label">{label}</span>
-              <div className={`equipped-slot__preview${skin ? '' : ' equipped-slot__preview--empty'}`}>
-                {skin ? (
-                  <img
-                    className="equipped-slot__img"
-                    src={skin.url}
-                    alt={skin.name}
-                    loading="lazy"
-                  />
+              <div className={`equipped-slot__preview${skin || showDefaultAvatar || showDefaultCard ? '' : ' equipped-slot__preview--empty'}`}>
+                {skin || showDefaultAvatar || showDefaultCard ? (
+                  // Si hay skin real la mostramos; si no, mostramos la imagen por defecto (avatar)
+                  skin ? (
+                    <img
+                      className="equipped-slot__img"
+                      src={skin.url}
+                      alt={skin.name}
+                      loading="lazy"
+                    />
+                  ) : showDefaultAvatar ? (
+                    <img
+                      className="equipped-slot__img"
+                      src={DEFAULT_AVATAR_URL}
+                      alt={DEFAULT_AVATAR_DISPLAY_NAME}
+                      loading="lazy"
+                    />
+                  ) : (
+                    // Carta por defecto: mostrar la imagen real de la skin default
+                    <img
+                      className="equipped-slot__img"
+                      src={DEFAULT_CARD_URL}
+                      alt={DEFAULT_CARD_DISPLAY_NAME}
+                      loading="lazy"
+                    />
+                  )
                 ) : (
+                  // Tapete vacío: mostrar una X estilizada (usuario pidió 'X')
                   <svg
                     className="equipped-slot__empty-icon"
                     width="28" height="28"
                     viewBox="0 0 24 24"
                     fill="none" stroke="currentColor"
-                    strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                     aria-hidden="true"
                   >
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
                 )}
               </div>
-              <span className={`equipped-slot__name${skin ? '' : ' equipped-slot__name--empty'}`}>
-                {skin ? skin.name : emptyLabel}
+              <span className={`equipped-slot__name${skin || showDefaultAvatar || showDefaultCard ? '' : ' equipped-slot__name--empty'}`}>
+                {skin ? skin.name : (showDefaultAvatar ? DEFAULT_AVATAR_DISPLAY_NAME : showDefaultCard ? DEFAULT_CARD_DISPLAY_NAME : emptyLabel)}
               </span>
             </button>
           );
@@ -133,6 +163,62 @@ export default function InventoryPage() {
   const [sortBy,         setSortBy]         = useState<SortKey>('price-asc');
   const [loadingSkinId,  setLoadingSkinId]  = useState<string | null>(null);
 
+  const pageRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  // Entrada de la página: panel de equipados + tabs deslizan desde abajo
+  useLayoutEffect(() => {
+    if (loading) return;
+
+    const scope = pageRef.current;
+    if (!scope) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline();
+      tl.from('.equipped-panel', {
+        y: -20,
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: 'power2.out',
+        clearProps: 'all',
+      });
+      tl.from('.skin-tabs', {
+        y: -14,
+        autoAlpha: 0,
+        duration: 0.35,
+        ease: 'power2.out',
+        clearProps: 'all',
+      }, 0.1);
+      tl.from('.app-page__panel', {
+        y: 24,
+        autoAlpha: 0,
+        duration: 0.4,
+        ease: 'power3.out',
+        clearProps: 'all',
+      }, 0.15);
+    }, scope);
+    return () => ctx.revert();
+  }, [loading]);
+
+  // Stagger de cards al cambiar de tab
+  useEffect(() => {
+    const scope = gridRef.current;
+    if (!scope) return;
+
+    const ctx = gsap.context(() => {
+      gsap.from('.skin-card', {
+        y: 14,
+        autoAlpha: 0,
+        scale: 0.9,
+        duration: 0.28,
+        ease: 'power2.out',
+        stagger: { each: 0.04, from: 'start' },
+        clearProps: 'all',
+      });
+    }, scope);
+    return () => ctx.revert();
+  }, [activeTab]);
+
   function showAddMore(type: SkinType): boolean {
     const storeCount = store.filter(s => s.type === type).length;
     const invCount   = inventory.filter(s => s.type === type).length;
@@ -159,12 +245,12 @@ export default function InventoryPage() {
   );
 
   return (
-    <div className="skin-page">
-      <GameHeader title="Inventario" onBack={() => navigate('/home')} />
+    <div className="app-page" ref={pageRef}>
+      <GameHeader title="Inventario" onBack={() => navigate(-1)} />
 
-      <main className="skin-page__content">
+      <main className="app-page__content">
         {loading ? (
-          <div className="skin-page__loading">Cargando inventario…</div>
+          <div className="app-page__loading">Cargando inventario…</div>
         ) : (
           <>
             {/* Panel de equipados */}
@@ -191,12 +277,12 @@ export default function InventoryPage() {
 
             {/* Panel con sort + grid */}
             <div
-              className="skin-page__panel"
+              className="app-page__panel"
               role="tabpanel"
               aria-live="polite"
               aria-atomic="false"
             >
-              {error && <div className="skin-page__error" role="alert">{error}</div>}
+              {error && <div className="app-page__error" role="alert">{error}</div>}
 
               {/* Controles de ordenado */}
               <div className="skin-sort" aria-label="Ordenar por">
@@ -215,11 +301,11 @@ export default function InventoryPage() {
 
               {/* Grid del inventario */}
               {visibleSkins.length === 0 && !showAddMore(activeTab) ? (
-                <div className="skin-empty">
+                <div className="app-page__empty">
                   <p>No tienes {TABS.find(t => t.type === activeTab)?.label.toLowerCase()} todavía.</p>
                 </div>
               ) : (
-                <div className={`skin-grid skin-grid--${activeTab.toLowerCase()}`}>
+                <div className={`skin-grid skin-grid--${activeTab.toLowerCase()}`} ref={gridRef}>
                   {visibleSkins.map(skin => (
                     <SkinCard
                       key={skin.id}
@@ -250,3 +336,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+

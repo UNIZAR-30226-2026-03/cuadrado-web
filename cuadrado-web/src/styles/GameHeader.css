@@ -9,6 +9,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 24px;
+  min-height: 58px; /* altura fija en todas las variantes del header */
   background: linear-gradient(180deg, rgba(11, 23, 51, 0.95) 0%, rgba(11, 23, 51, 0.8) 100%);
   border-bottom: 1px solid var(--glass-border);
   backdrop-filter: blur(20px);

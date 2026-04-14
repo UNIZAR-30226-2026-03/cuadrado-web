@@ -1,0 +1,274 @@
+/* CreateRoomExtras.css - Estilos adicionales para CreateRoomPage */
+
+/* Sublabel bajo el nombre de la opción de baraja */
+.room-option__sublabel {
+  font-size: 11px;
+  color: var(--text-50);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  margin-top: -6px;
+}
+
+/* === Fila de ajustes numéricos === */
+.room-settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === Stepper (selector numérico +/-) === */
+.room-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(17, 40, 88, 0.5);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+}
+
+.room-stepper__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-80);
+}
+
+.room-stepper__control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(0, 229, 255, 0.07);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.room-stepper__btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--neon-cyan);
+  cursor: pointer;
+  transition: background 150ms, opacity 150ms;
+  padding: 0;
+}
+
+.room-stepper__btn:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.14);
+}
+
+.room-stepper__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.room-stepper__value {
+  width: 38px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-100);
+}
+
+/* === Selector de tiempo de turno — pills === */
+.room-turntime {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.room-turntime__cards {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-turntime__card {
+  flex: 1 1 72px;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 8px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(120, 210, 255, 0.22);
+  background: rgba(17, 40, 88, 0.5);
+  color: var(--text-50);
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, color 160ms, transform 160ms var(--spring);
+}
+
+.room-turntime__card:hover {
+  background: rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.4);
+  color: var(--text-80);
+}
+
+.room-turntime__card.is-active {
+  background: rgba(0, 229, 255, 0.14);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(0, 229, 255, 0.22);
+}
+
+.room-turntime__card-time {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.room-turntime__card-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.room-turntime__card svg {
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.room-turntime__card.is-active svg {
+  opacity: 1;
+}
+
+/* === Responsive === */
+@media (max-width: 480px) {
+  .room-turntime__cards {
+    gap: 6px;
+  }
+
+  .room-turntime__card {
+    flex: 1 1 58px;
+    min-width: 52px;
+    padding: 8px 6px 6px;
+  }
+
+  .room-turntime__card-time {
+    font-size: 15px;
+  }
+
+  .room-stepper__value {
+    width: 34px;
+    font-size: 15px;
+  }
+}
+
+/* === Modificador: contenido de configuración de partida con scroll propio === */
+.app-page__content--room-config {
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+/* === Modo popup de crear partida === */
+.create-room-embedded {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 92vh;
+}
+
+.create-room-embedded__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(120, 210, 255, 0.18);
+  background: linear-gradient(180deg, rgba(11, 23, 51, 0.9), rgba(11, 23, 51, 0.7));
+}
+
+.create-room-embedded__title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-100);
+}
+
+.create-room-embedded__spacer {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.create-room-embedded__back {
+  min-width: 96px;
+}
+
+.create-room-embedded__content {
+  min-height: 0;
+  padding: 0;
+}
+
+.create-room-embedded__panel {
+  margin: 0;
+  min-height: 0;
+  border: none;
+  border-top: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 12px 16px 16px;
+}
+
+.create-room-embedded .room-panel--stack {
+  max-height: calc(92vh - 148px);
+  display: flex;
+}
+
+.create-room-embedded .room-powers__list {
+  flex: 1;
+}
+
+/* Separación inferior en fase 2 para que los CTAs no queden pegados al borde */
+.create-room-embedded .room-footer--spread {
+  padding-bottom: 10px;
+}
+
+.room-option--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.room-option--disabled:hover {
+  transform: none;
+  border-color: var(--glass-border);
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .create-room-embedded__header {
+    padding: 10px 12px;
+  }
+
+  .create-room-embedded__title {
+    font-size: 16px;
+  }
+
+  .create-room-embedded__spacer,
+  .create-room-embedded__back {
+    width: 84px;
+    min-width: 84px;
+  }
+
+  .create-room-embedded .room-panel--stack {
+    max-height: calc(96vh - 138px);
+  }
+}
+

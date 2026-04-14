@@ -1,8 +1,8 @@
-// components/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
+// components/game/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
 
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import '../styles/GameHeader.css';
+import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
+import '../../styles/GameHeader.css';
 
 interface GameHeaderProps {
   /** Título de sección mostrado en el centro. Si se omite, no se renderiza. */
@@ -36,7 +36,7 @@ function CubeWireframeIcon({ size = 18 }: { size?: number }) {
 
 export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const { openSettingsModal } = useModal();
   const isSub = Boolean(title || onBack);
 
   return (
@@ -66,7 +66,7 @@ export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
 
         <button
           className="game-header__icon-btn"
-          onClick={() => navigate('/settings')}
+          onClick={openSettingsModal}
           aria-label="Ajustes"
           title="Ajustes"
         >

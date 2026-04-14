@@ -1,5 +1,5 @@
 /* InventoryPage.css - Estilos específicos de la pantalla de inventario (/inventory) */
-/* Comparte .skin-page, .skin-tabs, .skin-sort, .skin-grid con ShopPage.css */
+/* Comparte .app-page, .skin-tabs, .skin-sort, .skin-grid con ShopPage.css */
 
 /* === Panel de equipados actualmente === */
 .equipped-panel {
@@ -115,7 +115,7 @@
 }
 
 /* === Card "+" acceso a tienda === */
-.skin-card--add-more {
+.skin-grid .skin-card--add-more {
   appearance: none;
   padding: 0;
   cursor: pointer;
@@ -124,16 +124,16 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1.5px dashed rgba(0, 208, 255, 0.42) !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  border: 1.5px dashed rgba(0, 208, 255, 0.42);
+  background: transparent;
+  box-shadow: none;
   transition: border-color 200ms, background 200ms;
 }
 
-.skin-card--add-more:hover,
-.skin-card--add-more:focus-visible {
-  border-color: rgba(0, 224, 255, 0.75) !important;
-  background: rgba(0, 208, 255, 0.06) !important;
+.skin-grid .skin-card--add-more:hover,
+.skin-grid .skin-card--add-more:focus-visible {
+  border-color: rgba(0, 224, 255, 0.75);
+  background: rgba(0, 208, 255, 0.06);
 }
 
 /* AddMoreCard: altura mínima para cuando es la única card del grid (sin vecinos que estiren la fila) */
@@ -213,3 +213,4 @@
   .skin-grid--carta  .skin-card--add-more { min-height: 200px; }
   .skin-grid--avatar .skin-card--add-more { min-height: 160px; }
 }
+
