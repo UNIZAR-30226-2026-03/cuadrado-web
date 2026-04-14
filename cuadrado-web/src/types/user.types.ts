@@ -14,3 +14,17 @@ export interface UserProfile {
   equippedTapeteId?: string | null;
   equippedSkinID?: string | null; // Compatibilidad con versión previa
 }
+
+/** Configuracion de audio del usuario (persistida en settings JSON) */
+export interface UserSettings {
+  voiceChatVolume: number;
+  gameMusicVolume: number;
+  soundEffectsVolume: number;
+}
+
+/** Payload para actualizar configuracion del usuario */
+export interface UpdateUserSettingsPayload {
+  voiceChatVolume?: number;
+  gameMusicVolume?: number;
+  soundEffectsVolume?: number;
+}

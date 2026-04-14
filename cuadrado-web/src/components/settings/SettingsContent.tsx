@@ -11,6 +11,11 @@ import {
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useAuth } from '../../context/AuthContext';
+import {
+  getMySettingsRequest,
+  updateMySettingsRequest,
+} from '../../services/user.service';
+import { getAccessToken } from '../../utils/token';
 import '../../styles/SettingsPage.css';
 
 interface SettingsContentProps {
@@ -29,6 +34,10 @@ function loadPref<T>(key: string, defaultVal: T): T {
 
 function savePref<T>(key: string, val: T) {
   localStorage.setItem(key, JSON.stringify(val));
+}
+
+function ajustarPorcentaje(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 interface SliderRowProps {
@@ -175,8 +184,38 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
   const [volMusic, setVolMusic] = useState(() => loadPref('vol_music', 60));
   const [volSfx, setVolSfx] = useState(() => loadPref('vol_sfx', 80));
   const [volVoice, setVolVoice] = useState(() => loadPref('vol_voice', 90));
+  const initialGeneralVolumeRef = useRef(volGeneral);
+  const settingsLoadedFromApiRef = useRef(false);
+  const hasAudioChangesRef = useRef(false);
+
+  const volumesRef = useRef({
+    volGeneral,
+    volMusic,
+    volSfx,
+    volVoice,
+  });
 
   const [passOpen, setPassOpen] = useState(false);
+
+  const handleVolGeneralChange = useCallback((value: number) => {
+    hasAudioChangesRef.current = true;
+    setVolGeneral(value);
+  }, []);
+
+  const handleVolMusicChange = useCallback((value: number) => {
+    hasAudioChangesRef.current = true;
+    setVolMusic(value);
+  }, []);
+
+  const handleVolSfxChange = useCallback((value: number) => {
+    hasAudioChangesRef.current = true;
+    setVolSfx(value);
+  }, []);
+
+  const handleVolVoiceChange = useCallback((value: number) => {
+    hasAudioChangesRef.current = true;
+    setVolVoice(value);
+  }, []);
 
   useEffect(() => {
     savePref('vol_general', volGeneral);
@@ -193,6 +232,72 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
   useEffect(() => {
     savePref('vol_voice', volVoice);
   }, [volVoice]);
+
+  useEffect(() => {
+    volumesRef.current = {
+      volGeneral,
+      volMusic,
+      volSfx,
+      volVoice,
+    };
+  }, [volGeneral, volMusic, volSfx, volVoice]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSettings = async () => {
+      const token = getAccessToken();
+      if (!token) return;
+
+      try {
+        const settings = await getMySettingsRequest(token);
+        if (cancelled) return;
+
+        const currentFactor = ajustarPorcentaje(initialGeneralVolumeRef.current) / 100;
+        const factor = currentFactor > 0 ? currentFactor : 1;
+
+        //Al mandarlo se multiplica, para enseñarlo correctamente hay que dividir
+        setVolVoice(ajustarPorcentaje(settings.voiceChatVolume / factor));
+        setVolMusic(ajustarPorcentaje(settings.gameMusicVolume / factor));
+        setVolSfx(ajustarPorcentaje(settings.soundEffectsVolume / factor));
+        settingsLoadedFromApiRef.current = true;
+      } catch {
+        // Si falla, mantenemos las locales como fallback
+      }
+    };
+
+    void loadSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const token = getAccessToken();
+      if (!token) return;
+      if (!settingsLoadedFromApiRef.current) return;
+      if (!hasAudioChangesRef.current) return;
+
+      const {
+        volGeneral: currentGeneral,
+        volMusic: currentMusic,
+        volSfx: currentSfx,
+        volVoice: currentVoice,
+      } = volumesRef.current;
+
+      const multiplier = ajustarPorcentaje(currentGeneral) / 100;
+
+      void updateMySettingsRequest(token, {
+        voiceChatVolume: ajustarPorcentaje(currentVoice * multiplier),
+        gameMusicVolume: ajustarPorcentaje(currentMusic * multiplier),
+        soundEffectsVolume: ajustarPorcentaje(currentSfx * multiplier),
+      }).catch(() => {
+        // Evita bloquear el cierre si la persistencia remota falla
+      });
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -274,22 +379,27 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
       <div className="settings-section">
         <h2 className="settings-section__title">Audio</h2>
         <div className="settings-panel">
-          <SliderRow icon={<VolumeIcon />} label="Volumen general" value={volGeneral} onChange={setVolGeneral} />
+          <SliderRow
+            icon={<VolumeIcon />}
+            label="Volumen general"
+            value={volGeneral}
+            onChange={handleVolGeneralChange}
+          />
           <SliderRow
             icon={<MusicIcon />}
             iconVariant="purple"
             label="Música"
             value={volMusic}
-            onChange={setVolMusic}
+            onChange={handleVolMusicChange}
           />
           <SliderRow
             icon={<SfxIcon />}
             iconVariant="gold"
             label="Efectos de sonido"
             value={volSfx}
-            onChange={setVolSfx}
+            onChange={handleVolSfxChange}
           />
-          <SliderRow icon={<MicIcon />} label="Voz" value={volVoice} onChange={setVolVoice} />
+          <SliderRow icon={<MicIcon />} label="Voz" value={volVoice} onChange={handleVolVoiceChange} />
         </div>
       </div>
     </div>
