@@ -5,6 +5,7 @@ export interface RulesConfig {
   turnTimeSeconds: number;
   isPrivate: boolean;
   fillWithBots: boolean;
+  dificultadBots?: 'media' | 'dificil';
   deckCount: number;
   enabledPowers: string[];
 }

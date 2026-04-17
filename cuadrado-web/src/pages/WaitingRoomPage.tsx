@@ -211,6 +211,11 @@ export default function WaitingRoomPage() {
 
   const maxPlayers = room.rules.maxPlayers;
   const deckCount = room.rules.deckCount;
+  const botModeLabel = !room.rules.fillWithBots
+    ? 'Sin bots'
+    : room.rules.dificultadBots === 'dificil'
+      ? 'Bots: Difícil'
+      : 'Bots: Media';
   const isHost = currentUserId === room.hostId;
   const blockedSoloStart = room.players.length === 1 && !room.rules.fillWithBots;
   
@@ -256,6 +261,9 @@ export default function WaitingRoomPage() {
             </span>
             <span className="room-info-badge">
               ⏱️ {formatTurnTime(room.rules.turnTimeSeconds)} por turno
+            </span>
+            <span className="room-info-badge">
+              🤖 {botModeLabel}
             </span>
             <span className="room-info-badge">
               👥 {room.players.length}/{maxPlayers} jugadores

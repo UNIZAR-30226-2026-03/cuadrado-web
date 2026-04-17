@@ -16,6 +16,7 @@ import '../../styles/RoomPages.css';
 import '../../styles/CreateRoomExtras.css';
 
 type DeckCount = 1 | 2;
+type BotDifficulty = 'media' | 'dificil';
 
 /** Estado interno de un poder con su flag de habilitado para esta sesión de creación */
 interface RoomPower {
@@ -111,6 +112,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
   const [roomName, setRoomName] = useState(user?.username ?? '');
   const [isPublic, setIsPublic] = useState(true);
   const [fillWithBots, setFillWithBots] = useState(true);
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>('media');
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [turnTime, setTurnTime] = useState<15 | 20 | 30 | 45 | 60>(30);
   const [powers, setPowers] = useState<RoomPower[]>(DEFAULT_POWERS);
@@ -153,6 +155,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
         turnTimeSeconds: turnTime,
         isPrivate: !isPublic,
         fillWithBots,
+        dificultadBots: fillWithBots ? botDifficulty : undefined,
         deckCount,
         enabledPowers: powers.filter(power => power.enabled).map(power => power.value),
       },
@@ -168,7 +171,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     } finally {
       setCreating(false);
     }
-  }, [deckCount, fillWithBots, isPublic, maxPlayers, navigate, onClose, powers, roomName, turnTime, user?.username]);
+  }, [botDifficulty, deckCount, fillWithBots, isPublic, maxPlayers, navigate, onClose, powers, roomName, turnTime, user?.username]);
 
   // ── Paso 1: Selección de barajas ─────────────────────────────────────────
 
@@ -281,6 +284,29 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
             </button>
             <span className={`room-toggle__label${fillWithBots ? ' is-active' : ''}`}>Completar con bots</span>
           </div>
+
+          {fillWithBots && (
+            <div className="room-turntime">
+              <span className="room-powers__title">Dificultad de bots</span>
+              <div className="room-turntime__cards">
+                <button
+                  className={`room-turntime__card${botDifficulty === 'media' ? ' is-active' : ''}`}
+                  onClick={() => setBotDifficulty('media')}
+                >
+                  <span className="room-turntime__card-time">Media</span>
+                  <span className="room-turntime__card-label">Equilibrada</span>
+                </button>
+
+                <button
+                  className={`room-turntime__card${botDifficulty === 'dificil' ? ' is-active' : ''}`}
+                  onClick={() => setBotDifficulty('dificil')}
+                >
+                  <span className="room-turntime__card-time">Difícil</span>
+                  <span className="room-turntime__card-label">Más competitiva</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ── Número de jugadores ── */}
           <div className="room-settings-row">
