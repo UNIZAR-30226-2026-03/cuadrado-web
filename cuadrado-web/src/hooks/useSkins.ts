@@ -119,8 +119,7 @@ export function useSkins(): UseSkinsReturn {
 
   /** Re-sincroniza inventario + equipadas tras comprar/equipar/desequipar */
   const syncInventory = useCallback(async (token: string) => {
-    const [, rawInventory, equipped] = await Promise.all([
-      fetchProfile().catch(() => {}),
+    const [rawInventory, equipped] = await Promise.all([
       getInventory(token),
       getEquipped(token),
     ]);
@@ -128,7 +127,7 @@ export function useSkins(): UseSkinsReturn {
     const filteredInventory = (rawInventory ?? []).filter((s: Skin) => !isDefaultSkin(s));
     setInventory(filteredInventory);
     setEquippedSkinIds(mapEquippedUrlsToIds(filteredInventory, equipped));
-  }, [fetchProfile, isDefaultSkin, mapEquippedUrlsToIds]);
+  }, [isDefaultSkin, mapEquippedUrlsToIds]);
 
   // Carga inicial
   useEffect(() => {
@@ -144,6 +143,7 @@ export function useSkins(): UseSkinsReturn {
     try {
       await buySkin(skinId, token);
       await syncInventory(token);
+      await fetchProfile();
     } catch (err) {
       // Si el backend falla con 500, ofrecemos un fallback local (simulación)
       const msg = err instanceof Error ? err.message : String(err);
@@ -170,7 +170,7 @@ export function useSkins(): UseSkinsReturn {
       setError(err instanceof Error ? err.message : 'Error al comprar skin');
       throw err; // re-throw for other error types
     }
-  }, [store, syncInventory, updateUser, user?.cubitos]);
+  }, [fetchProfile, store, syncInventory, updateUser, user?.cubitos]);
 
   /** Equipa una skin: re-fetch inventario + actualiza perfil */
   const equip = useCallback(async (skinId: string) => {
@@ -181,11 +181,12 @@ export function useSkins(): UseSkinsReturn {
     try {
       await equipSkin(skinId, token);
       await syncInventory(token);
+      await fetchProfile();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al equipar skin');
       throw err;
     }
-  }, [syncInventory]);
+  }, [fetchProfile, syncInventory]);
 
   /** Desequipa la skin actual: re-fetch inventario + actualiza perfil */
   const unequip = useCallback(async (type: SkinType) => {
@@ -200,11 +201,12 @@ export function useSkins(): UseSkinsReturn {
     try {
       await unequipSkin(type, token);
       await syncInventory(token);
+      await fetchProfile();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al desequipar skin');
       throw err;
     }
-  }, [equippedSkinIds, syncInventory]);
+  }, [equippedSkinIds, fetchProfile, syncInventory]);
 
   return { store, inventory, equippedSkinIds, loading, error, buy, equip, unequip, refresh };
 }

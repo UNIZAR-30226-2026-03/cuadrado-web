@@ -31,6 +31,7 @@ import { getAccessToken, setTokens, clearTokens } from '../utils/token';
 /** Contrato del contexto: estado y acciones expuestos a los hijos */
 interface AuthContextType {
   isAuthenticated: boolean;
+  authReady: boolean;
   user: UserProfile | null;
   login: (data: LoginPayload) => Promise<void>;
   register: (data: RegisterPayload) => Promise<void>;
@@ -46,6 +47,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 /** Provee el estado de autenticacion a todos los hijos */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
 
   /** Carga el perfil del usuario desde el backend. Fallo silencioso para evitar logout en cascada. */
@@ -70,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       fetchProfile();
     }
+    setAuthReady(true);
   }, []);
 
   /** Autentica al usuario, guarda tokens y carga el perfil completo */
@@ -113,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, login, register, logout, changePassword, fetchProfile, updateUser }}
+      value={{ isAuthenticated, authReady, user, login, register, logout, changePassword, fetchProfile, updateUser }}
     >
       {children}
     </AuthContext.Provider>
