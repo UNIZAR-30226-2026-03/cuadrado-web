@@ -1,7 +1,8 @@
 // App.tsx - Componente raiz: AuthProvider, fondo animado y enrutamiento SPA
 
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
 import SettingsModal from './components/modals/SettingsModal';
 import CreateRoomModal from './components/modals/CreateRoomModal';
@@ -28,6 +29,8 @@ import PortraitOverlay from './components/PortraitOverlay/PortraitOverlay';
 
 function AppInner() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, authReady } = useAuth();
   const hideOn = [
     '/login',
     '/register',
@@ -36,6 +39,29 @@ function AppInner() {
     '/reset-password',
   ];
   const hideOverlay = hideOn.includes(location.pathname);
+
+  useEffect(() => {
+    const publicAuthRoutes = new Set(hideOn);
+    const isAuthRoute = publicAuthRoutes.has(location.pathname);
+
+    if (!authReady) {
+      return;
+    }
+
+    if (!isAuthenticated && location.pathname !== '/' && !isAuthRoute) {
+      navigate('/', { replace: true });
+      return;
+    }
+
+    if (isAuthenticated && location.pathname === '/') {
+      navigate('/home', { replace: true });
+      return;
+    }
+
+    if (isAuthenticated && isAuthRoute) {
+      navigate('/home', { replace: true });
+    }
+  }, [authReady, hideOn, isAuthenticated, location.pathname, navigate]);
 
   return (
     <>
