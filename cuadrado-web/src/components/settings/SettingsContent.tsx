@@ -15,6 +15,7 @@ import {
   getMySettingsRequest,
   updateMySettingsRequest,
 } from '../../services/user.service';
+import { leaveRoom, getLastRoomState, disconnectRoomsSocket } from '../../services/room.service';
 import { getAccessToken } from '../../utils/token';
 import '../../styles/SettingsPage.css';
 
@@ -177,7 +178,7 @@ function PasswordForm({ open, onClose }: PasswordFormProps) {
 
 export default function SettingsContent({ onClose, inModal = false }: SettingsContentProps) {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [volGeneral, setVolGeneral] = useState(() => loadPref('vol_general', 80));
@@ -196,6 +197,8 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
   });
 
   const [passOpen, setPassOpen] = useState(false);
+  const [closingRoom, setClosingRoom] = useState(false);
+  const [closeRoomError, setCloseRoomError] = useState<string | null>(null);
 
   const handleVolGeneralChange = useCallback((value: number) => {
     hasAudioChangesRef.current = true;
@@ -327,6 +330,28 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
     return () => ctx.revert();
   }, []);
 
+  const handleCloseRoom = useCallback(async () => {
+    const room = getLastRoomState();
+    if (!room) return;
+
+    // Confirmación simple
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm('¿Cerrar la sala actual? Esta acción expulsará a todos los jugadores.')) return;
+
+    setClosingRoom(true);
+    setCloseRoomError(null);
+    try {
+      await leaveRoom();
+      disconnectRoomsSocket();
+      onClose();
+      navigate('/home');
+    } catch (err) {
+      setCloseRoomError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setClosingRoom(false);
+    }
+  }, [navigate, onClose]);
+
   return (
     <div
       className={`settings-container${inModal ? ' settings-container--modal' : ''}`}
@@ -373,6 +398,40 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
               </button>
             </div>
           </div>
+
+          {/* Cerrar sala actual (solo visible si eres host) */}
+          {(() => {
+            const room = getLastRoomState();
+            if (!room) return null;
+
+            const amIHost = room.hostId === (user?.username ?? '');
+
+            return (
+              <div className="settings-row">
+                <span className="settings-row__icon settings-row__icon--red">🚪</span>
+                <div className="settings-row__body">
+                  <span className="settings-row__label">Sala actual</span>
+                  <span className="settings-row__sublabel">{`${room.name} (${room.code})`}</span>
+                </div>
+                <div className="settings-row__control">
+                  {amIHost ? (
+                    <>
+                      <button
+                        className="settings-action-btn settings-action-btn--danger"
+                        onClick={handleCloseRoom}
+                        disabled={closingRoom}
+                      >
+                        {closingRoom ? 'Cerrando…' : 'Cerrar sala'}
+                      </button>
+                      {closeRoomError && <div style={{ color: 'var(--danger)', marginTop: 6 }}>{closeRoomError}</div>}
+                    </>
+                  ) : (
+                    <span className="settings-row__sublabel">Solo el creador puede cerrar la sala</span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

@@ -599,3 +599,644 @@
   .game-pile-card__label { font-size: 18px; }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === HUD de turno === */
+.game-turn-hud {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: rgba(10, 18, 40, 0.88);
+  backdrop-filter: blur(10px);
+  color: var(--neon-cyan);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  z-index: 15;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: slide-up-center 0.28s var(--spring) both;
+}
+
+/* === Mazo activo: pila de robar clickeable cuando es el turno del jugador === */
+.game-pile--draw-active {
+  cursor: pointer;
+  animation: draw-pulse 1.4s ease-in-out infinite;
+}
+
+.game-pile--draw-active:hover .game-pile-card {
+  border-color: var(--neon-cyan);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.8),
+    0 0 22px rgba(0, 229, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.game-pile--draw-active .game-pile-card {
+  border-color: rgba(0, 229, 255, 0.9);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(0, 229, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+@keyframes draw-pulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.3)); }
+  50%       { filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.7)); }
+}
+
+/* === Contador de cartas en el mazo === */
+.game-pile__count {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  opacity: 0.7;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* === Botón CUBO estado activo === */
+.cubo-btn--active {
+  border-color: var(--neon-gold);
+  background: rgba(251, 191, 36, 0.22);
+  box-shadow: 0 0 32px rgba(251, 191, 36, 0.55), 0 0 80px rgba(251, 191, 36, 0.25);
+  animation: draw-pulse 0.9s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Cara de carta visual (estilo home animation) === */
+.drawn-card-face {
+  width: 70px;
+  height: 100px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(0, 229, 255, 0.75);
+  background: linear-gradient(145deg, #1a2d5a, #0f1f42);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), 0 4px 16px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.drawn-card-face--red {
+  border-color: rgba(255, 170, 200, 0.75);
+  box-shadow: 0 0 20px rgba(255, 100, 150, 0.18), 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.drawn-card-face--rival {
+  border-color: rgba(251, 191, 36, 0.7);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.18);
+}
+
+.drawn-card-face__label {
+  position: absolute;
+  top: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-50);
+}
+
+.drawn-card-face__value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: #7fffff;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+}
+
+.drawn-card-face--red .drawn-card-face__value {
+  color: #ffaacb;
+  text-shadow: 0 0 10px rgba(255, 100, 150, 0.9);
+}
+
+.drawn-card-face--rival .drawn-card-face__value {
+  color: var(--neon-gold);
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+}
+
+.drawn-card-face__suit {
+  font-size: 18px;
+  line-height: 1;
+  color: #7fffff;
+}
+
+.drawn-card-face--red .drawn-card-face__suit { color: #ffaacb; }
+.drawn-card-face--rival .drawn-card-face__suit { color: var(--neon-gold); }
+
+.drawn-card-face__pts {
+  position: absolute;
+  bottom: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-50);
+}
+
+/* === Panel: carta robada pendiente de decisión === */
+.pending-card-panel {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: rgba(8, 14, 32, 0.96);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0, 229, 255, 0.08);
+  z-index: 25;
+  animation: slide-up-center 0.3s var(--spring) both;
+  max-width: min(94vw, 520px);
+  width: max-content;
+}
+
+.pending-card-panel__drawn-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-right: 18px;
+}
+
+.pending-card-panel__meta {
+  margin: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--neon-cyan);
+  opacity: 0.7;
+}
+
+.pending-card-panel__divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 0 18px;
+  flex-shrink: 0;
+}
+
+.pending-card-panel__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pending-card-panel__or {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-50);
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.pending-card-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-btn);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms, transform 100ms;
+  white-space: nowrap;
+}
+
+.pending-card-btn--discard {
+  border: 1px solid rgba(255, 90, 90, 0.55);
+  background: rgba(255, 90, 90, 0.12);
+  color: #ffb0b0;
+}
+
+.pending-card-btn--discard:hover {
+  background: rgba(255, 90, 90, 0.24);
+  transform: translateY(-1px);
+}
+
+/* === Cuadrícula visual de cartas de la mano === */
+.pending-card-hand-grid {
+  display: grid;
+  gap: 5px;
+}
+
+.skill-hand-grid {
+  display: grid;
+  gap: 5px;
+  margin: 2px 0 4px;
+}
+
+.hand-card-btn {
+  width: 36px;
+  height: 50px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(120, 210, 255, 0.35);
+  background: linear-gradient(135deg, #1a3478 0%, #0d1f4a 100%);
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.14s, transform 0.12s, box-shadow 0.14s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hand-card-btn::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(0, 229, 255, 0.06) 0%, transparent 60%),
+    repeating-linear-gradient(45deg, transparent, transparent 2.5px, rgba(0, 229, 255, 0.07) 2.5px, rgba(0, 229, 255, 0.07) 3.5px),
+    repeating-linear-gradient(-45deg, transparent, transparent 2.5px, rgba(0, 229, 255, 0.06) 2.5px, rgba(0, 229, 255, 0.06) 3.5px);
+  pointer-events: none;
+}
+
+.hand-card-btn:hover {
+  border-color: rgba(0, 229, 255, 0.65);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 14px rgba(0, 229, 255, 0.18);
+}
+
+.hand-card-btn--selected {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.14);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
+  transform: translateY(-3px);
+}
+
+.hand-card-btn__num {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(120, 210, 255, 0.55);
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  z-index: 2;
+  line-height: 1;
+}
+
+.hand-card-btn--selected .hand-card-btn__num {
+  color: var(--neon-cyan);
+}
+
+.hand-card-btn__confirm {
+  font-size: 15px;
+  color: var(--neon-cyan);
+  font-weight: 800;
+  z-index: 2;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Panel de habilidad de carta === */
+.skill-panel {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: min(92vw, 380px);
+  border-radius: 18px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(8, 14, 32, 0.95);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(251, 191, 36, 0.06);
+  z-index: 25;
+  animation: slide-up-corner 0.3s var(--spring) both;
+  overflow: hidden;
+}
+
+.skill-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.skill-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--neon-gold);
+}
+
+.skill-panel__skip {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: var(--text-50);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms, color 120ms;
+}
+
+.skill-panel__skip:hover {
+  background: rgba(255, 90, 90, 0.15);
+  color: #ff9c9c;
+}
+
+.skill-panel__content {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-80);
+}
+
+.skill-panel__content p {
+  margin: 0;
+}
+
+.skill-panel__auto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skill-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.skill-panel__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-50);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-panel__targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skill-panel__target-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 210, 255, 0.28);
+  background: rgba(17, 40, 88, 0.6);
+  color: var(--text-80);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+
+.skill-panel__target-btn:hover {
+  background: rgba(0, 229, 255, 0.1);
+  border-color: rgba(0, 229, 255, 0.45);
+}
+
+.skill-panel__target-btn--selected {
+  border-color: var(--neon-cyan);
+  background: rgba(0, 229, 255, 0.18);
+  color: var(--neon-cyan);
+  font-weight: 800;
+}
+
+.skill-panel__btn {
+  padding: 10px 20px;
+  border-radius: var(--radius-btn);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms, transform 100ms, opacity 140ms;
+  align-self: flex-start;
+}
+
+.skill-panel__btn--primary {
+  border: 1.5px solid rgba(251, 191, 36, 0.65);
+  background: rgba(251, 191, 36, 0.14);
+  color: var(--neon-gold);
+}
+
+.skill-panel__btn--primary:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.26);
+  transform: translateY(-1px);
+}
+
+.skill-panel__btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Panel de carta espiada (poderes 10 y 11 - solo jugador local) === */
+.peeked-card-panel {
+  position: fixed;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-50%);
+  min-width: 160px;
+  border-radius: 18px;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  background: rgba(8, 14, 32, 0.96);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 229, 255, 0.06);
+  z-index: 30;
+  padding: 14px 18px 18px;
+  animation: slide-up-corner 0.3s var(--spring) both;
+}
+
+.peeked-card-panel__title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--neon-cyan);
+  text-align: center;
+}
+
+.peeked-card-panel__cards {
+  display: flex;
+  gap: 12px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Panel de cartas reveladas (poder del 5) === */
+.revealed-cards-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 260px;
+  max-width: min(92vw, 480px);
+  border-radius: 18px;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(8, 14, 32, 0.96);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8), 0 0 60px rgba(251, 191, 36, 0.08);
+  z-index: 30;
+  padding: 16px 20px 20px;
+  animation: pop-in 0.35s var(--spring) both;
+}
+
+.revealed-cards-panel__title {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--neon-gold);
+  text-align: center;
+}
+
+.revealed-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.revealed-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 210, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.revealed-card-item__player {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-100);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.revealed-card-item__card {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Modal de resultado de partida === */
+.game-result-modal {
+  width: min(560px, 96vw);
+}
+
+.game-result-modal__winner {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--neon-gold);
+  text-align: center;
+}
+
+.game-result-modal__reason {
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: var(--text-50);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.game-result-modal__ranking {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-result-modal__rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 210, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rank-position {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--neon-gold);
+  min-width: 22px;
+}
+
+.rank-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-100);
+}
+
+.rank-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* === Keyframes compartidos === */
+
+/* Para elementos centrados con left:50% + translateX(-50%) */
+@keyframes slide-up-center {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Para elementos posicionados en esquina sin transform de centrado */
+@keyframes slide-up-corner {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.88); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+

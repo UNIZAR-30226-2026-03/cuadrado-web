@@ -6,7 +6,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { createRoom, leaveRoom } from '../../services/room.service';
+import { createRoom, leaveRoom, getLastRoomState } from '../../services/room.service';
 import { useAuth } from '../../context/AuthContext';
 import { DEFAULT_POWERS } from '../../data/cardPowers';
 import { IconOneDeck, IconTwoDecks, IconResume } from '../icons/DeckIcons';
@@ -145,6 +145,13 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
   const handleCreateRoom = useCallback(async () => {
     if (!deckCount) return;
 
+    // Si el usuario ya está en una sala con partida iniciada, no permitir crear otra
+    const currentRoom = getLastRoomState();
+    if (currentRoom?.started) {
+      setError('No puedes crear una nueva partida mientras estás en una partida activa');
+      return;
+    }
+
     setCreating(true);
     setError(null);
 
@@ -162,7 +169,12 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     };
 
     try {
-      await leaveRoom();
+      // Intentar salir de la sala actual sólo si existe y no ha empezado
+      const roomStateBefore = getLastRoomState();
+      if (roomStateBefore && !roomStateBefore.started) {
+        await leaveRoom();
+      }
+
       await createRoom(payload);
       onClose();
       navigate('/waiting-room');

@@ -75,11 +75,49 @@ const DEFAULT_TIMEOUT_MS = 8000;
 let socket: RoomsSocket | null = null;
 
 // Caché del último estado de sala recibido vía room:update.
-// Permite a WaitingRoomPage leer el estado inicial sin esperar al siguiente evento.
 let lastRoomState: RoomState | null = null;
 
 export function getLastRoomState(): RoomState | null {
   return lastRoomState;
+}
+
+// ── Caché de inicio de partida (game:inicio-partida / game:turno-iniciado) ──
+// GamePage puede perder estos eventos durante la navegación, así que se cachean
+// en el socket permanente de salas (establecido antes de navegar a /game).
+
+interface CachedGameStart {
+  partidaId: string;
+  jugadores: string[];
+  jugadoresDetalle: Array<{
+    userId: string;
+    controlador: 'humano' | 'bot';
+    dificultadBot?: string;
+    nombreEnPartida?: string;
+  }>;
+}
+
+interface CachedTurnoIniciado {
+  gameId: string;
+  turn: number;
+  userId: string;
+  phase: 'WAIT_DRAW';
+  turnDeadlineAt: number;
+}
+
+let lastGameStartData: CachedGameStart | null = null;
+let lastTurnoIniciadoData: CachedTurnoIniciado | null = null;
+
+export function getLastGameStartData(): CachedGameStart | null {
+  return lastGameStartData;
+}
+
+export function getLastTurnoIniciadoData(): CachedTurnoIniciado | null {
+  return lastTurnoIniciadoData;
+}
+
+export function clearGameCache(): void {
+  lastGameStartData = null;
+  lastTurnoIniciadoData = null;
 }
 
 function getStoredAccessToken(): string | undefined {
@@ -172,10 +210,18 @@ async function ensureSocketConnected(auth?: SocketAuthOptions): Promise<RoomsSoc
 
     socket = socketUrl ? io(socketUrl, options) : io(options);
 
-    // Listener permanente para cachear el estado de sala entre navegaciones
+    // Listeners permanentes para cachear estado entre navegaciones
     socket.on('room:update', (state: RoomState) => {
       lastRoomState = state;
     });
+    (socket as unknown as { on: (ev: string, cb: (d: unknown) => void) => void })
+      .on('game:inicio-partida', (d: unknown) => {
+        lastGameStartData = d as CachedGameStart;
+      });
+    (socket as unknown as { on: (ev: string, cb: (d: unknown) => void) => void })
+      .on('game:turno-iniciado', (d: unknown) => {
+        lastTurnoIniciadoData = d as CachedTurnoIniciado;
+      });
   } else if (Object.keys(handshake).length > 0) {
     socket.auth = { ...(socket.auth as Record<string, unknown>), ...handshake };
   }
@@ -261,6 +307,8 @@ export function disconnectRoomsSocket(): void {
     socket.disconnect();
     socket = null;
     lastRoomState = null;
+    lastGameStartData = null;
+    lastTurnoIniciadoData = null;
   }
 }
 

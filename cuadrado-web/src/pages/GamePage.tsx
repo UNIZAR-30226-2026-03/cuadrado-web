@@ -1,324 +1,366 @@
-// pages/GamePage.tsx - Pantalla de juego
+// pages/GamePage.tsx - Partida en curso.
 //
-// Layout dinámico: datos reales del usuario y skins via API. Lógica de juego pendiente.
-// GSAP para entrada del tablero, stagger de slots, idle del botón CUBO.
+// Backend-driven: todo el estado proviene de eventos WebSocket gestionados
+// por useGame(). GSAP para animaciones de cartas, turnos y temporizador.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import PlayerSlot, { type GamePlayer } from '../components/room/PlayerSlot';
-import {
-  connectRoomsSocket,
-  disconnectRoomsSocket,
-  getLastRoomState,
-  getRoomsSocket,
-  leaveRoom,
-} from '../services/room.service';
-import { getEquipped } from '../services/skin.service';
-import type { EquippedSkinUrls } from '../services/skin.service';
-import type { RoomState } from '../types/room.types';
+import { useGame } from '../hooks/useGame';
 import { useAuth } from '../context/AuthContext';
-import { DEFAULT_AVATAR_URL, DEFAULT_CARD_URL } from '../config/skinDefaults';
-import { getAccessToken } from '../utils/token';
+import {
+  disconnectRoomsSocket,
+  leaveRoom,
+  getLastRoomState,
+} from '../services/room.service';
+import {
+  animateCardFly,
+  animateSlotActivate,
+  animateSlotDeactivate,
+  animateTurnTimer,
+  killTurnTimer,
+  animateDeckReshuffle,
+  animateCuboActivated,
+  animateRevealedCards,
+} from '../utils/game-animations';
+import type {
+  GamePlayerState,
+  PendingSkill,
+  EvPartidaFinalizada,
+  EvCartaRevelada,
+  CartaRevelada,
+  Card,
+  PaloCarta,
+} from '../types/game.types';
 import '../styles/AppModal.css';
 import '../styles/GamePage.css';
 
-// ── Tipos locales ─────────────────────────────────────────────────────────────
+// ── Helpers de cartas ─────────────────────────────────────────────────────────
 
-const DEMO_TURN_SECONDS = 30;
+function formatCartaValue(carta: number): string {
+  if (carta === 1) return 'A';
+  if (carta === 11) return 'J';
+  if (carta === 12) return 'Q';
+  if (carta === 13) return 'K';
+  return String(carta);
+}
 
-// ── Constantes de posicionamiento ─────────────────────────────────────────────
-// Ángulos en grados (0°=derecha, 90°=abajo, 180°=izquierda, 270°=arriba)
-// Convenio CSS-canvas: eje Y positivo hacia abajo.
+function formatPaloSimbolo(palo: PaloCarta): string {
+  const map: Record<PaloCarta, string> = {
+    corazones: '♥', picas: '♠', rombos: '♦', treboles: '♣', joker: '★',
+  };
+  return map[palo] ?? palo;
+}
+
+function isRedSuit(palo: PaloCarta): boolean {
+  return palo === 'corazones' || palo === 'rombos';
+}
+
+// ── Posicionamiento polar ─────────────────────────────────────────────────────
+// 0°=derecha, 90°=abajo (convenio CSS-canvas, eje Y positivo hacia abajo)
+
 const SLOT_ANGLES_DEG = [270, 315, 0, 45, 90, 135, 180, 225] as const;
 
-// Para N jugadores, distribuir equidistantemente incluyendo siempre pos 4 (abajo) para 'isMe'
 function getActivePositionIndices(n: number): number[] {
   const step = Math.floor(8 / n);
   return Array.from({ length: n }, (_, i) => (4 + i * step) % 8);
 }
 
-/**
- * Ordena jugadores para fijar siempre al usuario local en la posición inferior (índice angular 4).
- * Si no se encuentra una posición válida, mantiene el orden original.
- */
 function orderPlayers(players: GamePlayer[], posIndices: number[]): GamePlayer[] {
-  const orderedPlayers: GamePlayer[] = new Array(players.length);
+  const ordered: GamePlayer[] = new Array(players.length);
+  const me   = players.filter(p => p.isMe);
+  const rest = players.filter(p => !p.isMe);
+  const mePosIdx = posIndices.findIndex(idx => idx === 4);
 
-  const mePlayers = players.filter(player => player.isMe);
-  const restPlayers = players.filter(player => !player.isMe);
-  const mePosInSlots = posIndices.findIndex(index => index === 4);
-
-  if (mePosInSlots === -1 || mePlayers.length === 0) {
-    players.forEach((player, index) => {
-      orderedPlayers[index] = player;
-    });
-    return orderedPlayers;
+  if (mePosIdx === -1 || me.length === 0) {
+    players.forEach((p, i) => { ordered[i] = p; });
+    return ordered;
   }
 
-  orderedPlayers[mePosInSlots] = mePlayers[0];
-  let restIndex = 0;
-  for (let slotIndex = 0; slotIndex < players.length; slotIndex++) {
-    if (slotIndex === mePosInSlots) continue;
-    orderedPlayers[slotIndex] = restPlayers[restIndex++];
+  ordered[mePosIdx] = me[0];
+  let ri = 0;
+  for (let si = 0; si < players.length; si++) {
+    if (si === mePosIdx) continue;
+    ordered[si] = rest[ri++];
   }
+  return ordered;
+}
 
-  return orderedPlayers;
+function toSlotPlayer(p: GamePlayerState): GamePlayer {
+  return {
+    id: p.userId,
+    name: p.name,
+    elo: 1200,
+    cardCount: p.cardCount,
+    avatarUrl: p.avatarUrl,
+    cardSkinUrl: p.cardSkinUrl,
+    isMe: p.isMe,
+    isBot: p.isBot,
+  };
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function GamePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const navigate   = useNavigate();
+  const { user }   = useAuth();
+  const currentUserId = user?.username ?? '';
 
+  const {
+    gameState,
+    tapeteUrl,
+    canDrawCard,
+    activePlayer,
+    actions,
+    setPendingSkill,
+  } = useGame(currentUserId);
+
+  // ── Refs DOM ────────────────────────────────────────────────────────────
   const boardRef     = useRef<HTMLDivElement>(null);
+  const deckRef      = useRef<HTMLDivElement>(null);
+  const discardRef   = useRef<HTMLDivElement>(null);
   const timerFillRef = useRef<HTMLDivElement>(null);
   const cuboRef      = useRef<HTMLButtonElement>(null);
-  const voiceRef     = useRef<HTMLDivElement>(null);
   const slotRefs     = useRef<(HTMLDivElement | null)[]>([]);
-  const pilesRef     = useRef<HTMLDivElement>(null);
+  const prevTurnRef    = useRef<number>(-1);
+  const revealedEls    = useRef<HTMLDivElement | null>(null);
+  const entryDoneRef   = useRef(false);
 
-  const [mutedMic,  setMutedMic]  = useState(false);
-  const [deafened,  setDeafened]  = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [roomState, setRoomState] = useState<RoomState | null>(() => getLastRoomState());
-  const [equippedSkins, setEquippedSkins] = useState<EquippedSkinUrls | null>(null);
+  // ── UI state ────────────────────────────────────────────────────────────
+  const [showLeaveModal,   setShowLeaveModal]   = useState(false);
+  const [isLeaving,        setIsLeaving]        = useState(false);
+  const [leaveError,       setLeaveError]       = useState<string | null>(null);
+  const [cuboToast,        setCuboToast]        = useState<string | null>(null);
+  const [selectedCardIdx,  setSelectedCardIdx]  = useState<number | null>(null);
 
-  const currentUserId = user?.username ?? '';
+  const roomState = getLastRoomState();
   const isHost = Boolean(roomState && currentUserId && roomState.hostId === currentUserId);
-  const actionLabel = isHost ? 'Cerrar partida' : 'Salir de la partida';
-  const actionDescription = isHost
-    ? 'Eres anfitrion. Al cerrar la partida, se cerrara la sala y todos volveran al lobby.'
-    : 'Al salir, dejaras de estar en la sala y volveras al lobby.';
 
-  // Carga las skins equipadas del jugador local al montar
+  // ── Posicionamiento ─────────────────────────────────────────────────────
+  // Si tengo carta pendiente, no la muestro en mi mano (va a la zona separada)
+  const slotPlayers = gameState.players.map(p => {
+    const adjusted = (p.isMe && gameState.pendingCard)
+      ? { ...p, cardCount: Math.max(0, p.cardCount - 1) }
+      : p;
+    return toSlotPlayer(adjusted);
+  });
+  const n = Math.max(2, slotPlayers.length);
+  const posIndices = useMemo(() => getActivePositionIndices(n), [n]);
+  const rx = 280, ry = 160;
+
+  const orderedPlayers = useMemo(
+    () => orderPlayers(slotPlayers, posIndices),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(slotPlayers), JSON.stringify(posIndices)],
+  );
+
+  // ── Entrada del tablero (cuando los jugadores llegan por primera vez) ──────
+  // useEffect (no useLayoutEffect) porque los slots se pueblan DESPUÉS del
+  // primer render con estado vacío → hay que esperar a que el DOM esté listo.
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) return;
-    getEquipped(token).then(setEquippedSkins).catch(() => {});
-  }, []);
+    if (entryDoneRef.current || gameState.players.length === 0 || !boardRef.current) return;
+    entryDoneRef.current = true;
 
-  // Lista dinámica de jugadores: usuario local + resto de jugadores recibidos por socket
-  // (incluye bots si el backend los ha añadido al iniciar la partida).
-  const allPlayers = useMemo((): GamePlayer[] => {
-    const me: GamePlayer = {
-      id: currentUserId || 'me',
-      name: currentUserId || 'Tú',
-      elo: user?.eloRating ?? 1200,
-      cardCount: 4,
-      avatarUrl: equippedSkins?.avatar ?? DEFAULT_AVATAR_URL,
-      cardSkinUrl: equippedSkins?.carta ?? DEFAULT_CARD_URL,
-      isMe: true,
-    };
+    const populated = slotRefs.current.filter(Boolean);
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+    tl.from(boardRef.current, { scale: 0.85, autoAlpha: 0, duration: 0.5 });
+    if (populated.length > 0) {
+      tl.from(populated, { scale: 0, autoAlpha: 0, duration: 0.4, stagger: 0.07, ease: 'back.out(1.7)' }, '-=0.2');
+    }
+  }, [gameState.players.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!roomState) return [me];
-
-    const others: GamePlayer[] = roomState.players
-      .filter(p => p.userId !== currentUserId)
-      .map(p => ({
-        id: p.userId,
-        name: p.controlador === 'bot' ? (p.nombreEnPartida ?? 'Bot') : p.userId,
-        elo: 1200,
-        cardCount: 4,
-        // No hay endpoint para skins equipadas de terceros: usar defaults visibles.
-        avatarUrl: DEFAULT_AVATAR_URL,
-        cardSkinUrl: DEFAULT_CARD_URL,
-        isBot: p.controlador === 'bot',
-      }));
-
-    return [me, ...others];
-  }, [currentUserId, user?.eloRating, equippedSkins, roomState]);
-
-  // URL del tapete equipado (null → degradado CSS por defecto)
-  const tapeteUrl = equippedSkins?.tapete ?? null;
-
-  const n = allPlayers.length;
-  const posIndices = getActivePositionIndices(n);
-
-  // Radios del tapete (en px, aprox. la mitad del tamaño CSS)
-  const rx = 280;
-  const ry = 160;
-
-  // ── Animaciones de entrada y idle ──────────────────────────────────────
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-      // 1. GameBoard: entrada escala
-      tl.from(boardRef.current, {
-        scale: 0.85,
-        autoAlpha: 0,
-        duration: 0.6,
-      });
-
-      // 2. PlayerSlots: stagger desde escala 0
-      tl.from(slotRefs.current.filter(Boolean), {
-        scale: 0,
-        autoAlpha: 0,
-        duration: 0.4,
-        stagger: 0.08,
-        ease: 'back.out(1.7)',
-      }, '-=0.25');
-
-      // 3. CenterPiles: desde arriba
-      if (pilesRef.current) {
-        tl.from(pilesRef.current, {
-          y: -30,
-          autoAlpha: 0,
-          duration: 0.35,
-        }, '-=0.3');
-      }
-
-      // 4. VoiceChatBar: slide desde la derecha
-      if (voiceRef.current) {
-        tl.from(voiceRef.current, {
-          x: 80,
-          autoAlpha: 0,
-          duration: 0.45,
-        }, '-=0.3');
-      }
-
-      // 5. Idle CUBO: pulso continuo
-      if (cuboRef.current) {
-        gsap.to(cuboRef.current, {
-          scale: 1.08,
-          duration: 0.9,
-          yoyo: true,
-          repeat: -1,
-          ease: 'sine.inOut',
-        });
-      }
-
-      // 6. TurnTimerBar: animación demo de 100% → 0% en DEMO_TURN_SECONDS
-      if (timerFillRef.current) {
-        gsap.to(timerFillRef.current, {
-          scaleX: 0,
-          duration: DEMO_TURN_SECONDS,
-          ease: 'none',
-          onUpdate() {
-            const el = timerFillRef.current;
-            if (!el) return;
-            const pct = parseFloat(gsap.getProperty(el, 'scaleX') as string);
-            if (pct < 0.33) {
-              el.classList.add('turn-timer-bar__fill--red');
-              el.classList.remove('turn-timer-bar__fill--orange');
-            } else if (pct < 0.66) {
-              el.classList.add('turn-timer-bar__fill--orange');
-              el.classList.remove('turn-timer-bar__fill--red');
-            }
-          },
-        });
-      }
-    });
-
-    return () => ctx.revert();
-  }, []);
-
+  // ── Activar/desactivar slot del jugador activo ──────────────────────────
   useEffect(() => {
-    let isMounted = true;
+    const prev = prevTurnRef.current;
+    if (prev >= 0 && slotRefs.current[prev]) {
+      animateSlotDeactivate(slotRefs.current[prev]!);
+    }
+    const activeIdx = orderedPlayers.findIndex(p => p?.id === activePlayer?.userId);
+    if (activeIdx >= 0 && slotRefs.current[activeIdx]) {
+      animateSlotActivate(slotRefs.current[activeIdx]!);
+    }
+    prevTurnRef.current = activeIdx;
+  }, [activePlayer?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const onRoomUpdate = (state: RoomState) => {
-      if (!isMounted) return;
-      setRoomState(state);
-    };
-
-    const onRoomClosed = () => {
-      if (!isMounted) return;
-      disconnectRoomsSocket();
-      setRoomState(null);
-      navigate('/home');
-    };
-
-    const initSocket = async () => {
-      try {
-        const socket = await connectRoomsSocket();
-        if (!isMounted) return;
-
-        socket.on('room:update', onRoomUpdate);
-        socket.on('room:closed', onRoomClosed);
-      } catch (error) {
-        console.error('No se pudo conectar con la sala activa', error);
-      }
-    };
-
-    initSocket();
-
-    return () => {
-      isMounted = false;
-      const socket = getRoomsSocket();
-      socket?.off('room:update', onRoomUpdate);
-      socket?.off('room:closed', onRoomClosed);
-    };
-  }, [navigate]);
-
+  // ── Temporizador de turno ───────────────────────────────────────────────
   useEffect(() => {
-    if (!showConfigModal) return;
+    if (!gameState.turnDeadlineAt || !timerFillRef.current) return;
+    const remaining = gameState.turnDeadlineAt - Date.now();
+    if (remaining <= 0) return;
+    animateTurnTimer(timerFillRef.current, remaining);
+    return () => killTurnTimer();
+  }, [gameState.turnDeadlineAt, gameState.turnIndex]);
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || isLeavingRoom) return;
-      setShowConfigModal(false);
-      setConfigError(null);
-    };
+  // ── Rebarajado del mazo ─────────────────────────────────────────────────
+  const prevDeckCountRef = useRef(gameState.deckCount);
+  useEffect(() => {
+    const prev = prevDeckCountRef.current;
+    const curr = gameState.deckCount;
+    prevDeckCountRef.current = curr;
+    // Solo anima si el mazo aumentó (fue rebarajado, no que sacaron una carta)
+    if (curr > prev && deckRef.current) {
+      animateDeckReshuffle(deckRef.current);
+    }
+  }, [gameState.deckCount]);
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showConfigModal, isLeavingRoom]);
+  // ── CUBO activado ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!gameState.cuboActive || !cuboRef.current) return;
+    setCuboToast(`¡CUBO! Quedan ${gameState.cuboTurnosRestantes} turnos`);
+    animateCuboActivated(cuboRef.current);
+    const t = setTimeout(() => setCuboToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [gameState.cuboActive, gameState.cuboTurnosRestantes]);
 
-  const handleCubo = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-  };
+  // ── Animar cartas reveladas ─────────────────────────────────────────────
+  useEffect(() => {
+    if (gameState.revealedCards.length > 0 && revealedEls.current) {
+      const items = Array.from(revealedEls.current.querySelectorAll('.revealed-card-item'));
+      animateRevealedCards(items);
+    }
+  }, [gameState.revealedCards]);
 
-  const handleLeaveOrCloseGame = async () => {
-    if (isLeavingRoom) return;
+  // ── Acciones ────────────────────────────────────────────────────────────
 
-    setIsLeavingRoom(true);
-    setConfigError(null);
+  const mySlotIdx = useCallback(
+    () => orderedPlayers.findIndex(p => p?.isMe),
+    [orderedPlayers],
+  );
 
+  const handleDrawCard = useCallback(() => {
+    if (!canDrawCard || !gameState.gameId) return;
+    actions.robarCarta(gameState.gameId);
+    const myIdx = mySlotIdx();
+    if (deckRef.current && myIdx >= 0 && slotRefs.current[myIdx]) {
+      animateCardFly(deckRef.current, slotRefs.current[myIdx]!);
+    }
+  }, [canDrawCard, gameState.gameId, actions, mySlotIdx]);
+
+  const handleDiscardPending = useCallback(() => {
+    if (!gameState.pendingCard || !gameState.gameId) return;
+    actions.descartarPendiente(gameState.gameId);
+    const myIdx = mySlotIdx();
+    if (discardRef.current && myIdx >= 0 && slotRefs.current[myIdx]) {
+      animateCardFly(slotRefs.current[myIdx]!, discardRef.current);
+    }
+  }, [gameState.pendingCard, gameState.gameId, actions, mySlotIdx]);
+
+  const handlePlayCardFromHand = useCallback((cardIndex: number) => {
+    if (!gameState.gameId) return;
+    actions.cartaPorPendiente(gameState.gameId, cardIndex);
+    setSelectedCardIdx(null);
+    const myIdx = mySlotIdx();
+    if (discardRef.current && myIdx >= 0 && slotRefs.current[myIdx]) {
+      animateCardFly(slotRefs.current[myIdx]!, discardRef.current);
+    }
+  }, [gameState.gameId, actions, mySlotIdx]);
+
+  const handleCubo = useCallback(() => {
+    if (!gameState.gameId) return;
+    actions.solicitarCubo(gameState.gameId);
+  }, [gameState.gameId, actions]);
+
+  const handleLeave = async () => {
+    if (isLeaving) return;
+    setIsLeaving(true);
+    setLeaveError(null);
     try {
       await leaveRoom();
       disconnectRoomsSocket();
-      setRoomState(null);
-      setShowConfigModal(false);
       navigate('/home');
-    } catch (error) {
-      setConfigError(error instanceof Error ? error.message : 'No se pudo salir de la partida');
+    } catch (e) {
+      setLeaveError(e instanceof Error ? e.message : 'No se pudo salir');
     } finally {
-      setIsLeavingRoom(false);
+      setIsLeaving(false);
     }
   };
 
-  const orderedPlayers = orderPlayers(allPlayers, posIndices);
+  const handleSkillAction = useCallback(
+    (skill: PendingSkill, params: Record<string, unknown>) => {
+      const { gameId } = skill;
+      switch (skill.tipo) {
+        case 'intercambiar-todas':
+          actions.intercambiarTodasCartas(gameId, params.destinatarioId as string);
+          break;
+        case 'hacer-robar-carta':
+          actions.hacerRobarCarta(gameId, params.adversarioId as string);
+          break;
+        case 'proteger-carta':
+          actions.protegerCarta(gameId, params.numCarta as number);
+          break;
+        case 'saltar-turno':
+          actions.saltarTurnoJugador(gameId, params.adversarioId as string);
+          break;
+        case 'ver-carta-todos':
+          actions.verCartaTodos(gameId);
+          break;
+        case 'intercambiar-carta-preparar':
+          actions.prepararIntercambioCarta(gameId, params.numCartaJugador as number, params.rivalId as string);
+          break;
+        case 'intercambiar-carta-rival':
+          actions.intercambiarCartaInteractivo(gameId, params.numCartaJugador as number, skill.rivalId!);
+          break;
+        case 'ver-carta-propia':
+          actions.verCarta(gameId, params.indexCarta as number);
+          break;
+        case 'ver-carta-propia-y-rival':
+          actions.verCarta(
+            gameId,
+            params.indexCarta as number,
+            params.playerId as string,
+            params.indexCartaPlayer as number,
+          );
+          break;
+      }
+      setPendingSkill(null);
+    },
+    [actions, setPendingSkill],
+  );
 
+  // ── Modal de resultado ──────────────────────────────────────────────────
+  if (gameState.result) {
+    return (
+      <GameResultModal
+        result={gameState.result}
+        players={gameState.players}
+        onClose={() => navigate('/home')}
+      />
+    );
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="game-page">
-      {/* ── Barra temporizador ── */}
+      {/* Timer */}
       <div className="turn-timer-bar">
         <div className="turn-timer-bar__fill" ref={timerFillRef} />
       </div>
 
-      {/* ── Configuracion de partida ── */}
+      {/* HUD de turno */}
+      {activePlayer && (
+        <div className="game-turn-hud">
+          {activePlayer.isMe ? 'Tu turno' : `Turno de ${activePlayer.name}`}
+        </div>
+      )}
+
+      {/* Botón de configuración */}
       <button
         className="leave-game-btn"
-        onClick={() => {
-          setConfigError(null);
-          setShowConfigModal(true);
-        }}
-        aria-label="Configuracion de partida"
-        title="Configuracion de partida"
-      >
-        ⚙
-      </button>
+        onClick={() => { setLeaveError(null); setShowLeaveModal(true); }}
+        aria-label="Configuración de partida"
+        title="Configuración de partida"
+      >⚙</button>
 
-      {/* ── Tablero ── */}
+      {/* Tablero */}
       <div className="game-board" ref={boardRef}>
-        <div
-          className={`game-tapete${tapeteUrl ? ' game-tapete--skin' : ''}`}
-        >
+        <div className={`game-tapete${tapeteUrl ? ' game-tapete--skin' : ''}`}>
           {tapeteUrl && (
             <img
               className="game-tapete__skin"
@@ -329,23 +371,36 @@ export default function GamePage() {
           )}
 
           {/* Pilas centrales */}
-          <div className="center-piles" ref={pilesRef}>
-            {/* Mazo de robar: 5 capas de profundidad + carta superior */}
-            <div className="game-pile game-pile--draw">
+          <div className="center-piles">
+            {/* Mazo — clickeable cuando es mi turno y fase WAIT_DRAW */}
+            <div
+              className={`game-pile game-pile--draw${canDrawCard ? ' game-pile--draw-active' : ''}`}
+              ref={deckRef}
+              onClick={canDrawCard ? handleDrawCard : undefined}
+              role={canDrawCard ? 'button' : undefined}
+              tabIndex={canDrawCard ? 0 : undefined}
+              aria-label={canDrawCard ? 'Robar carta' : undefined}
+              title={canDrawCard ? 'Robar carta' : undefined}
+              onKeyDown={canDrawCard ? (e) => { if (e.key === 'Enter' || e.key === ' ') handleDrawCard(); } : undefined}
+            >
               <div className="game-pile-depth" />
               <div className="game-pile-depth" />
               <div className="game-pile-depth" />
               <div className="game-pile-depth" />
               <div className="game-pile-depth" />
               <div className="game-pile-card" />
+              {gameState.deckCount > 0 && (
+                <span className="game-pile__count">{gameState.deckCount}</span>
+              )}
             </div>
-            {/* Pila de descartes: abanico de 3 cartas + carta boca arriba */}
-            <div className="game-pile game-pile--discard">
+            <div className="game-pile game-pile--discard" ref={discardRef}>
               <div className="game-pile-card game-pile-card--fan" />
               <div className="game-pile-card game-pile-card--fan" />
               <div className="game-pile-card game-pile-card--fan" />
               <div className="game-pile-card game-pile-card--face-up">
-                <span className="game-pile-card__label">?</span>
+                <span className="game-pile-card__label">
+                  {gameState.lastDiscardedCard?.carta ?? '?'}
+                </span>
               </div>
             </div>
           </div>
@@ -370,112 +425,481 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* ── Botón CUBO ── */}
+      {/* Botón CUBO */}
       <button
         ref={cuboRef}
-        className="cubo-btn"
+        className={`cubo-btn${gameState.cuboActive ? ' cubo-btn--active' : ''}`}
         onClick={handleCubo}
+        disabled={!gameState.gameId || !!gameState.result}
         aria-label="Declarar cubo"
       >
         CUBO
       </button>
 
-      {/* ── Toast CUBO ── */}
-      {showToast && (
-        <div className="cubo-toast" key={Date.now()}>¡Cubo declarado!</div>
+      {/* Toast CUBO */}
+      {cuboToast && <div className="cubo-toast">{cuboToast}</div>}
+
+      {/* Cartas reveladas a todos (poder del 5) */}
+      {gameState.revealedCards.length > 0 && (
+        <div className="revealed-cards-panel" ref={revealedEls}>
+          <h3 className="revealed-cards-panel__title">Cartas reveladas</h3>
+          <div className="revealed-cards-list">
+            {gameState.revealedCards.map((rc, i) => (
+              <RevealedCardItem
+                key={i}
+                rc={rc}
+                ownerName={gameState.players.find(p => p.userId === rc.jugadorId)?.name ?? rc.jugadorId}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* ── Modal de configuracion de partida ── */}
-      {showConfigModal && (
+      {/* Carta vista solo por el jugador local (poderes 10 y 11) */}
+      {gameState.peekedCard && (
+        <PeekedCardPanel peeked={gameState.peekedCard} />
+      )}
+
+      {/* Panel carta pendiente */}
+      {gameState.pendingCard && !gameState.pendingSkill && (
+        <PendingCardPanel
+          card={gameState.pendingCard}
+          myCardCount={gameState.players.find(p => p.isMe)?.cardCount ?? 4}
+          onDiscard={handleDiscardPending}
+          onSelectFromHand={handlePlayCardFromHand}
+          selectedIndex={selectedCardIdx}
+          onSelectIndex={setSelectedCardIdx}
+        />
+      )}
+
+      {/* Panel de skill */}
+      {gameState.pendingSkill && !gameState.pendingCard && (
+        <SkillPanel
+          skill={gameState.pendingSkill}
+          opponents={gameState.players.filter(p => !p.isMe)}
+          myCardCount={gameState.players.find(p => p.isMe)?.cardCount ?? 4}
+          onAction={handleSkillAction}
+          onSkip={() => setPendingSkill(null)}
+        />
+      )}
+
+      {/* Modal de salida */}
+      {showLeaveModal && (
         <div
           className="app-modal-overlay"
-          onClick={() => {
-            if (isLeavingRoom) return;
-            setShowConfigModal(false);
-            setConfigError(null);
-          }}
+          onClick={() => { if (!isLeaving) { setShowLeaveModal(false); setLeaveError(null); } }}
           role="presentation"
         >
           <section
             className="app-modal leave-game-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Configuracion de partida"
-            onClick={event => event.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <header className="app-modal__header">
               <button
                 className="app-modal__back"
-                onClick={() => {
-                  if (isLeavingRoom) return;
-                  setShowConfigModal(false);
-                  setConfigError(null);
-                }}
-              >
-                ← Volver
-              </button>
-              <h2 className="app-modal__title">Configuracion de partida</h2>
-              <div className="app-modal__spacer" aria-hidden="true" />
+                onClick={() => { if (!isLeaving) { setShowLeaveModal(false); setLeaveError(null); } }}
+              >← Volver</button>
+              <h2 className="app-modal__title">Salir de la partida</h2>
+              <div className="app-modal__spacer" />
             </header>
-
             <div className="app-modal__content app-modal__content--tight">
               <div className="leave-game-modal__content">
-                <p className="leave-game-modal__headline">{actionLabel}</p>
-                <p className="leave-game-modal__text">{actionDescription}</p>
-
-                {configError && (
-                  <div className="leave-game-modal__error" role="alert">
-                    {configError}
-                  </div>
+                <p className="leave-game-modal__headline">
+                  {isHost ? 'Cerrar partida' : 'Salir de la partida'}
+                </p>
+                <p className="leave-game-modal__text">
+                  {isHost
+                    ? 'Eres anfitrión. Un bot te sustituirá si sales.'
+                    : 'Un bot te sustituirá en la partida.'}
+                </p>
+                {leaveError && (
+                  <div className="leave-game-modal__error" role="alert">{leaveError}</div>
                 )}
-
                 <div className="leave-game-modal__actions">
                   <button
                     className="leave-game-modal__btn leave-game-modal__btn--ghost"
-                    onClick={() => {
-                      if (isLeavingRoom) return;
-                      setShowConfigModal(false);
-                      setConfigError(null);
-                    }}
-                    disabled={isLeavingRoom}
-                  >
-                    Cancelar
-                  </button>
-
+                    onClick={() => { if (!isLeaving) { setShowLeaveModal(false); setLeaveError(null); } }}
+                    disabled={isLeaving}
+                  >Cancelar</button>
                   <button
                     className="leave-game-modal__btn leave-game-modal__btn--danger"
-                    onClick={handleLeaveOrCloseGame}
-                    disabled={isLeavingRoom}
-                  >
-                    {isLeavingRoom ? 'Procesando…' : actionLabel}
-                  </button>
+                    onClick={handleLeave}
+                    disabled={isLeaving}
+                  >{isLeaving ? 'Procesando…' : 'Salir'}</button>
                 </div>
               </div>
             </div>
           </section>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* ── VoiceChatBar ── */}
-      <div className="voice-chat-bar" ref={voiceRef}>
-        <button
-          className={`voice-btn${mutedMic ? ' voice-btn--muted' : ''}`}
-          onClick={() => setMutedMic(m => !m)}
-          aria-label={mutedMic ? 'Activar micrófono' : 'Silenciar micrófono'}
-          title={mutedMic ? 'Activar micrófono' : 'Silenciar micrófono'}
-        >
-          {mutedMic ? '🔇' : '🎤'}
-        </button>
-        <button
-          className={`voice-btn${deafened ? ' voice-btn--muted' : ''}`}
-          onClick={() => setDeafened(d => !d)}
-          aria-label={deafened ? 'Dejar de ensordecerse' : 'Ensordecerse'}
-          title={deafened ? 'Dejar de ensordecerse' : 'Ensordecerse'}
-        >
-          {deafened ? '🚫🔊' : '🔊'}
-        </button>
+// ── Sub-componentes ───────────────────────────────────────────────────────────
+
+/** Muestra al jugador local la(s) carta(s) que acaba de espiar (poderes 10 y 11) */
+function PeekedCardPanel({ peeked }: { peeked: EvCartaRevelada }) {
+  return (
+    <div className="peeked-card-panel">
+      <h3 className="peeked-card-panel__title">Has visto</h3>
+      <div className="peeked-card-panel__cards">
+        <DrawnCardFace card={peeked.carta} label="Tu carta" />
+        {peeked.cartaJugadorContrario && (
+          <DrawnCardFace card={peeked.cartaJugadorContrario} label="Carta rival" variant="rival" />
+        )}
       </div>
     </div>
   );
 }
 
+function RevealedCardItem({ rc, ownerName }: { rc: CartaRevelada; ownerName: string }) {
+  return (
+    <div className="revealed-card-item">
+      <span className="revealed-card-item__player">{ownerName}</span>
+      <span className="revealed-card-item__card">
+        {formatCartaValue(rc.carta.carta)}{formatPaloSimbolo(rc.carta.palo)}
+        {' '}{rc.carta.puntos} pts
+        {rc.carta.protegida ? ' · protegida' : ''}
+      </span>
+    </div>
+  );
+}
+
+/** Cara de carta con estilo home-animation: valor, palo, puntos, variante roja */
+function DrawnCardFace({
+  card, label, variant,
+}: { card: Card; label?: string; variant?: 'rival' }) {
+  const isRed = isRedSuit(card.palo);
+  return (
+    <div className={`drawn-card-face${isRed ? ' drawn-card-face--red' : ''}${variant === 'rival' ? ' drawn-card-face--rival' : ''}`}>
+      {label && <span className="drawn-card-face__label">{label}</span>}
+      <span className="drawn-card-face__value">{formatCartaValue(card.carta)}</span>
+      <span className="drawn-card-face__suit">{formatPaloSimbolo(card.palo)}</span>
+      <span className="drawn-card-face__pts">{card.puntos} pts</span>
+    </div>
+  );
+}
+
+interface PendingCardPanelProps {
+  card: Card;
+  myCardCount: number;
+  onDiscard: () => void;
+  onSelectFromHand: (index: number) => void;
+  selectedIndex: number | null;
+  onSelectIndex: (i: number | null) => void;
+}
+
+function PendingCardPanel({
+  card, myCardCount, onDiscard, onSelectFromHand, selectedIndex, onSelectIndex,
+}: PendingCardPanelProps) {
+  // myCardCount ya incluye la carta robada; la mano existente = myCardCount - 1
+  const handCount = Math.max(0, myCardCount - 1);
+  const cols = handCount > 4 ? 3 : 2;
+
+  return (
+    <div className="pending-card-panel">
+      {/* Carta robada */}
+      <div className="pending-card-panel__drawn-side">
+        <p className="pending-card-panel__meta">Has robado</p>
+        <DrawnCardFace card={card} />
+      </div>
+
+      {/* Separador vertical */}
+      <div className="pending-card-panel__divider" />
+
+      {/* Acciones */}
+      <div className="pending-card-panel__actions">
+        <button className="pending-card-btn pending-card-btn--discard" onClick={onDiscard}>
+          Descartar
+        </button>
+
+        {handCount > 0 && (
+          <>
+            <span className="pending-card-panel__or">o intercambia tu carta nº:</span>
+            <div
+              className="pending-card-hand-grid"
+              style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+            >
+              {Array.from({ length: handCount }, (_, i) => (
+                <button
+                  key={i}
+                  className={`hand-card-btn${selectedIndex === i ? ' hand-card-btn--selected' : ''}`}
+                  onClick={() => selectedIndex === i ? onSelectFromHand(i) : onSelectIndex(i)}
+                  title={selectedIndex === i ? 'Confirmar intercambio' : `Intercambiar carta ${i + 1}`}
+                >
+                  <span className="hand-card-btn__num">{i + 1}</span>
+                  {selectedIndex === i && <span className="hand-card-btn__confirm">✓</span>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Mini-cuadrícula visual de reversos de carta para seleccionar */
+function HandCardGrid({ count, selected, onSelect }: {
+  count: number;
+  selected: number | null;
+  onSelect: (i: number) => void;
+}) {
+  const cols = count > 4 ? 3 : 2;
+  return (
+    <div
+      className="skill-hand-grid"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <button
+          key={i}
+          className={`hand-card-btn${selected === i ? ' hand-card-btn--selected' : ''}`}
+          onClick={() => onSelect(i)}
+          title={`Carta ${i + 1}`}
+        >
+          <span className="hand-card-btn__num">{i + 1}</span>
+          {selected === i && <span className="hand-card-btn__confirm">✓</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface SkillPanelProps {
+  skill: PendingSkill;
+  opponents: GamePlayerState[];
+  myCardCount: number;
+  onAction: (skill: PendingSkill, params: Record<string, unknown>) => void;
+  onSkip: () => void;
+}
+
+function SkillPanel({ skill, opponents, myCardCount, onAction, onSkip }: SkillPanelProps) {
+  const [target,      setTarget]      = useState('');
+  const [myCard,      setMyCard]      = useState('');
+  const [rivalCard,   setRivalCard]   = useState('');
+
+  const myHandIndices = Array.from({ length: myCardCount }, (_, i) => i);
+
+  const content = (() => {
+    switch (skill.tipo) {
+      case 'ver-carta-todos':
+        return (
+          <div className="skill-panel__auto">
+            <p>El poder del 5 revela automáticamente una carta de cada rival.</p>
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              onClick={() => onAction(skill, {})}
+            >Ver cartas de todos</button>
+          </div>
+        );
+
+      case 'hacer-robar-carta':
+      case 'intercambiar-todas':
+      case 'saltar-turno': {
+        const labels: Record<string, string> = {
+          'hacer-robar-carta': 'Elegir rival para hacer robar carta:',
+          'intercambiar-todas': 'Intercambiar todas las cartas con:',
+          'saltar-turno': 'Saltar el turno de:',
+        };
+        const pk = skill.tipo === 'intercambiar-todas' ? 'destinatarioId' : 'adversarioId';
+        return (
+          <>
+            <p>{labels[skill.tipo]}</p>
+            <div className="skill-panel__targets">
+              {opponents.map(op => (
+                <button key={op.userId}
+                  className={`skill-panel__target-btn${target === op.userId ? ' skill-panel__target-btn--selected' : ''}`}
+                  onClick={() => setTarget(op.userId)}
+                >{op.name}</button>
+              ))}
+            </div>
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={!target}
+              onClick={() => onAction(skill, { [pk]: target })}
+            >Confirmar</button>
+          </>
+        );
+      }
+
+      case 'proteger-carta':
+        return (
+          <>
+            <p>Elige una carta tuya para proteger:</p>
+            <HandCardGrid
+              count={myHandIndices.length}
+              selected={myCard !== '' ? Number(myCard) : null}
+              onSelect={i => setMyCard(String(i))}
+            />
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={myCard === ''}
+              onClick={() => onAction(skill, { numCarta: Number(myCard) })}
+            >Proteger</button>
+          </>
+        );
+
+      case 'ver-carta-propia':
+        return (
+          <>
+            <p>Mira una de tus cartas:</p>
+            <HandCardGrid
+              count={myHandIndices.length}
+              selected={myCard !== '' ? Number(myCard) : null}
+              onSelect={i => setMyCard(String(i))}
+            />
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={myCard === ''}
+              onClick={() => onAction(skill, { indexCarta: Number(myCard) })}
+            >Ver</button>
+          </>
+        );
+
+      case 'ver-carta-propia-y-rival':
+        return (
+          <>
+            <p>Mira una tuya y una de un rival:</p>
+            <div className="skill-panel__section">
+              <span className="skill-panel__label">Tu carta:</span>
+              <HandCardGrid
+                count={myHandIndices.length}
+                selected={myCard !== '' ? Number(myCard) : null}
+                onSelect={i => setMyCard(String(i))}
+              />
+            </div>
+            <div className="skill-panel__section">
+              <span className="skill-panel__label">Carta del rival:</span>
+              <div className="skill-panel__targets">
+                {opponents.flatMap(op =>
+                  Array.from({ length: op.cardCount }, (_, i) => (
+                    <button key={`${op.userId}:${i}`}
+                      className={`skill-panel__target-btn${rivalCard === `${op.userId}:${i}` ? ' skill-panel__target-btn--selected' : ''}`}
+                      onClick={() => setRivalCard(`${op.userId}:${i}`)}
+                    >{op.name} #{i + 1}</button>
+                  ))
+                )}
+              </div>
+            </div>
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={myCard === '' || rivalCard === ''}
+              onClick={() => {
+                const [playerId, idxStr] = rivalCard.split(':');
+                onAction(skill, { indexCarta: Number(myCard), playerId, indexCartaPlayer: Number(idxStr) });
+              }}
+            >Ver cartas</button>
+          </>
+        );
+
+      case 'intercambiar-carta-preparar':
+        return (
+          <>
+            <p>Intercambia una carta con un rival:</p>
+            <div className="skill-panel__section">
+              <span className="skill-panel__label">Tu carta:</span>
+              <HandCardGrid
+                count={myHandIndices.length}
+                selected={myCard !== '' ? Number(myCard) : null}
+                onSelect={i => setMyCard(String(i))}
+              />
+            </div>
+            <div className="skill-panel__section">
+              <span className="skill-panel__label">Rival:</span>
+              <div className="skill-panel__targets">
+                {opponents.map(op => (
+                  <button key={op.userId}
+                    className={`skill-panel__target-btn${target === op.userId ? ' skill-panel__target-btn--selected' : ''}`}
+                    onClick={() => setTarget(op.userId)}
+                  >{op.name}</button>
+                ))}
+              </div>
+            </div>
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={myCard === '' || !target}
+              onClick={() => onAction(skill, { numCartaJugador: Number(myCard), rivalId: target })}
+            >Iniciar intercambio</button>
+          </>
+        );
+
+      case 'intercambiar-carta-rival':
+        return (
+          <>
+            <p>Un rival quiere intercambiar contigo. Elige tu carta:</p>
+            <HandCardGrid
+              count={myHandIndices.length}
+              selected={myCard !== '' ? Number(myCard) : null}
+              onSelect={i => setMyCard(String(i))}
+            />
+            <button
+              className="skill-panel__btn skill-panel__btn--primary"
+              disabled={myCard === ''}
+              onClick={() => onAction(skill, { numCartaJugador: Number(myCard) })}
+            >Confirmar intercambio</button>
+          </>
+        );
+
+      default:
+        return <p>Habilidad: {skill.tipo}</p>;
+    }
+  })();
+
+  return (
+    <div className="skill-panel">
+      <div className="skill-panel__header">
+        <h3 className="skill-panel__title">Habilidad de carta</h3>
+        <button className="skill-panel__skip" onClick={onSkip} title="Saltar">×</button>
+      </div>
+      <div className="skill-panel__content">{content}</div>
+    </div>
+  );
+}
+
+interface GameResultModalProps {
+  result: EvPartidaFinalizada;
+  players: GamePlayerState[];
+  onClose: () => void;
+}
+
+function GameResultModal({ result, players, onClose }: GameResultModalProps) {
+  const winner = players.find(p => p.userId === result.ganadorId);
+
+  return (
+    <div className="app-modal-overlay">
+      <section className="app-modal game-result-modal" role="dialog" aria-modal="true">
+        <header className="app-modal__header">
+          <h2 className="app-modal__title">Partida finalizada</h2>
+        </header>
+        <div className="app-modal__content">
+          <p className="game-result-modal__winner">
+            {winner ? `Ganador: ${winner.name}` : 'Partida terminada'}
+          </p>
+          <p className="game-result-modal__reason">
+            Motivo: {result.motivo}
+          </p>
+          <ol className="game-result-modal__ranking">
+            {result.ranking.map((entry, i) => {
+              const pl = players.find(p => p.userId === entry.userId);
+              return (
+                <li key={entry.userId} className="game-result-modal__rank-item">
+                  <span className="rank-position">{i + 1}.</span>
+                  <span className="rank-name">{pl?.name ?? entry.userId}</span>
+                  <span className="rank-score">{entry.puntaje} pts</span>
+                </li>
+              );
+            })}
+          </ol>
+          <button
+            className="leave-game-modal__btn leave-game-modal__btn--danger"
+            onClick={onClose}
+          >Volver al lobby</button>
+        </div>
+      </section>
+    </div>
+  );
+}

@@ -35,9 +35,12 @@ export async function getInventory(token: string): Promise<Skin[]> {
   return handleResponse<Skin[]>(res);
 }
 
-/** Devuelve URLs de skins equipadas por tipo. GET /skins/equipped */
-export async function getEquipped(token: string): Promise<EquippedSkinUrls> {
-  const res = await fetch(`${API_URL}/skins/equipped`, {
+/** Devuelve URLs de skins equipadas por tipo. GET /skins/equipped[?username=X] */
+export async function getEquipped(token: string, username?: string): Promise<EquippedSkinUrls> {
+  const url = username
+    ? `${API_URL}/skins/equipped?username=${encodeURIComponent(username)}`
+    : `${API_URL}/skins/equipped`;
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse<EquippedSkinUrls>(res);
