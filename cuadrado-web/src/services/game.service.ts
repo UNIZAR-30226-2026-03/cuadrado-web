@@ -38,6 +38,18 @@ export interface GameEventHandlers {
   onHabilidadDenegada?: (data: EvHabilidadDenegada) => void;
   onIntercambioRival?: (data: { gameId: string; usuarioIniciador: string }) => void;
   onSeHaHechoRobarCarta?: (data: { partidaId: string; remitente: string; destinatario: string }) => void;
+  onBotRobaCarta?: (data: { gameId: string; botId: string }) => void;
+  onBotDescartaPendiente?: (data: { gameId: string; botId: string }) => void;
+  onBotIntercambiaCartas?: (data: { gameId: string; botId: string }) => void;
+  onBotVerCarta?: (data: { gameId: string; botId: string; cartaIndex: number }) => void;
+  onBotVerCartaPropiaYRival?: (data: {
+    gameId: string;
+    botId: string;
+    rivalId: string;
+    cartaIndex: number;
+    cartaIndexRival: number;
+  }) => void;
+  onBotJugadorMenosPuntuacion?: (data: { gameId: string; botId: string; jugadorId: string }) => void;
 }
 
 // Handlers activos registrados en el socket, para poder eliminarlos en cleanup
@@ -69,6 +81,12 @@ export function subscribeToGameEvents(handlers: GameEventHandlers): void {
   reg('game:habilidad-denegada', handlers.onHabilidadDenegada);
   reg('game:intercambio-rival', handlers.onIntercambioRival);
   reg('game:se-ha-hecho-robar-carta', handlers.onSeHaHechoRobarCarta);
+  reg('game:bot-roba-carta', handlers.onBotRobaCarta);
+  reg('game:bot-descarta-pendiente', handlers.onBotDescartaPendiente);
+  reg('game:bot-intercambia-cartas', handlers.onBotIntercambiaCartas);
+  reg('game:bot-ver-carta', handlers.onBotVerCarta);
+  reg('game:bot-ver-carta-propia-y-rival', handlers.onBotVerCartaPropiaYRival);
+  reg('game:bot-jugador-menos-puntuacion', handlers.onBotJugadorMenosPuntuacion);
 }
 
 export function unsubscribeFromGameEvents(): void {

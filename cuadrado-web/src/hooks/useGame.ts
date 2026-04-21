@@ -1,392 +1,401 @@
-// hooks/useGame.ts - Hook principal de estado de la partida en curso.
-//
-// Inicializa el estado desde datos cacheados en room.service (para no perder
-// los eventos de inicio enviados antes de montar GamePage), luego escucha
-// todos los eventos WebSocket de juego y actualiza el estado via useReducer.
+// hooks/useGame.ts - Estadio 0: estado minimo y sincronizacion por eventos reales.
 
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { getAccessToken } from '../utils/token';
 import {
-  getLastGameStartData,
-  getLastTurnoIniciadoData,
-} from '../services/room.service';
-import {
+  gameActions,
   subscribeToGameEvents,
   unsubscribeFromGameEvents,
-  gameActions,
 } from '../services/game.service';
-import { getEquipped } from '../services/skin.service';
-import { DEFAULT_AVATAR_URL, DEFAULT_CARD_URL } from '../config/skinDefaults';
+import { getLastGameStartData, getLastTurnoIniciadoData } from '../services/room.service';
 import type {
-  GameState,
-  GamePlayerState,
-  EvInicioPartida,
-  EvTurnoIniciado,
+  Card,
   EvCartaRobada,
   EvDecisionRequerida,
   EvDescartarPendiente,
-  EvIntercambioCartas,
+  EvInicioPartida,
   EvPartidaFinalizada,
-  EvCuboActivado,
-  EvMazoRebarajado,
-  EvCartasRevealedTodos,
-  EvCartaRevelada,
-  CartaRevelada,
-  PendingSkill,
+  EvTurnoIniciado,
 } from '../types/game.types';
 
-const INITIAL_CARD_COUNT = 4;
-const REVEALED_CARDS_DISPLAY_MS = 4500;
+const INITIAL_HAND_COUNT = 4;
+const DEFAULT_DECK_COUNT = 52;
+const MAX_DEBUG_EVENTS = 200;
 
-// ── Estado inicial ────────────────────────────────────────────────────────────
+export interface Stage0PlayerState {
+  userId: string;
+  name: string;
+  isBot: boolean;
+  isMe: boolean;
+  cardCount: number;
+}
 
-function makeEmpty(): GameState {
+export interface Stage0GameState {
+  gameId: string;
+  players: Stage0PlayerState[];
+  activePlayerId: string | null;
+  phase: 'WAIT_DRAW' | 'WAIT_DECISION' | null;
+  deckCount: number;
+  pendingCard: Card | null;
+  topDiscardCard: Card | null;
+  result: EvPartidaFinalizada | null;
+}
+
+export interface Stage0DebugEvent {
+  event: string;
+  payload: unknown;
+  receivedAt: number;
+}
+
+interface ReducerState {
+  game: Stage0GameState;
+}
+
+type ReducerAction =
+  | { type: 'INIT_FROM_START'; payload: EvInicioPartida; myUserId: string; turno: EvTurnoIniciado | null }
+  | { type: 'INICIO_PARTIDA'; payload: EvInicioPartida; myUserId: string }
+  | { type: 'TURNO_INICIADO'; payload: EvTurnoIniciado }
+  | { type: 'CARTA_ROBADA'; payload: EvCartaRobada }
+  | { type: 'DECISION_REQUERIDA'; payload: EvDecisionRequerida }
+  | { type: 'DESCARTAR_PENDIENTE'; payload: EvDescartarPendiente; fallbackPlayerIndex: number | null }
+  | { type: 'PARTIDA_FINALIZADA'; payload: EvPartidaFinalizada };
+
+function createEmptyGameState(): Stage0GameState {
   return {
     gameId: '',
     players: [],
-    turnIndex: 0,
     activePlayerId: null,
     phase: null,
-    turnDeadlineAt: null,
-    deckCount: 52,
-    cuboActive: false,
-    cuboTurnosRestantes: 0,
+    deckCount: DEFAULT_DECK_COUNT,
     pendingCard: null,
-    pendingSkill: null,
-    revealedCards: [],
-    peekedCard: null,
+    topDiscardCard: null,
     result: null,
-    lastDiscardedCard: null,
-    lastDiscardPlayerId: null,
   };
 }
 
-// ── Mapeo carta → tipo de skill ───────────────────────────────────────────────
+/** Construye el estado inicial de jugadores con la informacion del evento de inicio. */
+function buildPlayers(payload: EvInicioPartida, myUserId: string): Stage0PlayerState[] {
+  return payload.jugadores.map((userId, index) => {
+    const detail = payload.jugadoresDetalle[index];
+    const isBot = detail?.controlador === 'bot';
 
-function cardToSkillTipo(carta: number): PendingSkill['tipo'] | null {
-  switch (carta) {
-    case 1:  return 'intercambiar-todas';
-    case 2:  return 'hacer-robar-carta';
-    case 3:  return 'proteger-carta';
-    case 4:  return 'saltar-turno';
-    case 5:  return 'ver-carta-todos';
-    case 9:  return 'intercambiar-carta-preparar';
-    case 10: return 'ver-carta-propia';
-    case 11: return 'ver-carta-propia-y-rival';
-    // Cartas 6, 7, 8, 12: el backend las resuelve automáticamente (sin-efecto-inmediato o roba-y-sigue)
-    default: return null;
-  }
+    return {
+      userId,
+      isBot,
+      isMe: userId === myUserId,
+      name: isBot ? (detail?.nombreEnPartida ?? `Bot ${index + 1}`) : userId,
+      cardCount: INITIAL_HAND_COUNT,
+    };
+  });
 }
 
-// ── Reducer ───────────────────────────────────────────────────────────────────
+/** Determina que jugador debe perder una carta tras descartar pendiente. */
+function resolveDiscardPlayerIndex(state: Stage0GameState, fallbackPlayerIndex: number | null): number {
+  // El descarte pendiente corresponde al ultimo jugador que robo carta.
+  if (fallbackPlayerIndex !== null && fallbackPlayerIndex >= 0) {
+    return fallbackPlayerIndex;
+  }
 
-type Action =
-  | { type: 'INIT'; state: GameState }
-  | { type: 'TURNO_INICIADO'; data: EvTurnoIniciado }
-  | { type: 'CARTA_ROBADA'; data: EvCartaRobada }
-  | { type: 'DECISION_REQUERIDA'; data: EvDecisionRequerida }
-  | { type: 'DESCARTAR_PENDIENTE'; data: EvDescartarPendiente; playerIndex: number }
-  | { type: 'INTERCAMBIO_CARTAS'; data: EvIntercambioCartas }
-  | { type: 'PARTIDA_FINALIZADA'; data: EvPartidaFinalizada }
-  | { type: 'CUBO_ACTIVADO'; data: EvCuboActivado }
-  | { type: 'MAZO_REBARAJADO'; data: EvMazoRebarajado }
-  | { type: 'CARTAS_REVEALED'; revealed: CartaRevelada[] }
-  | { type: 'CLEAR_REVEALED' }
-  | { type: 'SET_PEEKED_CARD'; data: EvCartaRevelada | null }
-  | { type: 'SET_PENDING_SKILL'; skill: PendingSkill | null }
-  | { type: 'UPDATE_SKINS'; userId: string; avatarUrl: string | null; cardSkinUrl: string | null }
-  | { type: 'ROBAR_FORZADO'; destinatario: string };
+  if (state.activePlayerId) {
+    const fromActive = state.players.findIndex((player) => player.userId === state.activePlayerId);
+    if (fromActive >= 0) {
+      return fromActive;
+    }
+  }
 
-function reducer(state: GameState, action: Action): GameState {
+  return -1;
+}
+
+/** Reducer de Estadio 0: estado pequeño y transiciones transparentes. */
+function reducer(state: ReducerState, action: ReducerAction): ReducerState {
   switch (action.type) {
-    case 'INIT':
-      return action.state;
+    case 'INIT_FROM_START': {
+      const players = buildPlayers(action.payload, action.myUserId);
+      const game: Stage0GameState = {
+        ...createEmptyGameState(),
+        gameId: action.payload.partidaId,
+        players,
+        activePlayerId: action.turno?.userId ?? null,
+        phase: action.turno?.phase ?? null,
+      };
+
+      return { game };
+    }
+
+    case 'INICIO_PARTIDA': {
+      const players = buildPlayers(action.payload, action.myUserId);
+
+      return {
+        game: {
+          ...createEmptyGameState(),
+          gameId: action.payload.partidaId,
+          players,
+        },
+      };
+    }
 
     case 'TURNO_INICIADO':
       return {
-        ...state,
-        turnIndex: action.data.turn,
-        activePlayerId: action.data.userId,
-        phase: action.data.phase,
-        turnDeadlineAt: action.data.turnDeadlineAt,
-        pendingCard: null,
-        pendingSkill: null,
+        game: {
+          ...state.game,
+          gameId: state.game.gameId || action.payload.gameId,
+          activePlayerId: action.payload.userId,
+          phase: action.payload.phase,
+          pendingCard: null,
+        },
       };
 
     case 'CARTA_ROBADA': {
-      const players = state.players.map((p, i) =>
-        i === action.data.jugadorRobado ? { ...p, cardCount: p.cardCount + 1 } : p
-      );
-      return { ...state, players, deckCount: action.data.cartasRestantes };
-    }
+      const updatedPlayers = state.game.players.map((player, index) => {
+        if (index !== action.payload.jugadorRobado) {
+          return player;
+        }
 
-    case 'DECISION_REQUERIDA':
-      return { ...state, phase: 'WAIT_DECISION', pendingCard: action.data.game ?? null };
+        return {
+          ...player,
+          cardCount: player.cardCount + 1,
+        };
+      });
 
-    case 'DESCARTAR_PENDIENTE': {
-      const { playerIndex, data } = action;
-      const players = state.players.map((p, i) =>
-        i === playerIndex ? { ...p, cardCount: Math.max(0, p.cardCount - 1) } : p
-      );
       return {
-        ...state,
-        players,
-        pendingCard: null,
-        lastDiscardedCard: data.carta,
-        lastDiscardPlayerId: state.players[playerIndex]?.userId ?? null,
+        game: {
+          ...state.game,
+          players: updatedPlayers,
+          deckCount: action.payload.cartasRestantes,
+        },
       };
     }
 
-    case 'INTERCAMBIO_CARTAS':
-      return state; // los conteos no cambian, solo posiciones internas
+    case 'DECISION_REQUERIDA':
+      return {
+        game: {
+          ...state.game,
+          gameId: state.game.gameId || action.payload.gameId,
+          phase: 'WAIT_DECISION',
+          pendingCard: action.payload.game ?? null,
+        },
+      };
+
+    case 'DESCARTAR_PENDIENTE': {
+      const playerIndex = resolveDiscardPlayerIndex(state.game, action.fallbackPlayerIndex);
+
+      const updatedPlayers = state.game.players.map((player, index) => {
+        if (index !== playerIndex) {
+          return player;
+        }
+
+        return {
+          ...player,
+          cardCount: Math.max(0, player.cardCount - 1),
+        };
+      });
+
+      return {
+        game: {
+          ...state.game,
+          players: updatedPlayers,
+          pendingCard: null,
+          topDiscardCard: action.payload.carta,
+          phase: 'WAIT_DRAW',
+        },
+      };
+    }
 
     case 'PARTIDA_FINALIZADA':
-      return { ...state, result: action.data, phase: null };
-
-    case 'CUBO_ACTIVADO':
-      return { ...state, cuboActive: true, cuboTurnosRestantes: action.data.turnosRestantes };
-
-    case 'MAZO_REBARAJADO':
-      return { ...state, deckCount: action.data.cantidadCartasMazo };
-
-    case 'CARTAS_REVEALED':
-      return { ...state, revealedCards: action.revealed };
-
-    case 'CLEAR_REVEALED':
-      return { ...state, revealedCards: [] };
-
-    case 'SET_PEEKED_CARD':
-      return { ...state, peekedCard: action.data };
-
-    case 'SET_PENDING_SKILL':
-      return { ...state, pendingSkill: action.skill };
-
-    case 'UPDATE_SKINS': {
-      const players = state.players.map(p =>
-        p.userId === action.userId
-          ? { ...p, avatarUrl: action.avatarUrl, cardSkinUrl: action.cardSkinUrl }
-          : p
-      );
-      return { ...state, players };
-    }
-
-    case 'ROBAR_FORZADO': {
-      const players = state.players.map(p =>
-        p.userId === action.destinatario ? { ...p, cardCount: p.cardCount + 1 } : p
-      );
-      return { ...state, players };
-    }
+      return {
+        game: {
+          ...state.game,
+          result: action.payload,
+          phase: null,
+          pendingCard: null,
+        },
+      };
 
     default:
       return state;
   }
 }
 
-// ── Helpers de construcción de estado ─────────────────────────────────────────
-
-function buildPlayers(
-  jugadores: string[],
-  jugadoresDetalle: EvInicioPartida['jugadoresDetalle'],
-  myUserId: string,
-): GamePlayerState[] {
-  return jugadores.map((userId, i) => {
-    const det = jugadoresDetalle[i];
-    return {
-      userId,
-      name: det?.controlador === 'bot'
-        ? (det.nombreEnPartida ?? `Bot ${i + 1}`)
-        : userId,
-      cardCount: INITIAL_CARD_COUNT,
-      isBot: det?.controlador === 'bot',
-      avatarUrl: DEFAULT_AVATAR_URL,
-      cardSkinUrl: DEFAULT_CARD_URL,
-      isMe: userId === myUserId,
-    };
-  });
-}
-
-// ── Hook ──────────────────────────────────────────────────────────────────────
-
 export interface UseGameReturn {
-  gameState: GameState;
-  tapeteUrl: string | null;
+  state: Stage0GameState;
+  myPlayer: Stage0PlayerState | null;
   isMyTurn: boolean;
   canDrawCard: boolean;
-  activePlayer: GamePlayerState | null;
-  actions: typeof gameActions;
-  setPendingSkill: (skill: PendingSkill | null) => void;
+  canResolvePending: boolean;
+  selectableHandCount: number;
+  debugEvents: Stage0DebugEvent[];
+  drawCard: () => void;
+  discardPending: () => void;
+  swapWithPending: (cardIndex: number) => void;
+  clearDebugEvents: () => void;
 }
 
 export function useGame(myUserId: string): UseGameReturn {
-  const [gameState, dispatch] = useReducer(reducer, undefined, makeEmpty);
+  const [state, dispatch] = useReducer(reducer, { game: createEmptyGameState() });
+  const [debugEvents, setDebugEvents] = useState<Stage0DebugEvent[]>(() => {
+    if (!import.meta.env.DEV) {
+      return [];
+    }
 
-  // Tapete del jugador local: estado separado para disparar re-render al cargar
-  const [tapeteUrl, setTapeteUrl] = useState<string | null>(null);
+    const events: Stage0DebugEvent[] = [];
+    const cachedStart = getLastGameStartData();
+    const cachedTurn = getLastTurnoIniciadoData();
 
-  // Índice del jugador que robó la última carta (para atribuir el descarte)
-  const lastDrawIndexRef = useRef<number>(-1);
+    if (cachedStart) {
+      events.push({
+        event: 'cache:game:inicio-partida',
+        payload: cachedStart,
+        receivedAt: Date.now(),
+      });
+    }
 
-  function loadSkinsForAll(jugadores: string[], me: string) {
-    const token = getAccessToken();
-    if (!token) return;
-    jugadores.forEach(uid => {
-      const isMe = uid === me;
-      getEquipped(token, isMe ? undefined : uid)
-        .then(skins => {
-          if (isMe) setTapeteUrl(skins.tapete);
-          dispatch({
-            type: 'UPDATE_SKINS',
-            userId: uid,
-            avatarUrl: skins.avatar,
-            cardSkinUrl: skins.carta,
-          });
-        })
-        .catch(() => {});
+    if (cachedTurn) {
+      events.push({
+        event: 'cache:game:turno-iniciado',
+        payload: cachedTurn,
+        receivedAt: Date.now(),
+      });
+    }
+
+    return events;
+  });
+  const lastDrawPlayerIndexRef = useRef<number | null>(null);
+
+  const pushDebugEvent = useCallback((event: string, payload: unknown) => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    setDebugEvents((prev) => {
+      const next = [...prev, { event, payload, receivedAt: Date.now() }];
+      if (next.length <= MAX_DEBUG_EVENTS) {
+        return next;
+      }
+      return next.slice(next.length - MAX_DEBUG_EVENTS);
     });
-  }
+  }, []);
 
-  // ── Bootstrap desde caché ──────────────────────────────────────────────
   useEffect(() => {
-    const cached = getLastGameStartData();
-    if (!cached) return;
+    const cachedStart = getLastGameStartData();
+    if (!cachedStart) {
+      return;
+    }
 
-    const turno = getLastTurnoIniciadoData();
-    const players = buildPlayers(cached.jugadores, cached.jugadoresDetalle, myUserId);
+    const cachedTurn = getLastTurnoIniciadoData();
 
     dispatch({
-      type: 'INIT',
-      state: {
-        ...makeEmpty(),
-        gameId: cached.partidaId,
-        players,
-        turnIndex: turno?.turn ?? 0,
-        activePlayerId: turno?.userId ?? null,
-        phase: turno?.phase ?? null,
-        turnDeadlineAt: turno?.turnDeadlineAt ?? null,
-      },
+      type: 'INIT_FROM_START',
+      payload: cachedStart as EvInicioPartida,
+      myUserId,
+      turno: (cachedTurn as EvTurnoIniciado | null) ?? null,
     });
+  }, [myUserId]);
 
-    loadSkinsForAll(cached.jugadores, myUserId);
-  }, [myUserId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Suscripción a eventos de partida ───────────────────────────────────
   useEffect(() => {
+    unsubscribeFromGameEvents();
+
     subscribeToGameEvents({
-      onInicioPartida: (data) => {
-        const players = buildPlayers(data.jugadores, data.jugadoresDetalle, myUserId);
+      onInicioPartida: (payload) => {
+        pushDebugEvent('game:inicio-partida', payload);
+        dispatch({ type: 'INICIO_PARTIDA', payload, myUserId });
+      },
+      onTurnoIniciado: (payload) => {
+        pushDebugEvent('game:turno-iniciado', payload);
+        dispatch({ type: 'TURNO_INICIADO', payload });
+      },
+      onCartaRobada: (payload) => {
+        pushDebugEvent('game:carta-robada', payload);
+        lastDrawPlayerIndexRef.current = payload.jugadorRobado;
+        dispatch({ type: 'CARTA_ROBADA', payload });
+      },
+      onDecisionRequerida: (payload) => {
+        pushDebugEvent('game:decision-requerida', payload);
+        dispatch({ type: 'DECISION_REQUERIDA', payload });
+      },
+      onDescartarPendiente: (payload) => {
+        pushDebugEvent('game:descartar-pendiente', payload);
         dispatch({
-          type: 'INIT',
-          state: { ...makeEmpty(), gameId: data.partidaId, players },
+          type: 'DESCARTAR_PENDIENTE',
+          payload,
+          fallbackPlayerIndex: lastDrawPlayerIndexRef.current,
         });
-        loadSkinsForAll(data.jugadores, myUserId);
+        lastDrawPlayerIndexRef.current = null;
       },
-
-      onTurnoIniciado: (data) => {
-        dispatch({ type: 'TURNO_INICIADO', data });
+      onPartidaFinalizada: (payload) => {
+        pushDebugEvent('game:partida-finalizada', payload);
+        dispatch({ type: 'PARTIDA_FINALIZADA', payload });
       },
-
-      onCartaRobada: (data) => {
-        lastDrawIndexRef.current = data.jugadorRobado;
-        dispatch({ type: 'CARTA_ROBADA', data });
+      onBotRobaCarta: (payload) => {
+        pushDebugEvent('game:bot-roba-carta', payload);
       },
-
-      onDecisionRequerida: (data) => {
-        dispatch({ type: 'DECISION_REQUERIDA', data });
+      onBotDescartaPendiente: (payload) => {
+        pushDebugEvent('game:bot-descarta-pendiente', payload);
       },
-
-      onDescartarPendiente: (data) => {
-        const idx = lastDrawIndexRef.current >= 0 ? lastDrawIndexRef.current : 0;
-        dispatch({ type: 'DESCARTAR_PENDIENTE', data, playerIndex: idx });
-        lastDrawIndexRef.current = -1;
+      onBotIntercambiaCartas: (payload) => {
+        pushDebugEvent('game:bot-intercambia-cartas', payload);
       },
-
-      onIntercambioCartas: (data) => {
-        dispatch({ type: 'INTERCAMBIO_CARTAS', data });
+      onBotVerCarta: (payload) => {
+        pushDebugEvent('game:bot-ver-carta', payload);
       },
-
-      onTurnoExpirado: () => {
-        // El backend ya avanzará el turno y emitirá turno-iniciado
-        dispatch({ type: 'SET_PENDING_SKILL', skill: null });
+      onBotVerCartaPropiaYRival: (payload) => {
+        pushDebugEvent('game:bot-ver-carta-propia-y-rival', payload);
       },
-
-      onPartidaFinalizada: (data) => {
-        dispatch({ type: 'PARTIDA_FINALIZADA', data });
-      },
-
-      onCuboActivado: (data) => {
-        dispatch({ type: 'CUBO_ACTIVADO', data });
-      },
-
-      onMazoRebarajado: (data) => {
-        dispatch({ type: 'MAZO_REBARAJADO', data });
-      },
-
-      onCartasRevealedTodos: (data: EvCartasRevealedTodos) => {
-        dispatch({ type: 'CARTAS_REVEALED', revealed: data.cartasReveladas });
-        setTimeout(() => dispatch({ type: 'CLEAR_REVEALED' }), REVEALED_CARDS_DISPLAY_MS);
-      },
-
-      onCartaRevelada: (data: EvCartaRevelada) => {
-        dispatch({ type: 'SET_PEEKED_CARD', data });
-        setTimeout(() => dispatch({ type: 'SET_PEEKED_CARD', data: null }), REVEALED_CARDS_DISPLAY_MS);
-      },
-
-      onIntercambioRival: (data) => {
-        dispatch({
-          type: 'SET_PENDING_SKILL',
-          skill: {
-            tipo: 'intercambiar-carta-rival',
-            rivalId: data.usuarioIniciador,
-            gameId: data.gameId,
-          },
-        });
-      },
-
-      onSeHaHechoRobarCarta: (data) => {
-        dispatch({ type: 'ROBAR_FORZADO', destinatario: data.destinatario });
-      },
-
-      onHabilidadDenegada: () => {
-        dispatch({ type: 'SET_PENDING_SKILL', skill: null });
+      onBotJugadorMenosPuntuacion: (payload) => {
+        pushDebugEvent('game:bot-jugador-menos-puntuacion', payload);
       },
     });
 
     return () => {
       unsubscribeFromGameEvents();
     };
-  }, [myUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [myUserId, pushDebugEvent]);
 
-  // ── Inferir skill pendiente cuando yo descarto ─────────────────────────
-  useEffect(() => {
-    const { lastDiscardedCard, lastDiscardPlayerId, gameId } = gameState;
-    if (!lastDiscardedCard || !lastDiscardPlayerId) return;
-    if (lastDiscardPlayerId !== myUserId) return;
+  const gameState = state.game;
+  const myPlayer = gameState.players.find((player) => player.isMe) ?? null;
 
-    const tipo = cardToSkillTipo(lastDiscardedCard.carta);
-    if (!tipo) return;
+  const isMyTurn = Boolean(gameState.activePlayerId && gameState.activePlayerId === myUserId);
+  const canDrawCard = Boolean(gameState.gameId) && isMyTurn && gameState.phase === 'WAIT_DRAW' && !gameState.pendingCard;
+  const canResolvePending = Boolean(gameState.gameId) && isMyTurn && gameState.phase === 'WAIT_DECISION' && Boolean(gameState.pendingCard);
+  const selectableHandCount = Math.max(0, (myPlayer?.cardCount ?? 0) - (gameState.pendingCard ? 1 : 0));
 
-    dispatch({ type: 'SET_PENDING_SKILL', skill: { tipo, gameId } });
-  }, [gameState.lastDiscardedCard, gameState.lastDiscardPlayerId, myUserId, gameState.gameId]);
+  const drawCard = useCallback(() => {
+    if (!canDrawCard || !gameState.gameId) {
+      return;
+    }
+    gameActions.robarCarta(gameState.gameId);
+  }, [canDrawCard, gameState.gameId]);
 
-  // ── Derived state ──────────────────────────────────────────────────────
-  const myPlayer = gameState.players.find(p => p.isMe) ?? null;
-  const isMyTurn = !!gameState.activePlayerId && gameState.activePlayerId === myUserId;
-  const canDrawCard = isMyTurn && gameState.phase === 'WAIT_DRAW' && (myPlayer?.cardCount ?? 0) < 6;
-  const activePlayer = gameState.activePlayerId
-    ? (gameState.players.find(p => p.userId === gameState.activePlayerId) ?? null)
-    : null;
+  const discardPending = useCallback(() => {
+    if (!canResolvePending || !gameState.gameId) {
+      return;
+    }
+    gameActions.descartarPendiente(gameState.gameId);
+  }, [canResolvePending, gameState.gameId]);
 
-  const setPendingSkill = useCallback((skill: PendingSkill | null) => {
-    dispatch({ type: 'SET_PENDING_SKILL', skill });
+  const swapWithPending = useCallback((cardIndex: number) => {
+    if (!canResolvePending || !gameState.gameId) {
+      return;
+    }
+    if (cardIndex < 0 || cardIndex >= selectableHandCount) {
+      return;
+    }
+    gameActions.cartaPorPendiente(gameState.gameId, cardIndex);
+  }, [canResolvePending, gameState.gameId, selectableHandCount]);
+
+  const clearDebugEvents = useCallback(() => {
+    setDebugEvents([]);
   }, []);
 
   return {
-    gameState,
-    tapeteUrl,
+    state: gameState,
+    myPlayer,
     isMyTurn,
     canDrawCard,
-    activePlayer,
-    actions: gameActions,
-    setPendingSkill,
+    canResolvePending,
+    selectableHandCount,
+    debugEvents,
+    drawCard,
+    discardPending,
+    swapWithPending,
+    clearDebugEvents,
   };
 }
