@@ -23,6 +23,7 @@ import GamePage from './pages/GamePage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
 import RankingPage from './pages/RankingPage';
+import BackgroundMusicController from './components/audio/BackgroundMusicController';
 
 import './App.css';
 import PortraitOverlay from './components/PortraitOverlay/PortraitOverlay';
@@ -65,6 +66,8 @@ function AppInner() {
 
   return (
     <>
+      <BackgroundMusicController />
+
       {/* Capas de fondo animado: siempre visibles, renderizadas fuera de Routes */}
       <div className="bg-mesh" aria-hidden="true" />
       <div className="bg-vignette" aria-hidden="true" />

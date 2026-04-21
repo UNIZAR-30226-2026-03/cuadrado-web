@@ -34,6 +34,7 @@ function loadPref<T>(key: string, defaultVal: T): T {
 
 function savePref<T>(key: string, val: T) {
   localStorage.setItem(key, JSON.stringify(val));
+  window.dispatchEvent(new Event('app:audio-settings-changed'));
 }
 
 function ajustarPorcentaje(value: number): number {
