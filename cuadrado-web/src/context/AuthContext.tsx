@@ -17,7 +17,7 @@ import {
   changePasswordRequest,
 } from '../services/auth.service';
 
-import { getProfileRequest } from '../services/user.service';
+import { getProfileRequest, getMySettingsRequest } from '../services/user.service';
 
 import type {
   LoginPayload,
@@ -43,6 +43,21 @@ interface AuthContextType {
 
 // undefined como valor por defecto: useAuth lo detecta si se usa fuera del Provider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function readLocalPercent(key: string, fallback: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? clampPercent(parsed) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 /** Provee el estado de autenticacion a todos los hijos */
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -86,6 +101,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         eloRating: res.user.eloRating ?? 1200,
       });
     }
+
+    try {
+      const settings = await getMySettingsRequest(res.accessToken);
+      const volGeneral = readLocalPercent('vol_general', 80);
+      const factor = Math.max(volGeneral / 100, 0.01);
+
+      localStorage.setItem('vol_music', JSON.stringify(clampPercent(settings.gameMusicVolume / factor)));
+      localStorage.setItem('vol_sfx', JSON.stringify(clampPercent(settings.soundEffectsVolume / factor)));
+      localStorage.setItem('vol_voice', JSON.stringify(clampPercent(settings.voiceChatVolume / factor)));
+
+      window.dispatchEvent(new Event('app:audio-settings-changed'));
+    } catch {
+      // Si falla la carga de settings, mantenemos las preferencias locales existentes.
+    }
+
     setIsAuthenticated(true);
     fetchProfile(); // carga el perfil completo en segundo plano
   }
