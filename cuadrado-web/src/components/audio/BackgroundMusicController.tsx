@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 
 const APP_BGM_SRC = '/audio/app-theme.mp3';
 const GAME_BGM_SRC = '/audio/app-theme.mp3';
@@ -28,13 +27,11 @@ function getEffectiveMusicVolume(): number {
 
 export default function BackgroundMusicController() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const targetSrc = useMemo(() => {
-    if (!isAuthenticated) return null;
     return location.pathname === '/game' ? GAME_BGM_SRC : APP_BGM_SRC;
-  }, [isAuthenticated, location.pathname]);
+  }, [location.pathname]);
 
   useEffect(() => {
     const audio = new Audio();
