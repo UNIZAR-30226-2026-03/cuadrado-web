@@ -24,6 +24,8 @@ interface CreateRoomResponse {
   success: true;
   roomCode: string;
   roomName: string;
+  loadedFromSave?: boolean;
+  warning?: string;
 }
 
 interface JoinRoomResponse {
@@ -73,12 +75,19 @@ const SOCKET_PATH = '/socket.io';
 const DEFAULT_TIMEOUT_MS = 8000;
 
 let socket: RoomsSocket | null = null;
+let lastCreateRoomWarning: string | null = null;
 
 // Caché del último estado de sala recibido vía room:update.
 let lastRoomState: RoomState | null = null;
 
 export function getLastRoomState(): RoomState | null {
   return lastRoomState;
+}
+
+export function consumeCreateRoomWarning(): string | null {
+  const warning = lastCreateRoomWarning;
+  lastCreateRoomWarning = null;
+  return warning;
 }
 
 // ── Caché de inicio de partida (game:inicio-partida / game:turno-iniciado) ──
@@ -309,6 +318,7 @@ export function disconnectRoomsSocket(): void {
     lastRoomState = null;
     lastGameStartData = null;
     lastTurnoIniciadoData = null;
+    lastCreateRoomWarning = null;
   }
 }
 
@@ -318,6 +328,7 @@ export async function createRoom(
 ): Promise<{ roomCode: string; roomName: string }> {
   await ensureSocketConnected(auth);
   const res = await emitWithAck<CreateRoomResponse>('rooms:create', payload);
+  lastCreateRoomWarning = res.warning ?? null;
   return { roomCode: res.roomCode, roomName: res.roomName };
 }
 

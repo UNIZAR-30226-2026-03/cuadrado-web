@@ -7,6 +7,12 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { createRoom, leaveRoom, getLastRoomState } from '../../services/room.service';
+import {
+  listSavedGames,
+  setLastSavedGameSummary,
+  clearLastSavedGameSummary,
+  type SavedGameSummary,
+} from '../../services/game.service';
 import { useAuth } from '../../context/AuthContext';
 import { DEFAULT_POWERS } from '../../data/cardPowers';
 import { IconOneDeck, IconTwoDecks, IconResume } from '../icons/DeckIcons';
@@ -17,6 +23,7 @@ import '../../styles/CreateRoomExtras.css';
 
 type DeckCount = 1 | 2;
 type BotDifficulty = 'media' | 'dificil';
+type CreationView = 'deck' | 'saved';
 
 /** Estado interno de un poder con su flag de habilitado para esta sesión de creación */
 interface RoomPower {
@@ -108,6 +115,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
   const { user } = useAuth();
   const step2Ref = useRef<HTMLDivElement>(null);
 
+  const [view, setView] = useState<CreationView>('deck');
   const [deckCount, setDeckCount] = useState<DeckCount | null>(null);
   const [roomName, setRoomName] = useState(user?.username ?? '');
   const [isPublic, setIsPublic] = useState(true);
@@ -118,6 +126,10 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
   const [powers, setPowers] = useState<RoomPower[]>(DEFAULT_POWERS);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedGames, setSavedGames] = useState<SavedGameSummary[]>([]);
+  const [savedGamesLoading, setSavedGamesLoading] = useState(false);
+  const [savedGamesLoaded, setSavedGamesLoaded] = useState(false);
+  const [savedGamesError, setSavedGamesError] = useState<string | null>(null);
 
   const allEnabled  = powers.every(power => power.enabled);
   const someEnabled = powers.some(power => power.enabled);
@@ -142,6 +154,66 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     setPowers(prev => prev.map(power => (power.value === value ? { ...power, enabled } : power)));
   }, []);
 
+  const leaveCurrentRoomIfNeeded = useCallback(async () => {
+    const currentRoom = getLastRoomState();
+    if (currentRoom && !currentRoom.started) {
+      await leaveRoom();
+    }
+  }, []);
+
+  const goToWaitingRoom = useCallback(() => {
+    onClose();
+    navigate('/waiting-room');
+  }, [navigate, onClose]);
+
+  const loadSavedGames = useCallback(async () => {
+    if (savedGamesLoading) return;
+
+    setSavedGamesLoading(true);
+    setSavedGamesError(null);
+
+    try {
+      const games = await listSavedGames();
+      setSavedGames(games);
+      setSavedGamesLoaded(true);
+    } catch (err) {
+      console.error('[CreateRoomModalContent] Error al cargar partidas guardadas', err);
+      setSavedGamesError(err instanceof Error ? err.message : 'Error al cargar partidas guardadas');
+    } finally {
+      setSavedGamesLoading(false);
+    }
+  }, [savedGamesLoading]);
+
+  const handleResumeSavedGame = useCallback(async (savedGame: SavedGameSummary) => {
+    const currentRoom = getLastRoomState();
+    if (currentRoom?.started) {
+      setError('No puedes crear una nueva partida mientras estás en una partida activa');
+      return;
+    }
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      const selectedSavedGame = savedGames.find(game => game.gameId === savedGame.gameId) ?? null;
+      setLastSavedGameSummary(selectedSavedGame);
+      await leaveCurrentRoomIfNeeded();
+      const payload: CreateRoomPayload = {
+      name: savedGame.roomName,
+    };
+      await createRoom(payload);
+      goToWaitingRoom();
+    } catch (err) {
+      console.error('[CreateRoomModalContent] Error al reanudar partida', {
+        savedGame,
+        error: err,
+      });
+      setError(err instanceof Error ? err.message : 'Error al reanudar la partida');
+    } finally {
+      setCreating(false);
+    }
+  }, [goToWaitingRoom, leaveCurrentRoomIfNeeded, savedGames]);
+
   const handleCreateRoom = useCallback(async () => {
     if (!deckCount) return;
 
@@ -154,6 +226,7 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
 
     setCreating(true);
     setError(null);
+    clearLastSavedGameSummary();
 
     const payload: CreateRoomPayload = {
       name: roomName.trim() || user?.username || 'Nueva sala',
@@ -169,25 +242,92 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
     };
 
     try {
-      // Intentar salir de la sala actual sólo si existe y no ha empezado
-      const roomStateBefore = getLastRoomState();
-      if (roomStateBefore && !roomStateBefore.started) {
-        await leaveRoom();
-      }
+      await leaveCurrentRoomIfNeeded();
 
       await createRoom(payload);
-      onClose();
-      navigate('/waiting-room');
+      goToWaitingRoom();
     } catch (err) {
+      console.error('[CreateRoomModalContent] Error al crear partida', err);
       setError(err instanceof Error ? err.message : 'Error al crear la partida');
     } finally {
       setCreating(false);
     }
-  }, [botDifficulty, deckCount, fillWithBots, isPublic, maxPlayers, navigate, onClose, powers, roomName, turnTime, user?.username]);
+  }, [botDifficulty, deckCount, fillWithBots, goToWaitingRoom, isPublic, leaveCurrentRoomIfNeeded, maxPlayers, powers, roomName, turnTime, user?.username]);
 
   // ── Paso 1: Selección de barajas ─────────────────────────────────────────
 
   if (deckCount === null) {
+    if (view === 'saved') {
+      return (
+        <div className="create-room-embedded">
+          <div className="create-room-embedded__header">
+            <button className="room-link-btn create-room-embedded__back" onClick={() => setView('deck')}>
+              ← Volver
+            </button>
+            <h3 className="create-room-embedded__title">Reanudar partida</h3>
+            <div className="create-room-embedded__spacer" aria-hidden="true" />
+          </div>
+
+          <div className="create-room-embedded__content room-page__content">
+            <div className="room-panel--stack create-room-embedded__panel">
+              <h4 className="room-powers__title">Selecciona una partida guardada</h4>
+
+              {savedGamesLoading && (
+                <p style={{ textAlign: 'center', color: 'var(--text-50)', margin: 0 }}>
+                  Cargando partidas guardadas…
+                </p>
+              )}
+
+              {savedGamesError && (
+                <div className="app-page__error" role="alert">
+                  {savedGamesError}
+                  <button
+                    className="room-link-btn"
+                    onClick={() => { void loadSavedGames(); }}
+                    style={{ marginLeft: 12 }}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
+              {!savedGamesLoading && !savedGamesError && savedGamesLoaded && savedGames.length === 0 && (
+                <p style={{ textAlign: 'center', color: 'var(--text-50)', margin: 0 }}>
+                  No hay partidas guardadas disponibles.
+                </p>
+              )}
+
+              {!savedGamesLoading && !savedGamesError && savedGames.length > 0 && (
+                <div className="room-list">
+                  {savedGames.map(savedGame => (
+                    <div className="room-row" key={savedGame.gameId}>
+                      <span className="room-row__name">{savedGame.roomName}</span>
+                      <button
+                        className="room-row__join"
+                        disabled={creating}
+                        onClick={() => { void handleResumeSavedGame(savedGame); }}
+                      >
+                        {creating ? 'Cargando…' : 'Reanudar'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="room-footer room-footer--spread">
+                <button className="room-link-btn" onClick={() => { void loadSavedGames(); }}>
+                  Recargar
+                </button>
+                <button className="room-cta" onClick={() => setView('deck')}>
+                  Crear nueva partida
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="create-room-embedded">
         <div className="create-room-embedded__header">
@@ -221,10 +361,18 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
                 <span className="room-option__sublabel">Más cartas, más caos</span>
               </button>
 
-              <button className="room-option room-option--disabled" disabled>
+              <button
+                className="room-option"
+                onClick={() => {
+                  setView('saved');
+                  if (!savedGamesLoaded) {
+                    void loadSavedGames();
+                  }
+                }}
+              >
                 <IconResume />
                 <span className="room-option__label">Reanudar</span>
-                <span className="room-option__sublabel">Próximamente</span>
+                <span className="room-option__sublabel">Partidas guardadas</span>
               </button>
             </div>
           </div>

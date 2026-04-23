@@ -44,7 +44,7 @@ export interface RoomState {
 
 export interface SavedRoomPayload {
   name: string;
-  rules: RulesConfig;
+  rules?: Partial<RulesConfig>;
 }
 
 export interface CreateRoomPayload {

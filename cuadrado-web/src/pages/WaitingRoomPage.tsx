@@ -16,7 +16,9 @@ import {
   startRoom,
   leaveRoom,
   getLastRoomState,
+  consumeCreateRoomWarning,
 } from '../services/room.service';
+import { getLastSavedGameSummary } from '../services/game.service';
 import { POWER_MAP } from '../data/cardPowers';
 import type { RoomState } from '../types/room.types';
 import '../styles/RoomPages.css';
@@ -37,12 +39,17 @@ function formatTurnTime(seconds: number): string {
   return `${seconds}s`;
 }
 
+function isBotSavedPlayer(userId: string): boolean {
+  return userId.trim().toLowerCase().startsWith('bot');
+}
+
 export default function WaitingRoomPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   // Estado inicial desde caché para evitar parpadeo "Cargando sala…"
   const [room, setRoom] = useState<RoomState | null>(getLastRoomState());
+  const [createWarning, setCreateWarning] = useState<string | null>(() => consumeCreateRoomWarning());
   const [showPowers, setShowPowers] = useState(false);
   const [selectedPower, setSelectedPower] = useState<string | null>(null);
   const [closedByHost, setClosedByHost] = useState(false);
@@ -110,6 +117,7 @@ export default function WaitingRoomPage() {
   // ── Comenzar partida ────────────────────────────────────────────────
   const handleStart = async () => {
     if (!room) return;
+    if (shouldBlockStartForResume) return;
     if (room.players.length === 1 && !room.rules.fillWithBots) {
       return;
     }
@@ -211,6 +219,16 @@ export default function WaitingRoomPage() {
 
   const maxPlayers = room.rules.maxPlayers;
   const deckCount = room.rules.deckCount;
+  const savedGame = getLastSavedGameSummary();
+  const expectedHumanPlayers = (savedGame?.players ?? []).filter(userId => !isBotSavedPlayer(userId));
+  const connectedHumanIds = new Set(
+    room.players
+      .filter(player => player.controlador !== 'bot' && player.connected === true)
+      .map(player => player.userId),
+  );
+  const missingHumanNames = expectedHumanPlayers.filter(userId => !connectedHumanIds.has(userId));
+  const hasMissingHumanPlayers = missingHumanNames.length > 0;
+  const shouldBlockStartForResume = expectedHumanPlayers.length > 0 && hasMissingHumanPlayers;
   const botModeLabel = !room.rules.fillWithBots
     ? 'Sin bots'
     : room.rules.dificultadBots === 'dificil'
@@ -251,6 +269,19 @@ export default function WaitingRoomPage() {
             Sala de {room.name}
           </p>
 
+          {createWarning && (
+            <div className="app-page__error" role="alert">
+              {createWarning}
+              <button
+                className="room-link-btn"
+                onClick={() => setCreateWarning(null)}
+                style={{ marginLeft: 12 }}
+              >
+                Cerrar
+              </button>
+            </div>
+          )}
+
           {/* ── Badges de información de sala ──────────────────── */}
           <div className="room-info-bar">
             <span className={`room-info-badge ${room.rules.isPrivate ? 'room-info-badge--private' : 'room-info-badge--public'}`}>
@@ -268,6 +299,14 @@ export default function WaitingRoomPage() {
             <span className="room-info-badge">
               👥 {room.players.length}/{maxPlayers} jugadores
             </span>
+            {shouldBlockStartForResume && (
+              <span
+                className="room-info-badge"
+                style={{ borderColor: 'rgba(251, 191, 36, 0.65)', color: 'var(--text-100)' }}
+              >
+                ⏳ Faltan: {missingHumanNames.join(', ')}
+              </span>
+            )}
           </div>
 
           {/* ── Panel de slots ─────────────────────────────────── */}
@@ -306,6 +345,11 @@ export default function WaitingRoomPage() {
                             {slot.data.userId}
                             {isSelf && <span className="waiting-you-badge"> (Tú)</span>}
                           </span>
+                          {slot.data.controlador !== 'bot' && slot.data.connected !== true && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--neon-gold)' }}>
+                              Esperando reconexión
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -342,9 +386,13 @@ export default function WaitingRoomPage() {
             {isHost && (
               <button
                 className="room-cta"
-                disabled={blockedSoloStart}
+                disabled={blockedSoloStart || shouldBlockStartForResume}
                 onClick={handleStart}
-                title={blockedSoloStart ? 'Necesitas al menos otro jugador o tener completar con bots activo' : undefined}
+                title={shouldBlockStartForResume
+                  ? `Faltan por reconectarse: ${missingHumanNames.join(', ')}`
+                  : blockedSoloStart
+                    ? 'Necesitas al menos otro jugador o tener completar con bots activo'
+                    : undefined}
               >
                 Comenzar partida
               </button>
