@@ -7,7 +7,7 @@ export interface RulesConfig {
   fillWithBots: boolean;
   dificultadBots?: 'media' | 'dificil';
   deckCount: number;
-  enabledPowers: string[];
+  enabledPowers: number[];
 }
 
 export interface PublicRoomSummary {

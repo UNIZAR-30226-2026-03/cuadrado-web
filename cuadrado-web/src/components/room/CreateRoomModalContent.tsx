@@ -14,7 +14,7 @@ import {
   type SavedGameSummary,
 } from '../../services/game.service';
 import { useAuth } from '../../context/AuthContext';
-import { DEFAULT_POWERS } from '../../data/cardPowers';
+import { DEFAULT_POWERS, cardLabelToNumber } from '../../data/cardPowers';
 import { IconOneDeck, IconTwoDecks, IconResume } from '../icons/DeckIcons';
 import { ClockIcon, CheckIcon, DashIcon } from '../icons/UiIcons';
 import type { CreateRoomPayload } from '../../types/room.types';
@@ -237,7 +237,10 @@ export default function CreateRoomModalContent({ onClose }: CreateRoomModalConte
         fillWithBots,
         dificultadBots: fillWithBots ? botDifficulty : undefined,
         deckCount,
-        enabledPowers: powers.filter(power => power.enabled).map(power => power.value),
+        enabledPowers: powers
+          .filter(power => power.enabled)
+          .map(power => cardLabelToNumber(power.value))
+          .filter((n): n is number => n !== null),
       },
     };
 

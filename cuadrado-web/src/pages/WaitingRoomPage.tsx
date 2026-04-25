@@ -19,7 +19,7 @@ import {
   consumeCreateRoomWarning,
 } from '../services/room.service';
 import { getLastSavedGameSummary } from '../services/game.service';
-import { POWER_MAP } from '../data/cardPowers';
+import { POWER_MAP, numberToCardLabel } from '../data/cardPowers';
 import type { RoomState } from '../types/room.types';
 import '../styles/RoomPages.css';
 
@@ -51,7 +51,7 @@ export default function WaitingRoomPage() {
   const [room, setRoom] = useState<RoomState | null>(getLastRoomState());
   const [createWarning, setCreateWarning] = useState<string | null>(() => consumeCreateRoomWarning());
   const [showPowers, setShowPowers] = useState(false);
-  const [selectedPower, setSelectedPower] = useState<string | null>(null);
+  const [selectedPower, setSelectedPower] = useState<number | null>(null);
   const [closedByHost, setClosedByHost] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showFillBots, setShowFillBots] = useState(false);
@@ -234,7 +234,15 @@ export default function WaitingRoomPage() {
     : room.rules.dificultadBots === 'dificil'
       ? 'Bots: Difícil'
       : 'Bots: Media';
-  const isHost = currentUserId === room.hostId;
+  const currentSocketId = getRoomsSocket()?.id ?? '';
+  const meInRoom = room.players.find(
+    (p) => p.userId === currentUserId || (currentSocketId !== '' && p.socketId === currentSocketId),
+  );
+  const isHost = Boolean(
+    meInRoom?.isHost ||
+    (currentUserId !== '' && currentUserId === room.hostId) ||
+    (currentSocketId !== '' && room.players.some((p) => p.isHost && p.socketId === currentSocketId)),
+  );
   const blockedSoloStart = room.players.length === 1 && !room.rules.fillWithBots;
   
   // ── Construir slots ─────────────────────────────────────────────────
@@ -475,35 +483,38 @@ export default function WaitingRoomPage() {
                         style={{ '--fan-index': i, '--fan-total': room.rules.enabledPowers.length } as React.CSSProperties}
                         onClick={() => setSelectedPower(prev => prev === p ? null : p)}
                       >
-                        <span className="fan-card__value">{p}</span>
+                        <span className="fan-card__value">{numberToCardLabel(p)}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Detalle de la carta seleccionada: los 4 palos */}
-                {selectedPower && (
-                  <div className="power-detail">
-                    <h4 className="power-detail__title">Carta {selectedPower}</h4>
-                    <div className="power-detail__suits">
-                      <span className="suit-card suit-card--hearts">
-                        {selectedPower}<span className="suit">♥</span>
-                      </span>
-                      <span className="suit-card suit-card--diamonds">
-                        {selectedPower}<span className="suit">♦</span>
-                      </span>
-                      <span className="suit-card suit-card--clubs">
-                        {selectedPower}<span className="suit">♣</span>
-                      </span>
-                      <span className="suit-card suit-card--spades">
-                        {selectedPower}<span className="suit">♠</span>
-                      </span>
+                {selectedPower !== null && (() => {
+                  const label = numberToCardLabel(selectedPower);
+                  return (
+                    <div className="power-detail">
+                      <h4 className="power-detail__title">Carta {label}</h4>
+                      <div className="power-detail__suits">
+                        <span className="suit-card suit-card--hearts">
+                          {label}<span className="suit">♥</span>
+                        </span>
+                        <span className="suit-card suit-card--diamonds">
+                          {label}<span className="suit">♦</span>
+                        </span>
+                        <span className="suit-card suit-card--clubs">
+                          {label}<span className="suit">♣</span>
+                        </span>
+                        <span className="suit-card suit-card--spades">
+                          {label}<span className="suit">♠</span>
+                        </span>
+                      </div>
+                      <p className="power-detail__desc">
+                        {POWER_MAP[label]?.shortDesc ?? 'Poder activo en esta sala.'}
+                      </p>
                     </div>
-                    <p className="power-detail__desc">
-                      {POWER_MAP[selectedPower]?.shortDesc ?? 'Poder activo en esta sala.'}
-                    </p>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 

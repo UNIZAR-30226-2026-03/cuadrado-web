@@ -4,9 +4,7 @@ export type PaloCarta = 'corazones' | 'picas' | 'treboles' | 'rombos' | 'joker';
 
 export type TurnPhase =
   | 'WAIT_DRAW'
-  | 'WAIT_DISCARD'
   | 'WAIT_SKILL'
-  | 'RESOLVE_SKILL'
   | 'WAIT_DECISION';
 
 export interface Card {
@@ -47,7 +45,16 @@ export interface EvCartaRobada {
 
 export interface EvDecisionRequerida {
   gameId: string;
-  game?: Card;
+  carta?: Card;
+}
+
+export interface EvCartaRobadaPorDescartar6 {
+  gameId: string;
+  cartaRobada: Card;
+  reshuffle?: {
+    huboRebarajado: boolean;
+    cantidadCartasMazo: number;
+  };
 }
 
 export interface EvDescartarPendiente {
@@ -61,6 +68,8 @@ export interface EvIntercambioCartas {
   destinatario: string;
   numCartaRemitente?: number;
   numCartaDestinatario?: number;
+  cardCountRemitente?: number;
+  cardCountDestinatario?: number;
 }
 
 export interface EvTurnoExpirado {
@@ -110,8 +119,36 @@ export interface EvCartaRevelada {
 
 export interface EvHabilidadDenegada {
   gameId: string;
-  userId: string;
-  accion: string;
+  jugadorId?: string;
+  habilidad?: string;
+  // Compatibilidad con payloads antiguos.
+  userId?: string;
+  accion?: string;
+}
+
+export interface EvRevanchaEstado {
+  gameId: string;
+  estado: 'waiting-host' | 'room-ready';
+  hostId: string;
+  jugadoresListos: string[];
+  roomCode?: string;
+  roomName?: string;
+}
+
+/** Respuesta privada al activar el poder de carta 7 */
+export interface EvJugadorMenosPuntuacionCalculado {
+  gameId: string;
+  jugadorId: string;
+}
+
+/** Estado global del poder 8: cuántas anulaciones pendientes hay en la partida */
+export interface EvPoder8Estado {
+  gameId: string;
+  /** Anulaciones ya activas que afectan a la siguiente habilidad usada */
+  pendientes: number;
+  /** Anulaciones armadas en el turno actual; pasan a activas al finalizar turno */
+  pendientesDiferidos?: number;
+  activadorId?: string | null;
 }
 
 // ── Estado de partida ─────────────────────────────────────────────────────────

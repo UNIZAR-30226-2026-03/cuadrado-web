@@ -120,18 +120,20 @@ interface PlayerSlotProps {
   rx: number;
   /** Radio vertical del tapete en px */
   ry: number;
+  isActive?: boolean;
+  cuboSource?: boolean;
   slotRef?: (el: HTMLDivElement | null) => void;
 }
 
 /** Slot de jugador posicionado absolutamente sobre el tapete mediante ángulo polar */
-export default function PlayerSlot({ player, angleRad, rx, ry, slotRef }: PlayerSlotProps) {
+export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false, cuboSource = false, slotRef }: PlayerSlotProps) {
   const left = `calc(50% + ${Math.cos(angleRad) * rx}px)`;
   const top  = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
 
   return (
     <div
       ref={slotRef}
-      className={`player-slot${player.isMe ? ' player-slot--me' : ''}`}
+      className={`player-slot${player.isMe ? ' player-slot--me' : ''}${isActive ? ' player-slot--active' : ''}${cuboSource ? ' player-slot--cubo-source' : ''}`}
       style={{ left, top }}
     >
       <div className={`player-avatar${player.isMe ? ' player-avatar--me' : ''}`}>
