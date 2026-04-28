@@ -1,6 +1,6 @@
 // hooks/useGame.ts - Estadio 5: habilidades interactivas simples y complejas.
 
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import {
   gameActions,
   subscribeToGameEvents,
@@ -26,11 +26,17 @@ import type {
   EvPoder8Estado,
   EvRevanchaEstado,
   EvTurnoIniciado,
+  EvSolicitudReaccionResponse,
+  EvPonerOtraCartaSobreOtra,
+  EvAccionCartaSobreOtra,
 } from '../types/game.types';
 
 const INITIAL_HAND_COUNT = 4;
 const DEFAULT_DECK_COUNT = 52;
 const MAX_DEBUG_EVENTS = 200;
+
+/** Fase de la ventana de reacción de descarte rápido (Estadio 8). */
+export type ReactionPhase = 'closed' | 'open' | 'pending-solicitud' | 'select-card';
 
 // Habilidades interactivas que requieren panel de confirmación (Estadios 4 y 5).
 export type InteractiveSkillType =
@@ -161,7 +167,8 @@ type ReducerAction =
   | { type: 'PODER8_USADO' }
   | { type: 'PODER8_ESTADO'; payload: EvPoder8Estado }
   | { type: 'CLEAR_MENOS_PUNTUACION_RESULT' }
-  | { type: 'CLEAR_DENIED_SKILL_NOTICE' };
+  | { type: 'CLEAR_DENIED_SKILL_NOTICE' }
+  | { type: 'ACCION_CARTA_SOBRE_OTRA'; usuarioImplicado: string; numCartasMano: number };
 
 function createEmptyGameState(): Stage0GameState {
   return {
@@ -542,7 +549,7 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
         game: {
           ...state.game,
           players: state.game.players.map((p) =>
-            p.userId === action.destinatarioId ? { ...p, cardCount: p.cardCount + 1 } : p,
+            p.userId === action.destinatarioId ? { ...p, cardCount: Math.min(6, p.cardCount + 1) } : p,
           ),
         },
       };
@@ -663,6 +670,18 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
         },
       };
 
+    case 'ACCION_CARTA_SOBRE_OTRA':
+      return {
+        game: {
+          ...state.game,
+          players: state.game.players.map((p) =>
+            p.userId === action.usuarioImplicado
+              ? { ...p, cardCount: Math.min(6, action.numCartasMano) }
+              : p,
+          ),
+        },
+      };
+
     default:
       return state;
   }
@@ -709,6 +728,11 @@ export interface UseGameReturn {
   power8QueuedCount: number;
   power8LastActivatorId: string | null;
   volverAJugar: () => void;
+  // Estadio 8 — descarte rápido
+  reactionPhase: ReactionPhase;
+  solicitarReaccion: () => void;
+  ponerCartaReaccion: (numCarta: number) => void;
+  cancelarReaccion: () => void;
 }
 
 /** Convierte enabledPowers (number[]) a Set<number>. Retorna null si vacío (= todos habilitados). */
@@ -737,6 +761,32 @@ export function useGame(myUserId: string): UseGameReturn {
   const preservePendingAfterDiscardRef = useRef(false);
   // Jugador activo en el momento del último turno-iniciado (para detectar mi turno en handlers).
   const activePlayerIdRef = useRef<string | null>(null);
+
+  const [reactionPhase, setReactionPhase] = useState<ReactionPhase>('closed');
+  // Timer de 3s para cerrar la ventana de reacción automáticamente.
+  const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Timer de seguridad 2s: si el backend no responde a solicitar-carta-sobre-otra, vuelve a 'closed'.
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref espejo de reactionPhase para evitar stale closure en handlers asíncronos.
+  const reactionPhaseRef = useRef<ReactionPhase>('closed');
+  // useLayoutEffect garantiza que reactionPhaseRef.current esté actualizado antes de que
+  // cualquier mensaje WS asíncrono llegue tras un render.
+  useLayoutEffect(() => {
+    reactionPhaseRef.current = reactionPhase;
+  });
+
+  useEffect(() => {
+    return () => {
+      if (reactionTimerRef.current !== null) {
+        clearTimeout(reactionTimerRef.current);
+        reactionTimerRef.current = null;
+      }
+      if (safetyTimerRef.current !== null) {
+        clearTimeout(safetyTimerRef.current);
+        safetyTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const [debugEvents, setDebugEvents] = useState<Stage0DebugEvent[]>(() => {
     if (!import.meta.env.DEV) {
@@ -811,6 +861,16 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onTurnoIniciado: (payload) => {
         pushDebugEvent('game:turno-iniciado', payload);
+        // Cerrar cualquier ventana de reacción activa al cambiar de turno.
+        if (reactionTimerRef.current !== null) {
+          clearTimeout(reactionTimerRef.current);
+          reactionTimerRef.current = null;
+        }
+        if (safetyTimerRef.current !== null) {
+          clearTimeout(safetyTimerRef.current);
+          safetyTimerRef.current = null;
+        }
+        setReactionPhase('closed');
         preservePendingAfterDiscardRef.current = false;
         activePlayerIdRef.current = payload.userId;
         dispatch({ type: 'TURNO_INICIADO', payload });
@@ -847,6 +907,14 @@ export function useGame(myUserId: string): UseGameReturn {
           eventAt: Date.now(),
           isMyTurn,
         });
+        // Abrir ventana de reacción para todos los jugadores, incluido el que acaba de descartar.
+        // El jugador activo puede reaccionar a su propio descarte si tiene otra carta del mismo número.
+        if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
+        setReactionPhase('open');
+        reactionTimerRef.current = setTimeout(() => {
+          setReactionPhase((p) => (p === 'open' ? 'closed' : p));
+          reactionTimerRef.current = null;
+        }, 3000);
       },
       onIntercambioCartas: (payload) => {
         pushDebugEvent('game:intercambio-cartas', payload);
@@ -857,6 +925,15 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onPartidaFinalizada: (payload) => {
         pushDebugEvent('game:partida-finalizada', payload);
+        if (reactionTimerRef.current !== null) {
+          clearTimeout(reactionTimerRef.current);
+          reactionTimerRef.current = null;
+        }
+        if (safetyTimerRef.current !== null) {
+          clearTimeout(safetyTimerRef.current);
+          safetyTimerRef.current = null;
+        }
+        setReactionPhase('closed');
         preservePendingAfterDiscardRef.current = false;
         dispatch({ type: 'PARTIDA_FINALIZADA', payload });
       },
@@ -905,6 +982,14 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onBotDescartaPendiente: (payload) => {
         pushDebugEvent('game:bot-descarta-pendiente', payload);
+        // Los bots también descartan; la ventana de reacción aplica a todos los humanos.
+        // No se filtra por activePlayerIdRef porque myUserId nunca es un bot.
+        if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
+        setReactionPhase('open');
+        reactionTimerRef.current = setTimeout(() => {
+          setReactionPhase((p) => (p === 'open' ? 'closed' : p));
+          reactionTimerRef.current = null;
+        }, 3000);
       },
       onBotIntercambiaCartas: (payload) => {
         pushDebugEvent('game:bot-intercambia-cartas', payload);
@@ -918,6 +1003,45 @@ export function useGame(myUserId: string): UseGameReturn {
       onBotJugadorMenosPuntuacion: (payload) => {
         pushDebugEvent('game:bot-jugador-menos-puntuacion', payload);
       },
+      onSolicitudReaccionResponse: (payload: EvSolicitudReaccionResponse) => {
+        pushDebugEvent('game:poner-carta-sobre-otra (response)', payload);
+        // Guard contra respuestas tardías: si la fase ya cerró, ignorar para no abrir selector fantasma.
+        if (reactionPhaseRef.current !== 'pending-solicitud') return;
+        if (safetyTimerRef.current !== null) {
+          clearTimeout(safetyTimerRef.current);
+          safetyTimerRef.current = null;
+        }
+        if (payload.aceptada) {
+          // Slot ganado: detener timer de 3s y pasar a selector de carta.
+          if (reactionTimerRef.current !== null) {
+            clearTimeout(reactionTimerRef.current);
+            reactionTimerRef.current = null;
+          }
+          setReactionPhase('select-card');
+        } else {
+          setReactionPhase('closed');
+        }
+      },
+      onPonerOtraCartaSobreOtra: (payload: EvPonerOtraCartaSobreOtra) => {
+        pushDebugEvent('game:poner-otra-carta-sobre-otra', payload);
+        // Solo se registra para debug; el cierre de la fase lo maneja accion-carta-sobre-otra.
+      },
+      onAccionCartaSobreOtra: (payload: EvAccionCartaSobreOtra) => {
+        pushDebugEvent('game:accion-carta-sobre-otra', payload);
+        dispatch({
+          type: 'ACCION_CARTA_SOBRE_OTRA',
+          usuarioImplicado: payload.usuarioImplicado,
+          numCartasMano: payload.numCartasMano,
+        });
+        // Tras cualquier intento propio (éxito o fallo) siempre se cierra el selector.
+        // El juego solo permite descartar una carta por ventana de reacción.
+        if (
+          payload.usuarioImplicado === myUserId &&
+          reactionPhaseRef.current === 'select-card'
+        ) {
+          setReactionPhase('closed');
+        }
+      },
     });
 
     return () => {
@@ -929,6 +1053,7 @@ export function useGame(myUserId: string): UseGameReturn {
   const myPlayer = gameState.players.find((player) => player.isMe) ?? null;
 
   const isMyTurn = Boolean(gameState.activePlayerId && gameState.activePlayerId === myUserId);
+
   // pendingSkill bloquea robar aunque la fase sea WAIT_DRAW, evitando emitir
   // game:robar-carta mientras el backend espera la resolución del skill.
   const canDrawCard = Boolean(gameState.gameId) && isMyTurn && gameState.phase === 'WAIT_DRAW' && !gameState.pendingCard && !gameState.pendingSkill;
@@ -940,12 +1065,10 @@ export function useGame(myUserId: string): UseGameReturn {
       isMyTurn ||
       gameState.pendingSkill?.tipo === 'intercambiar-carta-rival'
     );
-  // CUBO solo disponible tras completar al menos una ronda completa (turnIndex >= nJugadores).
   const canRequestCubo =
     Boolean(gameState.gameId) &&
     !gameState.result &&
-    !gameState.cuboActive &&
-    gameState.turnIndex >= gameState.players.length;
+    !gameState.cuboActive;
   // Poderes almacenables solo activables en WAIT_DRAW del propio turno.
   const canUsePoder7 =
     isMyTurn &&
@@ -1135,6 +1258,39 @@ export function useGame(myUserId: string): UseGameReturn {
     gameActions.volverAJugar(gameState.gameId);
   }, [gameState.gameId, gameState.result]);
 
+  const solicitarReaccion = useCallback(() => {
+    if (reactionPhase !== 'open' || !gameState.gameId) return;
+    setReactionPhase('pending-solicitud');
+    gameActions.solicitarCartaSobreOtra(gameState.gameId);
+
+    // Safety timeout: si en 2s el backend no responde, volvemos a 'closed'.
+    if (safetyTimerRef.current !== null) clearTimeout(safetyTimerRef.current);
+    safetyTimerRef.current = setTimeout(() => {
+      if (reactionPhaseRef.current === 'pending-solicitud') {
+        setReactionPhase('closed');
+      }
+      safetyTimerRef.current = null;
+    }, 2000);
+  }, [reactionPhase, gameState.gameId]);
+
+  const ponerCartaReaccion = useCallback((numCarta: number) => {
+    if (reactionPhase !== 'select-card' || !gameState.gameId) return;
+    if (numCarta < 0) return;
+    gameActions.ponerCartaSobreOtra(gameState.gameId, numCarta);
+  }, [reactionPhase, gameState.gameId]);
+
+  const cancelarReaccion = useCallback(() => {
+    if (reactionTimerRef.current !== null) {
+      clearTimeout(reactionTimerRef.current);
+      reactionTimerRef.current = null;
+    }
+    if (safetyTimerRef.current !== null) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+    setReactionPhase('closed');
+  }, []);
+
   return {
     state: gameState,
     myPlayer,
@@ -1174,5 +1330,9 @@ export function useGame(myUserId: string): UseGameReturn {
     power8QueuedCount: gameState.power8QueuedCount,
     power8LastActivatorId: gameState.power8LastActivatorId,
     volverAJugar,
+    reactionPhase,
+    solicitarReaccion,
+    ponerCartaReaccion,
+    cancelarReaccion,
   };
 }

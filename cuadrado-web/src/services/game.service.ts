@@ -22,6 +22,9 @@ import type {
   EvRevanchaEstado,
   EvJugadorMenosPuntuacionCalculado,
   EvPoder8Estado,
+  EvSolicitudReaccionResponse,
+  EvPonerOtraCartaSobreOtra,
+  EvAccionCartaSobreOtra,
 } from '../types/game.types';
 
 // ── Subscripciones ────────────────────────────────────────────────────────────
@@ -61,6 +64,12 @@ export interface GameEventHandlers {
   onJugadorMenosPuntuacionCalculado?: (data: EvJugadorMenosPuntuacionCalculado) => void;
   /** Estado global del poder 8 activo (anulaciones pendientes) */
   onPoder8Estado?: (data: EvPoder8Estado) => void;
+  /** Respuesta privada a solicitar la ventana de reacción (acepta/rechaza el slot) */
+  onSolicitudReaccionResponse?: (data: EvSolicitudReaccionResponse) => void;
+  /** Confirmación privada: carta puesta con número correcto (puede encadenar otra) */
+  onPonerOtraCartaSobreOtra?: (data: EvPonerOtraCartaSobreOtra) => void;
+  /** Broadcast: conteo actualizado del jugador que intentó la reacción */
+  onAccionCartaSobreOtra?: (data: EvAccionCartaSobreOtra) => void;
 }
 
 export interface SavedGameSummary {
@@ -256,6 +265,12 @@ export function subscribeToGameEvents(handlers: GameEventHandlers): void {
   reg('game:bot-jugador-menos-puntuacion', handlers.onBotJugadorMenosPuntuacion);
   reg('game:jugador-menos-puntuacion-calculado', handlers.onJugadorMenosPuntuacionCalculado);
   reg('game:poder8-estado', handlers.onPoder8Estado);
+  // Estadio 8 — descarte rápido fuera de turno
+  // 'game:poner-carta-sobre-otra' es usado como acción (client→server) y como respuesta
+  // privada (server→client); Socket.io los distingue por dirección.
+  reg('game:poner-carta-sobre-otra', handlers.onSolicitudReaccionResponse);
+  reg('game:poner-otra-carta-sobre-otra', handlers.onPonerOtraCartaSobreOtra);
+  reg('game:accion-carta-sobre-otra', handlers.onAccionCartaSobreOtra);
 }
 
 export function unsubscribeFromGameEvents(): void {
@@ -333,4 +348,12 @@ export const gameActions = {
   /** Activa el poder guardado de carta 8 (solo en WAIT_DRAW del propio turno) */
   desactivarProximaHabilidad: (gameId: string) =>
     emit('game:desactivar-proxima-habilidad', { gameId }),
+
+  /** Solicita el slot de reacción (carrera: solo el primero gana el turno de poner carta) */
+  solicitarCartaSobreOtra: (gameId: string) =>
+    emit('game:solicitar-carta-sobre-otra', { gameId }),
+
+  /** Pone la carta en la pila de descarte (solo si se tiene el slot por solicitud previa) */
+  ponerCartaSobreOtra: (gameId: string, numCarta: number) =>
+    emit('game:poner-carta-sobre-otra', { gameId, numCarta }),
 };

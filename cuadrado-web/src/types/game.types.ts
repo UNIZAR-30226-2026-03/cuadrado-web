@@ -151,6 +151,26 @@ export interface EvPoder8Estado {
   activadorId?: string | null;
 }
 
+/** Respuesta privada al solicitar la ventana de reacción (server→client).
+ * El evento WS es 'game:poner-carta-sobre-otra' (mismo nombre que la acción cliente→servidor). */
+export interface EvSolicitudReaccionResponse {
+  aceptada: boolean;
+}
+
+/** Confirmación privada de acierto: la carta puesta era del número correcto (server→client). */
+export interface EvPonerOtraCartaSobreOtra {
+  gameId: string;
+}
+
+/** Broadcast a toda la sala tras un intento de descarte rápido (éxito o fallo). */
+export interface EvAccionCartaSobreOtra {
+  partidaId: string;
+  /** ID del jugador que intentó la reacción */
+  usuarioImplicado: string;
+  /** Nuevo conteo de cartas de ese jugador tras el intento */
+  numCartasMano: number;
+}
+
 // ── Estado de partida ─────────────────────────────────────────────────────────
 
 export interface GamePlayerState {
