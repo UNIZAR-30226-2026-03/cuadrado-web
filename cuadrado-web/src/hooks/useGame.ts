@@ -1050,7 +1050,10 @@ export function useGame(myUserId: string): UseGameReturn {
   }, [myUserId, pushDebugEvent]);
 
   const gameState = state.game;
-  const myPlayer = gameState.players.find((player) => player.isMe) ?? null;
+  const myPlayer =
+    gameState.players.find((player) => player.isMe) ??
+    gameState.players.find((player) => player.userId === myUserId) ??
+    null;
 
   const isMyTurn = Boolean(gameState.activePlayerId && gameState.activePlayerId === myUserId);
 

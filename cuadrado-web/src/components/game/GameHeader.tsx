@@ -2,6 +2,7 @@
 
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
+import VoiceChatControls from '../voice/VoiceChatControls';
 import '../../styles/GameHeader.css';
 
 interface GameHeaderProps {
@@ -9,6 +10,8 @@ interface GameHeaderProps {
   title?: string;
   /** Si se provee, sustituye el logo por un botón "← Volver" que llama a esta función. */
   onBack?: () => void;
+  /** Si true, muestra los controles de chat de voz (mute/deafen) en el área de acciones. */
+  showVoiceControls?: boolean;
 }
 
 /** Icono SVG de cubo wireframe (solo aristas) */
@@ -34,7 +37,7 @@ function CubeWireframeIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
+export default function GameHeader({ title, onBack, showVoiceControls = false }: GameHeaderProps = {}) {
   const { user } = useAuth();
   const { openSettingsModal } = useModal();
   const isSub = Boolean(title || onBack);
@@ -55,7 +58,7 @@ export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
       {/* Centro: título de sección */}
       {title && <h1 className="game-header__title">{title}</h1>}
 
-      {/* Derecha: badge de cubitos + botón de ajustes */}
+      {/* Derecha: badge de cubitos + controles de voz + botón de ajustes */}
       <div className="game-header__actions">
         <div className="game-header__badge game-header__badge--cubitos">
           <CubeWireframeIcon />
@@ -63,6 +66,8 @@ export default function GameHeader({ title, onBack }: GameHeaderProps = {}) {
             {user?.cubitos?.toLocaleString('es-ES') ?? '0'}
           </span>
         </div>
+
+        {showVoiceControls && <VoiceChatControls />}
 
         <button
           className="game-header__icon-btn"

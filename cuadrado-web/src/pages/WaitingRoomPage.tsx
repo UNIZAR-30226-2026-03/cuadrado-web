@@ -9,6 +9,7 @@ import gsap from 'gsap';
 import GameHeader from '../components/game/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useVoice } from '../context/VoiceContext';
 import {
   connectRoomsSocket,
   disconnectRoomsSocket,
@@ -22,6 +23,7 @@ import { getLastSavedGameSummary } from '../services/game.service';
 import { POWER_MAP, numberToCardLabel } from '../data/cardPowers';
 import type { RoomState } from '../types/room.types';
 import '../styles/RoomPages.css';
+import '../styles/VoiceChat.css';
 
 interface LocalBot {
   userId: string;
@@ -46,6 +48,7 @@ function isBotSavedPlayer(userId: string): boolean {
 export default function WaitingRoomPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { joinVoiceRoom, leaveVoiceRoom, updatePlayerMapping, isSpeakingUser, connectedPeers } = useVoice();
 
   // Estado inicial desde caché para evitar parpadeo "Cargando sala…"
   const [room, setRoom] = useState<RoomState | null>(getLastRoomState());
@@ -63,6 +66,40 @@ export default function WaitingRoomPage() {
 
   // El backend usa el username como userId en las salas (decoded.sub del JWT)
   const currentUserId = user?.username ?? '';
+
+  // ── Chat de voz: unirse a sala cuando el código esté disponible ────
+  // Inicializar como true si ya hay peers conectados (viniendo de revancha)
+  const [voiceJoined, setVoiceJoined] = useState(connectedPeers.length > 0);
+
+  // Sincronizar con peers conectados reales
+  useEffect(() => {
+    if (connectedPeers.length > 0) {
+      setVoiceJoined(true);
+    }
+  }, [connectedPeers.length]);
+
+  const handleJoinVoice = useCallback(async () => {
+    if (!room?.code || voiceJoined) return;
+    try {
+      await joinVoiceRoom(room.code);
+      setVoiceJoined(true);
+    } catch (err) {
+      console.error('Error al conectar voz:', err);
+    }
+  }, [room?.code, voiceJoined, joinVoiceRoom]);
+
+  useEffect(() => {
+    if (!room?.code || voiceJoined) return;
+    // Disparar automáticamente pero con un pequeño retraso para permitir que sea un "gesto" válido
+    const timer = setTimeout(handleJoinVoice, 500);
+    return () => clearTimeout(timer);
+  }, [room?.code, voiceJoined, handleJoinVoice]);
+
+  // ── Chat de voz: actualizar mapeo socketId→userId al cambiar jugadores ─
+  useEffect(() => {
+    if (!room?.players) return;
+    updatePlayerMapping(room.players.map(p => ({ userId: p.userId, socketId: p.socketId })));
+  }, [room?.players, updatePlayerMapping]);
 
   // ── Conexión y escucha en tiempo real ───────────────────────────────
   useEffect(() => {
@@ -167,6 +204,7 @@ export default function WaitingRoomPage() {
   const handleBack = async () => {
     if (isLeavingRef.current) return;
     isLeavingRef.current = true;
+    leaveVoiceRoom();
     try {
       await leaveRoom();
     } catch (e) {
@@ -211,7 +249,7 @@ export default function WaitingRoomPage() {
   if (!room) {
     return (
       <div className="app-page">
-        <GameHeader title="Sala de espera" onBack={handleBack} />
+        <GameHeader title="Sala de espera" onBack={handleBack} showVoiceControls />
         <p style={{ textAlign: 'center' }}>Cargando sala…</p>
       </div>
     );
@@ -267,7 +305,7 @@ export default function WaitingRoomPage() {
 
   return (
     <div className="app-page">
-      <GameHeader title="Sala de espera" onBack={handleBack} />
+      <GameHeader title="Sala de espera" onBack={handleBack} showVoiceControls />
 
       <main className="app-page__content room-page__content">
 
@@ -337,9 +375,12 @@ export default function WaitingRoomPage() {
                       <span className="waiting-slot__empty">Vacío</span>
                     )}
 
-                    {slot.type === 'player' && (
+                    {slot.type === 'player' && (() => {
+                      const speaking = isSpeakingUser(slot.data.userId, isSelf);
+                      const avatarVoiceClass = speaking ? ' waiting-avatar--speaking' : ' waiting-avatar--voice';
+                      return (
                       <div className="waiting-slot__player">
-                        <div className="waiting-avatar">
+                        <div className={`waiting-avatar${avatarVoiceClass}`}>
                           {/* Inicial del username como avatar (el backend no envía avatarUrl en RoomState) */}
                           <span className="waiting-avatar__initial">
                             {slot.data.userId.charAt(0).toUpperCase()}
@@ -360,7 +401,8 @@ export default function WaitingRoomPage() {
                           )}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {slot.type === 'bot' && (
                       <div className="waiting-slot__player">
@@ -383,6 +425,20 @@ export default function WaitingRoomPage() {
         {/* ── Footer ───────────────────────────────────────────── */}
         <div className="room-footer room-footer--waiting">
           <div className="room-footer__row">
+            {!voiceJoined && (
+              <button 
+                className="room-link-btn" 
+                onClick={handleJoinVoice}
+                style={{ color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
+              >
+                🎤 Conectar Voz
+              </button>
+            )}
+            {voiceJoined && (
+              <span className="room-info-badge" style={{ color: '#86efac' }}>
+                🎤 Voz conectada
+              </span>
+            )}
             <button
               className="room-link-btn"
               onClick={() => { setShowPowers(true); setSelectedPower(null); }}

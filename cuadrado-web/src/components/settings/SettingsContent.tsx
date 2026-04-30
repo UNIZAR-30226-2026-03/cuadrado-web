@@ -8,6 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
+import { useVoice } from '../../context/VoiceContext';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useAuth } from '../../context/AuthContext';
@@ -180,6 +181,14 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
+  const {
+    micPermission,
+    audioInputDevices,
+    selectedDeviceId,
+    requestPermission,
+    selectDevice,
+    setOutputVolume,
+  } = useVoice();
 
   const [volGeneral, setVolGeneral] = useState(() => loadPref('vol_general', 80));
   const [volMusic, setVolMusic] = useState(() => loadPref('vol_music', 60));
@@ -234,7 +243,8 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
 
   useEffect(() => {
     savePref('vol_voice', volVoice);
-  }, [volVoice]);
+    setOutputVolume(volVoice);
+  }, [volVoice, setOutputVolume]);
 
   useEffect(() => {
     volumesRef.current = {
@@ -459,6 +469,49 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
             onChange={handleVolSfxChange}
           />
           <SliderRow icon={<MicIcon />} label="Voz" value={volVoice} onChange={handleVolVoiceChange} />
+
+          {/* ── Dispositivo de micrófono ─────────────────────────── */}
+          <div className="settings-row">
+            <span className="settings-row__icon"><MicIcon /></span>
+            <div className="settings-row__body">
+              <span className="settings-row__label">Micrófono</span>
+              <span className="settings-row__sublabel">
+                {micPermission === 'denied'
+                  ? 'Sin acceso al micrófono — revisa los permisos del navegador'
+                  : micPermission === 'unknown'
+                    ? 'Toca para activar el chat de voz'
+                    : audioInputDevices.length === 0
+                      ? 'Micrófono por defecto del sistema'
+                      : `${audioInputDevices.length} dispositivo(s) detectado(s)`}
+              </span>
+            </div>
+            <div className="settings-row__control">
+              {micPermission !== 'granted' ? (
+                <button
+                  className="settings-action-btn"
+                  onClick={() => void requestPermission()}
+                >
+                  {micPermission === 'denied' ? 'Sin acceso' : 'Activar'}
+                </button>
+              ) : audioInputDevices.length > 0 ? (
+                <select
+                  className="settings-select"
+                  value={selectedDeviceId}
+                  onChange={e => void selectDevice(e.target.value)}
+                  aria-label="Seleccionar micrófono"
+                >
+                  <option value="default">Por defecto</option>
+                  {audioInputDevices.map(d => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label || `Micrófono ${d.deviceId.slice(0, 6)}`}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="settings-row__sublabel">Por defecto</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

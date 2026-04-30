@@ -3,6 +3,8 @@
 // Renderiza avatar, nombre, ELO y mano de cartas de un jugador.
 // Se posiciona absolutamente mediante ángulo polar + radios del tapete.
 
+import '../../styles/VoiceChat.css';
+
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 /** Datos de un jugador necesarios para renderizar su slot en el tablero */
@@ -123,12 +125,23 @@ interface PlayerSlotProps {
   isActive?: boolean;
   cuboSource?: boolean;
   slotRef?: (el: HTMLDivElement | null) => void;
+  /** true → borde de voz activo (rojo); false/undefined → sin borde de voz */
+  voiceConnected?: boolean;
+  /** true → jugador está hablando ahora mismo (borde brillante + pulse) */
+  isSpeaking?: boolean;
 }
 
 /** Slot de jugador posicionado absolutamente sobre el tapete mediante ángulo polar */
-export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false, cuboSource = false, slotRef }: PlayerSlotProps) {
+export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false, cuboSource = false, slotRef, voiceConnected = false, isSpeaking = false }: PlayerSlotProps) {
   const left = `calc(50% + ${Math.cos(angleRad) * rx}px)`;
   const top  = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
+
+  // Clase de indicador de voz: --speaking tiene prioridad sobre --voice
+  const voiceClass = isSpeaking
+    ? ' player-avatar--speaking'
+    : voiceConnected
+      ? ' player-avatar--voice'
+      : '';
 
   return (
     <div
@@ -136,7 +149,7 @@ export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false,
       className={`player-slot${player.isMe ? ' player-slot--me' : ''}${isActive ? ' player-slot--active' : ''}${cuboSource ? ' player-slot--cubo-source' : ''}`}
       style={{ left, top }}
     >
-      <div className={`player-avatar${player.isMe ? ' player-avatar--me' : ''}`}>
+      <div className={`player-avatar${player.isMe ? ' player-avatar--me' : ''}${voiceClass}`}>
         <span className="player-avatar__fallback" aria-hidden="true">
           {player.name.charAt(0).toUpperCase() || '?'}
         </span>

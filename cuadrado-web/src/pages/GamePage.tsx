@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlayerSlot, { type GamePlayer } from '../components/room/PlayerSlot';
 import { useAuth } from '../context/AuthContext';
+import { useVoice } from '../context/VoiceContext';
+import VoiceChatControls from '../components/voice/VoiceChatControls';
 import type {
   InteractiveSkillType,
   PendingInteractiveSkill,
@@ -15,7 +17,7 @@ import type {
   Stage0SkillUse,
 } from '../hooks/useGame';
 import { useGame } from '../hooks/useGame';
-import { disconnectRoomsSocket, leaveRoom } from '../services/room.service';
+import { disconnectRoomsSocket, getLastRoomState, getRoomsSocket, leaveRoom } from '../services/room.service';
 import type { Card, EvPartidaFinalizada } from '../types/game.types';
 import '../styles/GamePage.css';
 
@@ -927,6 +929,13 @@ function ResultModal({
     };
   }, [phase, revealRows.length]);
 
+  // Resetear replayRequested cuando la sala de revancha esté lista
+  useEffect(() => {
+    if (rematch.status === 'room-ready') {
+      setReplayRequested(false);
+    }
+  }, [rematch.status]);
+
   const waitingForHost = rematch.status === 'waiting-host';
   const rematchReady = rematch.status === 'room-ready';
   const hostName = rematch.hostId ? (names.get(rematch.hostId) ?? rematch.hostId) : null;
@@ -985,7 +994,15 @@ function ResultModal({
               <button
                 type="button"
                 className="stage2-btn stage2-btn--primary"
-                onClick={() => { setReplayRequested(true); onReplay(); }}
+                onClick={() => { 
+                  setReplayRequested(true); 
+                  onReplay(); 
+                  // Resetear después de 15s si la operación falla silenciosamente
+                  const timeoutId = window.setTimeout(() => {
+                    setReplayRequested(false);
+                  }, 15000);
+                  return () => window.clearTimeout(timeoutId);
+                }}
                 disabled={replayRequested}
               >
                 {replayRequested ? 'Preparando...' : 'Volver a jugar'}
@@ -1014,7 +1031,10 @@ function ResultModal({
 export default function GamePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const myUserId = user?.username ?? '';
+  const { leaveVoiceRoom, isSpeakingUser, connectedPeers } = useVoice();
+  const currentSocketId = getRoomsSocket()?.id ?? '';
+  const roomUserId = getLastRoomState()?.players.find((player) => player.socketId === currentSocketId)?.userId ?? '';
+  const myUserId = user?.username ?? roomUserId;
 
   const {
     state,
@@ -1272,13 +1292,14 @@ export default function GamePage() {
     }
 
     setLeaving(true);
+    leaveVoiceRoom();
     try {
       await leaveRoom();
       disconnectRoomsSocket();
     } finally {
       navigate('/home');
     }
-  }, [leaving, navigate]);
+  }, [leaving, navigate, leaveVoiceRoom]);
 
   const handleConfirmSwap = useCallback(() => {
     if (selectedSwapIndex === null) {
@@ -1329,14 +1350,17 @@ export default function GamePage() {
           <h1>Partida</h1>
           <p>{isMyTurn ? 'Tu turno' : `Turno de ${activePlayerName}`}</p>
         </div>
-        <button
-          type="button"
-          className="stage2-btn stage2-btn--danger"
-          onClick={handleLeave}
-          disabled={leaving}
-        >
-          {leaving ? 'Saliendo...' : 'Salir'}
-        </button>
+        <div className="stage2-header__actions">
+          <VoiceChatControls />
+          <button
+            type="button"
+            className="stage2-btn stage2-btn--danger"
+            onClick={handleLeave}
+            disabled={leaving}
+          >
+            {leaving ? 'Saliendo...' : 'Salir'}
+          </button>
+        </div>
       </header>
 
       <div className={`stage2-turn-timer${state.cuboActive ? ' stage2-turn-timer--cubo' : ''}`} aria-label="Temporizador de turno">
@@ -1464,6 +1488,8 @@ export default function GamePage() {
                 ry={boardRadii.ry}
                 isActive={base.userId === state.activePlayerId}
                 cuboSource={state.cuboActive && base.userId === state.cuboSolicitanteId}
+                voiceConnected={connectedPeers.length > 0 || base.isMe === true}
+                isSpeaking={isSpeakingUser(base.userId, base.isMe === true)}
               />
             ))}
           </div>

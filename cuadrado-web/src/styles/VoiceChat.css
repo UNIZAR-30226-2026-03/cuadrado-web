@@ -1,0 +1,97 @@
+/* VoiceChat.css - Estilos para controles de voz e indicadores de habla en avatares. */
+
+/* ── Botones de control (mute / deafen) ─────────────────────────────────── */
+
+.voice-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.voice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 210, 255, 0.22);
+  background: rgba(17, 40, 88, 0.60);
+  color: rgba(200, 220, 255, 0.85);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  flex-shrink: 0;
+}
+
+.voice-btn:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: rgba(0, 229, 255, 0.35);
+  color: #00e5ff;
+  transform: scale(1.08);
+}
+
+.voice-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Estado activo (no silenciado): pequeño punto verde en esquina */
+.voice-btn--active {
+  border-color: rgba(134, 239, 172, 0.4);
+  color: #86efac;
+}
+
+/* Silenciado: rojo */
+.voice-btn--muted {
+  border-color: rgba(255, 90, 90, 0.55);
+  background: rgba(255, 90, 90, 0.12);
+  color: #ff5a5a;
+}
+
+/* Ensordecido: naranja/ámbar */
+.voice-btn--deafened {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(251, 191, 36, 0.10);
+  color: #fbbf24;
+}
+
+/* ── Indicador de voz en avatares ────────────────────────────────────────── */
+/*
+ * Se usa box-shadow para que el borde siga el border-radius del elemento,
+ * compatible tanto con avatares circulares como con futuros avatares
+ * cuadrados con esquinas redondeadas.
+ *
+ * Convención de nombres:
+ *   --voice      → conectado al chat de voz pero sin hablar (rojo tenue)
+ *   --speaking   → está hablando en este momento (rojo brillante + pulse)
+ *
+ * Se aplica tanto a .player-avatar (GamePage/PlayerSlot) como a
+ * .waiting-avatar (WaitingRoomPage).
+ */
+
+.player-avatar--voice,
+.waiting-avatar--voice {
+  box-shadow: 0 0 0 2px rgba(255, 90, 90, 0.35);
+  transition: box-shadow 0.2s ease;
+}
+
+.player-avatar--speaking,
+.waiting-avatar--speaking {
+  box-shadow:
+    0 0 0 2px #ff5a5a,
+    0 0 10px 2px rgba(255, 90, 90, 0.45);
+  animation: voice-speaking-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes voice-speaking-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px #ff5a5a,
+      0 0 8px 1px rgba(255, 90, 90, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px #ff5a5a,
+      0 0 14px 4px rgba(255, 90, 90, 0.55);
+  }
+}
