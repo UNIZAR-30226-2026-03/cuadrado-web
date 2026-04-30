@@ -219,7 +219,7 @@ function buildPlayers(payload: EvInicioPartida, myUserId: string): Stage0PlayerS
       isBot,
       isMe: userId === myUserId,
       name: isBot ? (detail?.nombreEnPartida ?? `Bot ${index + 1}`) : userId,
-      cardCount: INITIAL_HAND_COUNT,
+      cardCount: (payload.estado?.jugadores?.find(j => j.userId === userId) as any)?.numCartas ?? INITIAL_HAND_COUNT,
     };
   });
 }
@@ -297,13 +297,21 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
     case 'INIT_FROM_START': {
       const players = buildPlayers(action.payload, action.myUserId);
       const game: Stage0GameState = {
-        ...createEmptyGameState(),
-        gameId: action.payload.partidaId,
-        turnIndex: action.turno?.turn ?? 0,
-        players,
-        activePlayerId: action.turno?.userId ?? null,
-        phase: action.turno?.phase ?? null,
-        turnDeadlineAt: action.turno?.turnDeadlineAt ?? null,
+          ...createEmptyGameState(),
+          gameId: action.payload.partidaId,
+          turnIndex: action.turno?.turn ?? 0,
+          players,
+          // Keep phase/activePlayer unset; populate safe display fields from
+          // `estado` when available so UI shows correct counts and discard top.
+          activePlayerId: action.turno?.userId ?? null,
+          phase: action.turno?.phase ?? null,
+          turnDeadlineAt: action.turno?.turnDeadlineAt ?? null,
+          deckCount: action.payload.estado?.cartasRestantes ?? state?.game?.deckCount ?? DEFAULT_DECK_COUNT,
+          topDiscardCard: action.payload.estado?.ultimaCartaDescartada ?? null,
+          cuboActive: Boolean(action.payload.estado?.cuboActivado) ?? false,
+          cuboSolicitanteId: action.payload.estado?.cuboSolicitanteId ?? null,
+          cuboTurnosRestantes: action.payload.estado?.cuboTurnosRestantes ?? 0,
+          myStoredPowers: action.payload.estado?.jugadores?.find(j => j.userId === action.myUserId)?.habilidadesActivadas ?? [],
       };
 
       return { game };
@@ -314,10 +322,21 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
 
       return {
         game: {
-          ...createEmptyGameState(),
-          gameId: action.payload.partidaId,
-          turnIndex: 0,
-          players,
+            ...createEmptyGameState(),
+            gameId: action.payload.partidaId,
+            turnIndex: 0,
+            players,
+            // Keep phase/activePlayer unset; populate safe display fields from
+            // `estado` when available so UI shows correct counts and discard top.
+            activePlayerId: action.payload.estado?.turnoActualUserId ?? null,
+            phase: (action.payload.estado?.phase as any) ?? null,
+            turnDeadlineAt: action.payload.estado?.turnDeadlineAt ?? null,
+            deckCount: action.payload.estado?.cartasRestantes ?? DEFAULT_DECK_COUNT,
+            topDiscardCard: action.payload.estado?.ultimaCartaDescartada ?? null,
+            cuboActive: Boolean(action.payload.estado?.cuboActivado) ?? false,
+            cuboSolicitanteId: action.payload.estado?.cuboSolicitanteId ?? null,
+            cuboTurnosRestantes: action.payload.estado?.cuboTurnosRestantes ?? 0,
+            myStoredPowers: action.payload.estado?.jugadores?.find(j => j.userId === action.myUserId)?.habilidadesActivadas ?? [],
         },
       };
     }
@@ -821,6 +840,8 @@ export function useGame(myUserId: string): UseGameReturn {
       return;
     }
 
+    console.log('[game.event]', event, payload);
+
     setDebugEvents((prev) => {
       const next = [...prev, { event, payload, receivedAt: Date.now() }];
       if (next.length <= MAX_DEBUG_EVENTS) {
@@ -829,6 +850,23 @@ export function useGame(myUserId: string): UseGameReturn {
       return next.slice(next.length - MAX_DEBUG_EVENTS);
     });
   }, []);
+
+  const lastCardCountSnapshotRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    const snapshot = state.game.players
+      .map((player) => `${player.userId}:${player.cardCount}`)
+      .join(' | ');
+
+    if (snapshot !== lastCardCountSnapshotRef.current) {
+      lastCardCountSnapshotRef.current = snapshot;
+      console.log('[game.cards]', snapshot || '(sin jugadores)');
+    }
+  }, [state.game.players]);
 
   useEffect(() => {
     const roomState = getLastRoomState();
@@ -842,6 +880,8 @@ export function useGame(myUserId: string): UseGameReturn {
     }
 
     const cachedTurn = getLastTurnoIniciadoData();
+
+    activePlayerIdRef.current = cachedTurn?.userId ?? cachedStart.estado?.turnoActualUserId ?? null;
 
     dispatch({
       type: 'INIT_FROM_START',
@@ -870,6 +910,9 @@ export function useGame(myUserId: string): UseGameReturn {
           clearTimeout(safetyTimerRef.current);
           safetyTimerRef.current = null;
         }
+        if (import.meta.env.DEV) {
+          console.log('[reaction.close] turno-iniciado', { phase: reactionPhaseRef.current });
+        }
         setReactionPhase('closed');
         preservePendingAfterDiscardRef.current = false;
         activePlayerIdRef.current = payload.userId;
@@ -890,15 +933,17 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onDescartarPendiente: (payload) => {
         pushDebugEvent('game:descartar-pendiente', payload);
+        if (import.meta.env.DEV) {
+          console.log('[reaction.open] descartar-pendiente HUMAN', { phase: reactionPhaseRef.current, card: payload.carta });
+        }
         const cardNumber = normalizeCardValue(payload.carta);
         const powerIsEnabled =
           cardNumber !== 'JOKER' &&
           (enabledPowersRef.current === null || enabledPowersRef.current.has(cardNumber));
         const preservePendingCard = preservePendingAfterDiscardRef.current;
         preservePendingAfterDiscardRef.current = false;
-        // activePlayerIdRef mantiene el ID del jugador activo en el momento del evento
-        // para detectar si el descarte fue del jugador local sin acceder al estado React.
         const isMyTurn = activePlayerIdRef.current === myUserId;
+
         dispatch({
           type: 'DESCARTAR_PENDIENTE',
           payload,
@@ -907,11 +952,16 @@ export function useGame(myUserId: string): UseGameReturn {
           eventAt: Date.now(),
           isMyTurn,
         });
-        // Abrir ventana de reacción para todos los jugadores, incluido el que acaba de descartar.
-        // El jugador activo puede reaccionar a su propio descarte si tiene otra carta del mismo número.
         if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
+        if (safetyTimerRef.current !== null) {
+          clearTimeout(safetyTimerRef.current);
+          safetyTimerRef.current = null;
+        }
         setReactionPhase('open');
         reactionTimerRef.current = setTimeout(() => {
+          if (import.meta.env.DEV) {
+            console.log('[reaction.auto-close] descartar-pendiente 3s timeout');
+          }
           setReactionPhase((p) => (p === 'open' ? 'closed' : p));
           reactionTimerRef.current = null;
         }, 3000);
@@ -982,11 +1032,19 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onBotDescartaPendiente: (payload) => {
         pushDebugEvent('game:bot-descarta-pendiente', payload);
-        // Los bots también descartan; la ventana de reacción aplica a todos los humanos.
-        // No se filtra por activePlayerIdRef porque myUserId nunca es un bot.
+        if (import.meta.env.DEV) {
+          console.log('[reaction.open] descartar-pendiente BOT', { phase: reactionPhaseRef.current, botId: payload.botId });
+        }
         if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
+        if (safetyTimerRef.current !== null) {
+          clearTimeout(safetyTimerRef.current);
+          safetyTimerRef.current = null;
+        }
         setReactionPhase('open');
         reactionTimerRef.current = setTimeout(() => {
+          if (import.meta.env.DEV) {
+            console.log('[reaction.auto-close] bot-descarta-pendiente 3s timeout');
+          }
           setReactionPhase((p) => (p === 'open' ? 'closed' : p));
           reactionTimerRef.current = null;
         }, 3000);

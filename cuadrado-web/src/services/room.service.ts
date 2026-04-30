@@ -46,6 +46,10 @@ interface LeaveRoomResponse {
 interface StartRoomResponse {
   success: true;
   roomCode: string;
+  gameId?: string;
+  roomId?: string;
+  loadedFromSave?: boolean;
+  estado?: CachedGameStart['estado'];
 }
 
 interface RoomsServerEvents {
@@ -103,6 +107,35 @@ interface CachedGameStart {
     dificultadBot?: string;
     nombreEnPartida?: string;
   }>;
+  estado?: {
+    turn: number;
+    turnoActualUserId: string;
+    phase: string;
+    turnDeadlineAt: number | null;
+    numBarajas: number;
+    cartasRestantes: number;
+    cartasDescartadas: Array<{
+      carta: number;
+      palo: 'corazones' | 'picas' | 'treboles' | 'rombos' | 'joker';
+      puntos: number;
+      protegida: boolean;
+    }>;
+    ultimaCartaDescartada: {
+      carta: number;
+      palo: 'corazones' | 'picas' | 'treboles' | 'rombos' | 'joker';
+      puntos: number;
+      protegida: boolean;
+    } | null;
+    habilidadesActivadas: number[];
+    cuboActivado: boolean;
+    cuboSolicitanteId: string | null;
+    cuboTurnosRestantes?: number;
+    jugadores: Array<{
+      userId: string;
+      cartasMano?: number;
+      habilidadesActivadas?: number[];
+    }>;
+  };
 }
 
 interface CachedTurnoIniciado {
@@ -115,6 +148,7 @@ interface CachedTurnoIniciado {
 
 let lastGameStartData: CachedGameStart | null = null;
 let lastTurnoIniciadoData: CachedTurnoIniciado | null = null;
+let pendingStartEstadoFromAck: CachedGameStart['estado'] | null = null;
 
 export function getLastGameStartData(): CachedGameStart | null {
   return lastGameStartData;
@@ -127,6 +161,7 @@ export function getLastTurnoIniciadoData(): CachedTurnoIniciado | null {
 export function clearGameCache(): void {
   lastGameStartData = null;
   lastTurnoIniciadoData = null;
+  pendingStartEstadoFromAck = null;
 }
 
 function getStoredAccessToken(): string | undefined {
@@ -219,13 +254,32 @@ async function ensureSocketConnected(auth?: SocketAuthOptions): Promise<RoomsSoc
 
     socket = socketUrl ? io(socketUrl, options) : io(options);
 
+    if (import.meta.env.DEV) {
+      socket.on('connect', () => {
+        console.log('[rooms.socket] connected', { id: socket?.id, url: socketUrl ?? '(same-origin)' });
+      });
+      socket.on('disconnect', (reason) => {
+        console.warn('[rooms.socket] disconnected', { reason });
+      });
+      socket.on('connect_error', (err) => {
+        console.error('[rooms.socket] connect_error', err);
+      });
+    }
+
     // Listeners permanentes para cachear estado entre navegaciones
     socket.on('room:update', (state: RoomState) => {
       lastRoomState = state;
     });
     (socket as unknown as { on: (ev: string, cb: (d: unknown) => void) => void })
       .on('game:inicio-partida', (d: unknown) => {
-        lastGameStartData = d as CachedGameStart;
+        const raw = d as CachedGameStart;
+
+        if (!raw?.estado && pendingStartEstadoFromAck) {
+          raw.estado = pendingStartEstadoFromAck;
+          pendingStartEstadoFromAck = null;
+        }
+
+        lastGameStartData = raw;
       });
     (socket as unknown as { on: (ev: string, cb: (d: unknown) => void) => void })
       .on('game:turno-iniciado', (d: unknown) => {
@@ -318,6 +372,7 @@ export function disconnectRoomsSocket(): void {
     lastRoomState = null;
     lastGameStartData = null;
     lastTurnoIniciadoData = null;
+    pendingStartEstadoFromAck = null;
     lastCreateRoomWarning = null;
   }
 }
@@ -355,5 +410,16 @@ export async function leaveRoom(auth?: SocketAuthOptions): Promise<void> {
 
 export async function startRoom(roomCode: string, auth?: SocketAuthOptions): Promise<void> {
   await ensureSocketConnected(auth);
-  await emitWithAck<StartRoomResponse>('rooms:start', { roomCode });
+  const res = await emitWithAck<StartRoomResponse>('rooms:start', { roomCode });
+
+  if (res.estado) {
+    pendingStartEstadoFromAck = res.estado;
+
+    // If we already cached a broadcasted inicio-partida without estado,
+    // inject ACK estado immediately so callers that read the cache get it.
+    if (lastGameStartData && !lastGameStartData.estado) {
+      lastGameStartData = { ...lastGameStartData, estado: res.estado };
+      pendingStartEstadoFromAck = null;
+    }
+  }
 }

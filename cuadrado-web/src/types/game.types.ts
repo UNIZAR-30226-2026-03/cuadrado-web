@@ -27,6 +27,26 @@ export interface EvInicioPartida {
   partidaId: string;
   jugadores: string[];
   jugadoresDetalle: GamePlayerDetail[];
+  /** Estado público de inicio de partida (opcional, enviado cuando se carga una partida) */
+  estado?: {
+    turn: number;
+    turnoActualUserId: string;
+    phase: TurnPhase | string;
+    turnDeadlineAt: number | null;
+    numBarajas: number;
+    cartasRestantes: number;
+    cartasDescartadas: Card[];
+    ultimaCartaDescartada: Card | null;
+    habilidadesActivadas: number[];
+    cuboActivado: boolean;
+    cuboSolicitanteId: string | null;
+    cuboTurnosRestantes?: number;
+    jugadores: Array<{
+      userId: string;
+      cartasMano?: number;
+      habilidadesActivadas?: number[];
+    }>;
+  };
 }
 
 export interface EvTurnoIniciado {
