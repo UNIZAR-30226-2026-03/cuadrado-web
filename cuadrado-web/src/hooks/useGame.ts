@@ -1,6 +1,6 @@
 // hooks/useGame.ts - Estadio 5: habilidades interactivas simples y complejas.
 
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   gameActions,
   subscribeToGameEvents,
@@ -25,18 +25,15 @@ import type {
   EvPartidaFinalizada,
   EvPoder8Estado,
   EvRevanchaEstado,
-  EvTurnoIniciado,
   EvSolicitudReaccionResponse,
-  EvPonerOtraCartaSobreOtra,
+  EvTurnoIniciado,
   EvAccionCartaSobreOtra,
+  EvPonerOtraCartaSobreOtra,
 } from '../types/game.types';
 
 const INITIAL_HAND_COUNT = 4;
 const DEFAULT_DECK_COUNT = 52;
 const MAX_DEBUG_EVENTS = 200;
-
-/** Fase de la ventana de reacción de descarte rápido (Estadio 8). */
-export type ReactionPhase = 'closed' | 'open' | 'pending-solicitud' | 'select-card';
 
 // Habilidades interactivas que requieren panel de confirmación (Estadios 4 y 5).
 export type InteractiveSkillType =
@@ -100,6 +97,8 @@ export interface Stage0GameState {
   power8PendingCount: number;
   power8QueuedCount: number;
   power8LastActivatorId: string | null;
+  // Resultado temporal del último intento de descartar una carta directamente.
+  lastCartaSobreOtraResult: { success: boolean; eventAt: number } | null;
 }
 
 export interface Stage0DeniedSkillNotice {
@@ -168,7 +167,9 @@ type ReducerAction =
   | { type: 'PODER8_ESTADO'; payload: EvPoder8Estado }
   | { type: 'CLEAR_MENOS_PUNTUACION_RESULT' }
   | { type: 'CLEAR_DENIED_SKILL_NOTICE' }
-  | { type: 'ACCION_CARTA_SOBRE_OTRA'; usuarioImplicado: string; numCartasMano: number };
+  | { type: 'ACCION_CARTA_SOBRE_OTRA'; usuarioImplicado: string; numCartasMano: number }
+  | { type: 'CART_SOBRE_OTRA_RESULTADO'; success: boolean; eventAt: number }
+  | { type: 'CLEAR_CART_SOBRE_OTRA_RESULTADO' };
 
 function createEmptyGameState(): Stage0GameState {
   return {
@@ -205,6 +206,7 @@ function createEmptyGameState(): Stage0GameState {
     power8PendingCount: 0,
     power8QueuedCount: 0,
     power8LastActivatorId: null,
+    lastCartaSobreOtraResult: null,
   };
 }
 
@@ -701,8 +703,24 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
         },
       };
 
-    default:
-      return state;
+      case 'CART_SOBRE_OTRA_RESULTADO':
+        return {
+          game: {
+            ...state.game,
+            lastCartaSobreOtraResult: { success: action.success, eventAt: action.eventAt },
+          },
+        };
+
+      case 'CLEAR_CART_SOBRE_OTRA_RESULTADO':
+        return {
+          game: {
+            ...state.game,
+            lastCartaSobreOtraResult: null,
+          },
+        };
+
+      default:
+        return state;
   }
 }
 
@@ -746,12 +764,12 @@ export interface UseGameReturn {
   power8PendingCount: number;
   power8QueuedCount: number;
   power8LastActivatorId: string | null;
+  quickDiscardRequestPending: boolean;
+  lastCartaSobreOtraResult: { success: boolean; eventAt: number } | null;
   volverAJugar: () => void;
-  // Estadio 8 — descarte rápido
-  reactionPhase: ReactionPhase;
-  solicitarReaccion: () => void;
-  ponerCartaReaccion: (numCarta: number) => void;
-  cancelarReaccion: () => void;
+  // Descarte directo sin ventana de reacción
+  ponerCartaSobreOtra: (cardIndex: number) => void;
+    clearCartaSobreOtraResult: () => void;
 }
 
 /** Convierte enabledPowers (number[]) a Set<number>. Retorna null si vacío (= todos habilitados). */
@@ -780,32 +798,15 @@ export function useGame(myUserId: string): UseGameReturn {
   const preservePendingAfterDiscardRef = useRef(false);
   // Jugador activo en el momento del último turno-iniciado (para detectar mi turno en handlers).
   const activePlayerIdRef = useRef<string | null>(null);
-
-  const [reactionPhase, setReactionPhase] = useState<ReactionPhase>('closed');
-  // Timer de 3s para cerrar la ventana de reacción automáticamente.
-  const reactionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Timer de seguridad 2s: si el backend no responde a solicitar-carta-sobre-otra, vuelve a 'closed'.
-  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Ref espejo de reactionPhase para evitar stale closure en handlers asíncronos.
-  const reactionPhaseRef = useRef<ReactionPhase>('closed');
-  // useLayoutEffect garantiza que reactionPhaseRef.current esté actualizado antes de que
-  // cualquier mensaje WS asíncrono llegue tras un render.
-  useLayoutEffect(() => {
-    reactionPhaseRef.current = reactionPhase;
-  });
-
-  useEffect(() => {
-    return () => {
-      if (reactionTimerRef.current !== null) {
-        clearTimeout(reactionTimerRef.current);
-        reactionTimerRef.current = null;
-      }
-      if (safetyTimerRef.current !== null) {
-        clearTimeout(safetyTimerRef.current);
-        safetyTimerRef.current = null;
-      }
-    };
-  }, []);
+  // Marca si la última petición propia de poner carta sobre otra fue confirmada por el servidor
+  const lastPonerCartaSucceededRef = useRef<boolean>(false);
+  // Solicitud en vuelo para el descarte rápido; evita duplicar emits.
+  const quickDiscardRequestInFlightRef = useRef(false);
+  // Índice de la carta elegida al hacer click; se envía cuando el servidor acepta el slot.
+  const quickDiscardSelectedIndexRef = useRef<number | null>(null);
+  // GameId del descarte rápido activo.
+  const quickDiscardGameIdRef = useRef<string | null>(null);
+  const [quickDiscardRequestPending, setQuickDiscardRequestPending] = useState(false);
 
   const [debugEvents, setDebugEvents] = useState<Stage0DebugEvent[]>(() => {
     if (!import.meta.env.DEV) {
@@ -901,21 +902,14 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onTurnoIniciado: (payload) => {
         pushDebugEvent('game:turno-iniciado', payload);
-        // Cerrar cualquier ventana de reacción activa al cambiar de turno.
-        if (reactionTimerRef.current !== null) {
-          clearTimeout(reactionTimerRef.current);
-          reactionTimerRef.current = null;
-        }
-        if (safetyTimerRef.current !== null) {
-          clearTimeout(safetyTimerRef.current);
-          safetyTimerRef.current = null;
-        }
-        if (import.meta.env.DEV) {
-          console.log('[reaction.close] turno-iniciado', { phase: reactionPhaseRef.current });
-        }
-        setReactionPhase('closed');
+        console.log('🔄 onTurnoIniciado: cleanup quick-discard state');
         preservePendingAfterDiscardRef.current = false;
         activePlayerIdRef.current = payload.userId;
+        // Cleanup refs but keep allowing clicks
+        quickDiscardRequestInFlightRef.current = false;
+        quickDiscardSelectedIndexRef.current = null;
+        quickDiscardGameIdRef.current = null;
+        setQuickDiscardRequestPending(false);
         dispatch({ type: 'TURNO_INICIADO', payload });
       },
       onCartaRobada: (payload) => {
@@ -933,9 +927,6 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onDescartarPendiente: (payload) => {
         pushDebugEvent('game:descartar-pendiente', payload);
-        if (import.meta.env.DEV) {
-          console.log('[reaction.open] descartar-pendiente HUMAN', { phase: reactionPhaseRef.current, card: payload.carta });
-        }
         const cardNumber = normalizeCardValue(payload.carta);
         const powerIsEnabled =
           cardNumber !== 'JOKER' &&
@@ -943,6 +934,11 @@ export function useGame(myUserId: string): UseGameReturn {
         const preservePendingCard = preservePendingAfterDiscardRef.current;
         preservePendingAfterDiscardRef.current = false;
         const isMyTurn = activePlayerIdRef.current === myUserId;
+
+        // No need to set window state - clicks are always allowed, backend validates
+        quickDiscardRequestInFlightRef.current = false;
+        quickDiscardSelectedIndexRef.current = null;
+        quickDiscardGameIdRef.current = payload.partidaId;
 
         dispatch({
           type: 'DESCARTAR_PENDIENTE',
@@ -952,19 +948,6 @@ export function useGame(myUserId: string): UseGameReturn {
           eventAt: Date.now(),
           isMyTurn,
         });
-        if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
-        if (safetyTimerRef.current !== null) {
-          clearTimeout(safetyTimerRef.current);
-          safetyTimerRef.current = null;
-        }
-        setReactionPhase('open');
-        reactionTimerRef.current = setTimeout(() => {
-          if (import.meta.env.DEV) {
-            console.log('[reaction.auto-close] descartar-pendiente 3s timeout');
-          }
-          setReactionPhase((p) => (p === 'open' ? 'closed' : p));
-          reactionTimerRef.current = null;
-        }, 3000);
       },
       onIntercambioCartas: (payload) => {
         pushDebugEvent('game:intercambio-cartas', payload);
@@ -975,16 +958,13 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onPartidaFinalizada: (payload) => {
         pushDebugEvent('game:partida-finalizada', payload);
-        if (reactionTimerRef.current !== null) {
-          clearTimeout(reactionTimerRef.current);
-          reactionTimerRef.current = null;
-        }
-        if (safetyTimerRef.current !== null) {
-          clearTimeout(safetyTimerRef.current);
-          safetyTimerRef.current = null;
-        }
-        setReactionPhase('closed');
+        console.log('🏁 onPartidaFinalizada: cleanup quick-discard state');
         preservePendingAfterDiscardRef.current = false;
+        // Cleanup refs but keep allowing clicks
+        quickDiscardRequestInFlightRef.current = false;
+        quickDiscardSelectedIndexRef.current = null;
+        quickDiscardGameIdRef.current = null;
+        setQuickDiscardRequestPending(false);
         dispatch({ type: 'PARTIDA_FINALIZADA', payload });
       },
       onRevanchaEstado: (payload) => {
@@ -1032,22 +1012,6 @@ export function useGame(myUserId: string): UseGameReturn {
       },
       onBotDescartaPendiente: (payload) => {
         pushDebugEvent('game:bot-descarta-pendiente', payload);
-        if (import.meta.env.DEV) {
-          console.log('[reaction.open] descartar-pendiente BOT', { phase: reactionPhaseRef.current, botId: payload.botId });
-        }
-        if (reactionTimerRef.current !== null) clearTimeout(reactionTimerRef.current);
-        if (safetyTimerRef.current !== null) {
-          clearTimeout(safetyTimerRef.current);
-          safetyTimerRef.current = null;
-        }
-        setReactionPhase('open');
-        reactionTimerRef.current = setTimeout(() => {
-          if (import.meta.env.DEV) {
-            console.log('[reaction.auto-close] bot-descarta-pendiente 3s timeout');
-          }
-          setReactionPhase((p) => (p === 'open' ? 'closed' : p));
-          reactionTimerRef.current = null;
-        }, 3000);
       },
       onBotIntercambiaCartas: (payload) => {
         pushDebugEvent('game:bot-intercambia-cartas', payload);
@@ -1061,45 +1025,67 @@ export function useGame(myUserId: string): UseGameReturn {
       onBotJugadorMenosPuntuacion: (payload) => {
         pushDebugEvent('game:bot-jugador-menos-puntuacion', payload);
       },
+
       onSolicitudReaccionResponse: (payload: EvSolicitudReaccionResponse) => {
-        pushDebugEvent('game:poner-carta-sobre-otra (response)', payload);
-        // Guard contra respuestas tardías: si la fase ya cerró, ignorar para no abrir selector fantasma.
-        if (reactionPhaseRef.current !== 'pending-solicitud') return;
-        if (safetyTimerRef.current !== null) {
-          clearTimeout(safetyTimerRef.current);
-          safetyTimerRef.current = null;
+        pushDebugEvent('game:solicitud-reaccion-response', payload);
+        quickDiscardRequestInFlightRef.current = false;
+        setQuickDiscardRequestPending(false);
+
+        if (!payload.aceptada) {
+          console.log('❌ onSolicitudReaccionResponse: request rejected by backend');
+          quickDiscardSelectedIndexRef.current = null;
+          // Keep allowing clicks - backend will validate next attempt
+          return;
         }
-        if (payload.aceptada) {
-          // Slot ganado: detener timer de 3s y pasar a selector de carta.
-          if (reactionTimerRef.current !== null) {
-            clearTimeout(reactionTimerRef.current);
-            reactionTimerRef.current = null;
-          }
-          setReactionPhase('select-card');
-        } else {
-          setReactionPhase('closed');
+
+        const selectedIndex = quickDiscardSelectedIndexRef.current;
+        const gameId = quickDiscardGameIdRef.current;
+        quickDiscardSelectedIndexRef.current = null;
+
+        console.log('📥 onSolicitudReaccionResponse accepted:', { selectedIndex, gameId });
+        if (selectedIndex === null || gameId === null) {
+          console.log('❌ Missing selectedIndex or gameId:', { selectedIndex, gameId });
+          return;
         }
-      },
-      onPonerOtraCartaSobreOtra: (payload: EvPonerOtraCartaSobreOtra) => {
-        pushDebugEvent('game:poner-otra-carta-sobre-otra', payload);
-        // Solo se registra para debug; el cierre de la fase lo maneja accion-carta-sobre-otra.
+
+        console.log('✅ Emitting ponerCartaSobreOtra:', { gameId, selectedIndex });
+        gameActions.ponerCartaSobreOtra(gameId, selectedIndex);
       },
       onAccionCartaSobreOtra: (payload: EvAccionCartaSobreOtra) => {
         pushDebugEvent('game:accion-carta-sobre-otra', payload);
+        console.log('📢 onAccionCartaSobreOtra: Broadcast action', { usuarioImplicado: payload.usuarioImplicado, numCartasMano: payload.numCartasMano });
+        // Actualizar conteos globales
         dispatch({
           type: 'ACCION_CARTA_SOBRE_OTRA',
           usuarioImplicado: payload.usuarioImplicado,
           numCartasMano: payload.numCartasMano,
         });
-        // Tras cualquier intento propio (éxito o fallo) siempre se cierra el selector.
-        // El juego solo permite descartar una carta por ventana de reacción.
-        if (
-          payload.usuarioImplicado === myUserId &&
-          reactionPhaseRef.current === 'select-card'
-        ) {
-          setReactionPhase('closed');
+
+        // Si la acción afectó al jugador local, inferir resultado:
+        // - Si previamente recibimos la confirmación privada (`onPonerOtraCartaSobreOtra`), es éxito.
+        // - Si no, entonces fue fallo (el servidor no envía confirmación privada en fallo).
+        if (payload.usuarioImplicado && payload.usuarioImplicado === myUserId) {
+          console.log('✔️ onAccionCartaSobreOtra: My action completed');
+          quickDiscardRequestInFlightRef.current = false;
+          setQuickDiscardRequestPending(false);
+          if (lastPonerCartaSucceededRef.current) {
+            // Asegurar que el estado refleja éxito (si no lo hizo ya)
+            dispatch({ type: 'CART_SOBRE_OTRA_RESULTADO', success: true, eventAt: Date.now() });
+            lastPonerCartaSucceededRef.current = false;
+          } else {
+            dispatch({ type: 'CART_SOBRE_OTRA_RESULTADO', success: false, eventAt: Date.now() });
+          }
         }
       },
+      onPonerOtraCartaSobreOtra: (payload: EvPonerOtraCartaSobreOtra) => {
+        pushDebugEvent('game:poner-otra-carta-sobre-otra', payload);
+        console.log('✅ onPonerOtraCartaSobreOtra: Private confirmation received', payload);
+        // El servidor envía este evento privado al cliente que consiguió poner la carta correctamente.
+        lastPonerCartaSucceededRef.current = true;
+        quickDiscardRequestInFlightRef.current = false;
+        setQuickDiscardRequestPending(false);
+        dispatch({ type: 'CART_SOBRE_OTRA_RESULTADO', success: true, eventAt: Date.now() });
+      }
     });
 
     return () => {
@@ -1176,6 +1162,7 @@ export function useGame(myUserId: string): UseGameReturn {
     }
     gameActions.verCarta(gameState.gameId, index);
   }, [canActSkill, gameState.pendingSkill?.tipo, gameState.gameId, selectableHandCount]);
+
 
   const verCartaPropiaYRival = useCallback((indexPropia: number, rivalId: string, indexRival: number) => {
     if (!canActSkill || gameState.pendingSkill?.tipo !== 'ver-carta-propia-y-rival') {
@@ -1319,37 +1306,39 @@ export function useGame(myUserId: string): UseGameReturn {
     gameActions.volverAJugar(gameState.gameId);
   }, [gameState.gameId, gameState.result]);
 
-  const solicitarReaccion = useCallback(() => {
-    if (reactionPhase !== 'open' || !gameState.gameId) return;
-    setReactionPhase('pending-solicitud');
+  const ponerCartaSobreOtra = useCallback((cardIndex: number) => {
+    console.log('🎯 ponerCartaSobreOtra called', { cardIndex, gameId: gameState.gameId, selectableHandCount });
+    if (!gameState.gameId) {
+      console.log('❌ Guard 1: No gameId');
+      return;
+    }
+    if (cardIndex < 0 || cardIndex >= selectableHandCount) {
+      console.log('❌ Guard 2: Invalid cardIndex', { cardIndex, selectableHandCount });
+      return;
+    }
+    console.log('✅ All guards passed, proceeding...');
+
+    // Directo: sin esperar ventana modal. El jugador hace click y se envía.
+    // El servidor responde con éxito/rechazo.
+    lastPonerCartaSucceededRef.current = false;
+    quickDiscardSelectedIndexRef.current = cardIndex;
+    quickDiscardGameIdRef.current = gameState.gameId;
+
+    if (quickDiscardRequestInFlightRef.current) {
+      console.log('❌ Guard 4: Request already in flight');
+      return;
+    }
+
+    console.log('📤 Emitting solicitarCartaSobreOtra', { gameId: gameState.gameId });
+    quickDiscardRequestInFlightRef.current = true;
+    setQuickDiscardRequestPending(true);
     gameActions.solicitarCartaSobreOtra(gameState.gameId);
+  }, [gameState.gameId, selectableHandCount]);
 
-    // Safety timeout: si en 2s el backend no responde, volvemos a 'closed'.
-    if (safetyTimerRef.current !== null) clearTimeout(safetyTimerRef.current);
-    safetyTimerRef.current = setTimeout(() => {
-      if (reactionPhaseRef.current === 'pending-solicitud') {
-        setReactionPhase('closed');
-      }
-      safetyTimerRef.current = null;
-    }, 2000);
-  }, [reactionPhase, gameState.gameId]);
+  // No cleanup necesario para timers: no usamos timeout fallback.
 
-  const ponerCartaReaccion = useCallback((numCarta: number) => {
-    if (reactionPhase !== 'select-card' || !gameState.gameId) return;
-    if (numCarta < 0) return;
-    gameActions.ponerCartaSobreOtra(gameState.gameId, numCarta);
-  }, [reactionPhase, gameState.gameId]);
-
-  const cancelarReaccion = useCallback(() => {
-    if (reactionTimerRef.current !== null) {
-      clearTimeout(reactionTimerRef.current);
-      reactionTimerRef.current = null;
-    }
-    if (safetyTimerRef.current !== null) {
-      clearTimeout(safetyTimerRef.current);
-      safetyTimerRef.current = null;
-    }
-    setReactionPhase('closed');
+  const clearCartaSobreOtraResult = useCallback(() => {
+    dispatch({ type: 'CLEAR_CART_SOBRE_OTRA_RESULTADO' });
   }, []);
 
   return {
@@ -1390,10 +1379,10 @@ export function useGame(myUserId: string): UseGameReturn {
     power8PendingCount: gameState.power8PendingCount,
     power8QueuedCount: gameState.power8QueuedCount,
     power8LastActivatorId: gameState.power8LastActivatorId,
+    quickDiscardRequestPending,
+    lastCartaSobreOtraResult: gameState.lastCartaSobreOtraResult,
     volverAJugar,
-    reactionPhase,
-    solicitarReaccion,
-    ponerCartaReaccion,
-    cancelarReaccion,
+    ponerCartaSobreOtra,
+    clearCartaSobreOtraResult,
   };
 }

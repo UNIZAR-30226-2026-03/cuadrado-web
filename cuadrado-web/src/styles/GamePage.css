@@ -819,6 +819,23 @@
   position: relative;
 }
 
+.card-back--clickable {
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  background: transparent;
+  appearance: none;
+}
+
+.card-back--clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 229, 255, 0.35);
+}
+
+.player-slot--me .card-back--clickable {
+  pointer-events: auto;
+}
+
 .player-slot--me .card-back {
   width: 29px;
   height: 41px;

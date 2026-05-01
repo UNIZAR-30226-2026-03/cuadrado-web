@@ -10,7 +10,6 @@ import VoiceChatControls from '../components/voice/VoiceChatControls';
 import type {
   InteractiveSkillType,
   PendingInteractiveSkill,
-  ReactionPhase,
   Stage0DebugEvent,
   Stage0PlayerState,
   Stage0RematchState,
@@ -623,84 +622,6 @@ function RevealedCardsOverlay({
   );
 }
 
-function ReactionWindowBanner({
-  phase,
-  onSolicitar,
-}: {
-  phase: ReactionPhase;
-  onSolicitar: () => void;
-}) {
-  if (phase === 'closed' || phase === 'select-card') return null;
-
-  return (
-    <section className="reaction-window-banner" role="status" aria-live="polite">
-      <p className="reaction-window-banner__title">¡Descarte rápido!</p>
-      <div className="reaction-window-banner__timer" aria-hidden>
-        <div className="reaction-window-banner__timer-bar" />
-      </div>
-      {phase === 'open' && (
-        <button
-          type="button"
-          className="reaction-window-banner__btn"
-          onClick={onSolicitar}
-        >
-          ¡Reaccionar!
-        </button>
-      )}
-      {phase === 'pending-solicitud' && (
-        <button
-          type="button"
-          className="reaction-window-banner__btn"
-          disabled
-        >
-          Esperando…
-        </button>
-      )}
-    </section>
-  );
-}
-
-function ReactionCardSelector({
-  cardCount,
-  onPoner,
-  onCancelar,
-}: {
-  cardCount: number;
-  onPoner: (numCarta: number) => void;
-  onCancelar: () => void;
-}) {
-  return (
-    <div
-      className="reaction-card-selector"
-      role="dialog"
-      aria-label="Selecciona carta para descarte rápido"
-    >
-      <p className="reaction-card-selector__title">
-        Elige tu carta (mismo número que el descarte)
-      </p>
-      <div className="reaction-card-selector__hand">
-        {Array.from({ length: cardCount }, (_, i) => (
-          <button
-            key={i}
-            type="button"
-            className="reaction-card-selector__card"
-            onClick={() => onPoner(i)}
-            aria-label={`Carta ${i + 1}`}
-          >
-            #{i + 1}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        className="reaction-card-selector__cancel"
-        onClick={onCancelar}
-      >
-        Cancelar
-      </button>
-    </div>
-  );
-}
 
 /** Panel permanente de poderes almacenables (cartas 7 y 8). Similar al banner de CUBO. */
 function StoredPowersPanel({
@@ -1074,11 +995,11 @@ export default function GamePage() {
     power8PendingCount,
     power8QueuedCount,
     power8LastActivatorId,
+    quickDiscardRequestPending,
     volverAJugar,
-    reactionPhase,
-    solicitarReaccion,
-    ponerCartaReaccion,
-    cancelarReaccion,
+    ponerCartaSobreOtra,
+    lastCartaSobreOtraResult,
+    clearCartaSobreOtraResult,
   } = useGame(myUserId);
 
   const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
@@ -1218,6 +1139,20 @@ export default function GamePage() {
       window.clearTimeout(timeoutId);
     };
   }, [state.cuboActive, state.cuboAnnouncedAt, state.cuboSolicitanteId]);
+
+  useEffect(() => {
+    if (!lastCartaSobreOtraResult) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      clearCartaSobreOtraResult();
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [lastCartaSobreOtraResult, clearCartaSobreOtraResult]);
 
   const orderedPlayers = useMemo(
     () => rotatePlayersFromMe(state.players, myUserId),
@@ -1440,6 +1375,14 @@ export default function GamePage() {
         <SkillDeniedIndicator habilidad={deniedSkillNotice.habilidad} />
       )}
 
+      {lastCartaSobreOtraResult && (
+        <section className="stage2-skill-indicator" role="status" aria-live="polite">
+          <p className="stage2-skill-indicator__title">
+            {lastCartaSobreOtraResult.success ? '✓ Carta colocada' : '✗ Acción rechazada'}
+          </p>
+        </section>
+      )}
+
       {lastExchangeLabel && (
         <section className="stage2-skill-indicator" role="status" aria-live="polite">
           <p className="stage2-skill-indicator__title">Intercambio aplicado</p>
@@ -1447,12 +1390,7 @@ export default function GamePage() {
         </section>
       )}
 
-      {reactionPhase !== 'closed' && (
-        <ReactionWindowBanner
-          phase={reactionPhase}
-          onSolicitar={solicitarReaccion}
-        />
-      )}
+
 
       <main className="stage2-main">
         <section className={`stage2-board-shell${state.cuboActive ? ' stage2-board-shell--cubo' : ''}`}>
@@ -1490,6 +1428,7 @@ export default function GamePage() {
                 cuboSource={state.cuboActive && base.userId === state.cuboSolicitanteId}
                 voiceConnected={connectedPeers.length > 0 || base.isMe === true}
                 isSpeaking={isSpeakingUser(base.userId, base.isMe === true)}
+                onCardClick={base.isMe ? ponerCartaSobreOtra : undefined}
               />
             ))}
           </div>
@@ -1584,13 +1523,7 @@ export default function GamePage() {
         />
       )}
 
-      {reactionPhase === 'select-card' && (
-        <ReactionCardSelector
-          cardCount={myPlayer?.cardCount ?? 0}
-          onPoner={ponerCartaReaccion}
-          onCancelar={cancelarReaccion}
-        />
-      )}
+
 
       <DebugPanel events={debugEvents} onClear={clearDebugEvents} />
     </div>

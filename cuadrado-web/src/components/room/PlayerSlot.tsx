@@ -89,7 +89,19 @@ function getStickyMaxCardsSeen(playerId: string, count: number): number {
 }
 
 /** Mano de cartas en rejilla estable (2x2/2x3) con placeholders invisibles */
-function CardHand({ playerId, count, skinUrl }: { playerId: string; count: number; skinUrl: string | null }) {
+function CardHand({
+  playerId,
+  count,
+  skinUrl,
+  isMe = false,
+  onCardClick,
+}: {
+  playerId: string;
+  count: number;
+  skinUrl: string | null;
+  isMe?: boolean;
+  onCardClick?: (cardIndex: number) => void;
+}) {
   const safeCount = clampHandCount(count);
   const maxCardsSeen = getStickyMaxCardsSeen(playerId, safeCount);
 
@@ -97,17 +109,38 @@ function CardHand({ playerId, count, skinUrl }: { playerId: string; count: numbe
   const cols = layout === '2x3' ? 3 : 2;
   const totalSlots = layout === '2x3' ? 6 : 4;
   const occupied = new Set(occupiedSlots);
+  let visibleCardIndex = 0;
 
   return (
     <div
       className={`card-hand card-hand--${layout}`}
       style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
     >
-      {Array.from({ length: totalSlots }, (_, slotIdx) => (
-        occupied.has(slotIdx)
-          ? <CardBack key={slotIdx} skinUrl={skinUrl} />
-          : <div key={slotIdx} className="card-back card-back--ghost" aria-hidden="true" />
-      ))}
+      {Array.from({ length: totalSlots }, (_, slotIdx) => {
+        const isOccupied = occupied.has(slotIdx);
+        if (isOccupied) {
+          const cardIndex = visibleCardIndex;
+          visibleCardIndex += 1;
+
+          return isMe && onCardClick ? (
+            <button
+              key={slotIdx}
+              className="card-back card-back--clickable"
+              onClick={() => {
+                console.log('🖱️ CLICK on card', { cardIndex, isMe, hasCallback: !!onCardClick });
+                onCardClick(cardIndex);
+              }}
+              type="button"
+              aria-label={`Carta ${cardIndex + 1}`}
+            >
+              <CardBack skinUrl={skinUrl} />
+            </button>
+          ) : (
+            <CardBack key={slotIdx} skinUrl={skinUrl} />
+          );
+        }
+        return <div key={slotIdx} className="card-back card-back--ghost" aria-hidden="true" />;
+      })}
     </div>
   );
 }
@@ -129,10 +162,23 @@ interface PlayerSlotProps {
   voiceConnected?: boolean;
   /** true → jugador está hablando ahora mismo (borde brillante + pulse) */
   isSpeaking?: boolean;
+  /** Callback para cuando el usuario hace clic en una carta de su mano */
+  onCardClick?: (cardIndex: number) => void;
 }
 
 /** Slot de jugador posicionado absolutamente sobre el tapete mediante ángulo polar */
-export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false, cuboSource = false, slotRef, voiceConnected = false, isSpeaking = false }: PlayerSlotProps) {
+export default function PlayerSlot({
+  player,
+  angleRad,
+  rx,
+  ry,
+  isActive = false,
+  cuboSource = false,
+  slotRef,
+  voiceConnected = false,
+  isSpeaking = false,
+  onCardClick,
+}: PlayerSlotProps) {
   const left = `calc(50% + ${Math.cos(angleRad) * rx}px)`;
   const top  = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
 
@@ -165,7 +211,13 @@ export default function PlayerSlot({ player, angleRad, rx, ry, isActive = false,
         <span className="player-name">{player.name}</span>
         <span className="player-elo">{player.elo} ELO</span>
       </div>
-      <CardHand playerId={player.id} count={player.cardCount} skinUrl={player.cardSkinUrl} />
+      <CardHand
+        playerId={player.id}
+        count={player.cardCount}
+        skinUrl={player.cardSkinUrl}
+        isMe={player.isMe}
+        onCardClick={onCardClick}
+      />
     </div>
   );
 }
