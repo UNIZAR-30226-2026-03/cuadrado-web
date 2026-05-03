@@ -52,13 +52,13 @@ export async function loginRequest(
   return handleResponse(res);
 }
 
-/** Cambia la contrasena del usuario autenticado. PATCH /auth/change-password */
+/** Cambia la contrasena del usuario autenticado. POST /auth/change-password */
 export async function changePasswordRequest(
   payload: ChangePasswordPayload,
   accessToken: string  // Token JWT necesario para identificar al usuario
 ): Promise<void> {
   const res = await fetch(`${API_URL}/auth/change-password`, {
-    method: 'PATCH',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,

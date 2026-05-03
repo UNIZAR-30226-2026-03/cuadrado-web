@@ -90,6 +90,8 @@ export interface EvIntercambioCartas {
   numCartaDestinatario?: number;
   cardCountRemitente?: number;
   cardCountDestinatario?: number;
+  proteccionesRemitente?: number[];
+  proteccionesDestinatario?: number[];
 }
 
 export interface EvTurnoExpirado {
