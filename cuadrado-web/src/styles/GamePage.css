@@ -525,12 +525,30 @@
 }
 
 .stage2-swap__grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 6px;
 }
 
+.card-protected-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 20px;
+  height: 20px;
+  background: rgba(15, 20, 42, 0.95);
+  border: 1px solid var(--neon-purple, #a855f7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(168, 85, 247, 0.4);
+  z-index: 10;
+  pointer-events: none;
+}
+
 .stage2-swap__card {
+  position: relative;
   min-width: 46px;
   border-radius: 8px;
   border: 1px solid rgba(120, 210, 255, 0.3);
@@ -550,6 +568,13 @@
   border-color: rgba(0, 229, 255, 0.62);
   color: var(--neon-cyan);
   background: rgba(0, 229, 255, 0.14);
+}
+
+.stage2-swap__card--ghost {
+  min-width: 46px; 
+  padding: 6px 8px;
+  visibility: hidden;
+  border: 1px solid transparent;
 }
 
 .stage2-btn {

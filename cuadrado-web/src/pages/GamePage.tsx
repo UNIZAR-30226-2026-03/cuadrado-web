@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PlayerSlot, { type GamePlayer } from '../components/room/PlayerSlot';
 import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
 import { useVoice } from '../context/VoiceContext';
 import VoiceChatControls from '../components/voice/VoiceChatControls';
 import type {
@@ -17,7 +18,9 @@ import type {
 } from '../hooks/useGame';
 import { useGame } from '../hooks/useGame';
 import { disconnectRoomsSocket, getLastRoomState, getRoomsSocket, leaveRoom } from '../services/room.service';
+import { gameActions } from '../services/game.service';
 import type { Card, EvPartidaFinalizada } from '../types/game.types';
+import { resolveHandGridState, HAND_LAYOUT_SPECS, clearHandGridMemory } from '../utils/handGrid';
 import '../styles/GamePage.css';
 
 const SUIT_SYMBOL: Record<string, string> = {
@@ -155,7 +158,75 @@ function toBoardPlayer(player: Stage0PlayerState, cardCount: number): GamePlayer
   };
 }
 
+function SelectableCardGrid({
+  playerId,
+  cardCount,
+  selectedIndex,
+  onSelect,
+  disabled,
+  protectedIndices = new Set(),
+  labelPrefix = '#',
+}: {
+  playerId: string;
+  cardCount: number;
+  selectedIndex: number | null;
+  onSelect: (index: number) => void;
+  disabled: boolean;
+  protectedIndices?: ReadonlySet<number>;
+  labelPrefix?: string;
+}) {
+  const { layout, occupiedSlots } = resolveHandGridState(playerId, cardCount);
+  const layoutSpec = HAND_LAYOUT_SPECS[layout];
+
+  if (cardCount === 0) return null;
+
+  return (
+    <div
+      className="stage2-swap__grid"
+      style={{
+        gridTemplateColumns: `repeat(${layoutSpec.columns}, max-content)`,
+        gridTemplateRows: `repeat(${layoutSpec.rows}, max-content)`,
+      }}
+    >
+      {layoutSpec.cells.map(({ slotIndex, row, column }) => {
+        // AQUÍ TAMBIÉN REEMPLAZAMOS LA LÓGICA
+        const cardIndex = occupiedSlots.indexOf(slotIndex);
+        const isOccupied = cardIndex !== -1;
+        const cellStyle = { gridRow: row, gridColumn: column } as const;
+
+        if (isOccupied) {
+          const isProtected = protectedIndices.has(cardIndex);
+          const isSelected = selectedIndex === cardIndex;
+
+          return (
+            <button
+              key={slotIndex}
+              type="button"
+              className={`stage2-swap__card${isSelected ? ' stage2-swap__card--selected' : ''}${isProtected ? ' stage2-swap__card--protected' : ''}`}
+              onClick={() => onSelect(cardIndex)}
+              disabled={disabled}
+              title={isProtected ? 'Carta protegida' : undefined}
+              style={cellStyle}
+            >
+              {labelPrefix === '#' ? `#${cardIndex + 1}` : `${labelPrefix} #${cardIndex + 1}`}
+              {isProtected && (
+                <span className="card-protected-badge" aria-label="Protegida">
+                  🔒
+                </span>
+              )}
+            </button>
+          );
+        }
+
+        return <div key={slotIndex} className="stage2-swap__card--ghost" aria-hidden="true" style={cellStyle} />;
+      })}
+    </div>
+  );
+}
+
 function PendingCardPanel({
+  myPlayerId,
+  myProtectedIndices,
   pendingCard,
   selectableHandCount,
   canResolve,
@@ -164,6 +235,8 @@ function PendingCardPanel({
   onDiscard,
   onConfirmSwap,
 }: {
+  myPlayerId: string;
+  myProtectedIndices: ReadonlySet<number>;
   pendingCard: Card;
   selectableHandCount: number;
   canResolve: boolean;
@@ -194,19 +267,15 @@ function PendingCardPanel({
 
           <div className="stage2-swap">
             <span>Intercambiar con carta:</span>
-            <div className="stage2-swap__grid">
-              {Array.from({ length: selectableHandCount }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={`stage2-swap__card${selectedSwapIndex === index ? ' stage2-swap__card--selected' : ''}`}
-                  onClick={() => onSelectSwap(index)}
-                  disabled={!canResolve}
-                >
-                  #{index + 1}
-                </button>
-              ))}
-            </div>
+            
+            <SelectableCardGrid
+              playerId={myPlayerId}
+              cardCount={selectableHandCount}
+              selectedIndex={selectedSwapIndex}
+              onSelect={onSelectSwap}
+              disabled={!canResolve}
+              protectedIndices={myProtectedIndices}
+            />
 
             <button
               type="button"
@@ -228,6 +297,7 @@ function PendingCardPanel({
  * Soporta selección de rival, carta propia, carta rival y respuesta bilateral.
  */
 function SkillPanel({
+  myPlayerId,
   pendingSkill,
   rivals,
   rivalCardCountById,
@@ -244,6 +314,7 @@ function SkillPanel({
   onSaltarTurno,
   onProtegerCarta,
 }: {
+  myPlayerId: string;
   pendingSkill: PendingInteractiveSkill;
   rivals: Stage0PlayerState[];
   rivalCardCountById: ReadonlyMap<string, number>;
@@ -402,45 +473,32 @@ function SkillPanel({
           <p className="stage2-skill-panel__hint">
             {isBlindReplySkill ? 'Tu carta para entregar:' : 'Selecciona una carta de tu mano:'}
           </p>
-          <div className="stage2-swap__grid">
-            {Array.from({ length: myCardCount }).map((_, index) => {
-              const isProtected = myProtectedIndices.has(index);
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  className={`stage2-swap__card${selectedCardIndex === index ? ' stage2-swap__card--selected' : ''}${isProtected ? ' stage2-swap__card--protected' : ''}`}
-                  onClick={() => setSelectedCardIndex(index)}
-                  disabled={!canAct}
-                  title={isProtected ? 'Carta protegida' : undefined}
-                >
-                  #{index + 1}{isProtected ? ' 🔒' : ''}
-                </button>
-              );
-            })}
-          </div>
+          <SelectableCardGrid
+            playerId={myPlayerId}
+            cardCount={myCardCount}
+            selectedIndex={selectedCardIndex}
+            onSelect={setSelectedCardIndex}
+            disabled={!canAct}
+            protectedIndices={myProtectedIndices}
+          />
         </div>
       )}
 
       {isRevealOwnAndRivalSkill && activeRivalId && (
         <div className="stage2-skill-section">
           <p className="stage2-skill-panel__hint">Selecciona una carta del rival:</p>
-          <div className="stage2-swap__grid">
-            {Array.from({ length: activeRivalCardCount }).map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                className={`stage2-swap__card${selectedRivalCardIndex === index ? ' stage2-swap__card--selected' : ''}`}
-                onClick={() => setSelectedRivalCardIndex(index)}
-                disabled={!canAct}
-              >
-                Rival #{index + 1}
-              </button>
-            ))}
-            {activeRivalCardCount === 0 && (
-              <p className="stage2-rival-empty">El rival no tiene cartas disponibles.</p>
-            )}
-          </div>
+          {activeRivalCardCount > 0 ? (
+            <SelectableCardGrid
+              playerId={activeRivalId}
+              cardCount={activeRivalCardCount}
+              selectedIndex={selectedRivalCardIndex}
+              onSelect={setSelectedRivalCardIndex}
+              disabled={!canAct}
+              labelPrefix="Rival"
+            />
+          ) : (
+            <p className="stage2-rival-empty">El rival no tiene cartas disponibles.</p>
+          )}
         </div>
       )}
 
@@ -951,7 +1009,14 @@ function ResultModal({
 
 export default function GamePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, fetchProfile } = useAuth();
+  useEffect(() => {
+    clearHandGridMemory();
+    return () => {
+      clearHandGridMemory();
+    };
+  }, []);
+  const { openSettingsModal } = useModal();
   const { leaveVoiceRoom, isSpeakingUser, connectedPeers } = useVoice();
   const currentSocketId = getRoomsSocket()?.id ?? '';
   const roomUserId = getLastRoomState()?.players.find((player) => player.socketId === currentSocketId)?.userId ?? '';
@@ -959,6 +1024,8 @@ export default function GamePage() {
 
   const {
     state,
+    gameId,
+    isHost,
     myPlayer,
     isMyTurn,
     canDrawCard,
@@ -995,11 +1062,11 @@ export default function GamePage() {
     power8PendingCount,
     power8QueuedCount,
     power8LastActivatorId,
-    quickDiscardRequestPending,
     volverAJugar,
     ponerCartaSobreOtra,
     lastCartaSobreOtraResult,
     clearCartaSobreOtraResult,
+    protectedIndicesByPlayer,
   } = useGame(myUserId);
 
   const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
@@ -1010,7 +1077,7 @@ export default function GamePage() {
   // Solo navegar a la sala de revancha si el usuario pulsó "Volver a jugar" explícitamente
   const [rematchNavigationArmed, setRematchNavigationArmed] = useState(false);
 
-  const myProtectedIndices = state.myProtectedIndices;
+  const myProtectedIndices = protectedIndicesByPlayer.get(myUserId) ?? new Set<number>();
 
   const boardRef = useRef<HTMLDivElement | null>(null);
   const timerFillRef = useRef<HTMLDivElement | null>(null);
@@ -1236,6 +1303,35 @@ export default function GamePage() {
     }
   }, [leaving, navigate, leaveVoiceRoom]);
 
+  /** Host: guarda el estado de la partida y la cierra; la navegación llega vía room:closed */
+  const handleSaveAndClose = useCallback(() => {
+    if (!gameId) return;
+    gameActions.guardarYCerrar(gameId);
+  }, [gameId]);
+
+  /** Host: cierra la sala sin guardar y vuelve al home */
+  const handleCloseWithoutSave = useCallback(async () => {
+    leaveVoiceRoom();
+    try {
+      await leaveRoom();
+    } catch (e) {
+      console.error('Error cerrando sala', e);
+    } finally {
+      disconnectRoomsSocket();
+      await fetchProfile().catch(() => {});
+      navigate('/home');
+    }
+  }, [leaveVoiceRoom, fetchProfile, navigate]);
+
+  /** No-host: abandona la partida sustituyéndose por un bot */
+  const handleLeaveGame = useCallback(() => {
+    if (!gameId) return;
+    gameActions.abandonarPartida(gameId, 'media');
+    leaveVoiceRoom();
+    disconnectRoomsSocket();
+    navigate('/home');
+  }, [gameId, leaveVoiceRoom, navigate]);
+
   const handleConfirmSwap = useCallback(() => {
     if (selectedSwapIndex === null) {
       return;
@@ -1265,6 +1361,41 @@ export default function GamePage() {
     });
   }, [rematchNavigationArmed, navigate, state.rematch.roomCode, state.rematch.roomName, state.rematch.status]);
 
+  // Escuchar room:closed para navegar al home cuando el host guarda y cierra la sala.
+  useEffect(() => {
+    const socket = getRoomsSocket();
+    if (!socket) return;
+
+    const handleRoomClosed = (payload: { reason: string; savedRoomName?: string }) => {
+      leaveVoiceRoom();
+      disconnectRoomsSocket();
+      fetchProfile().catch(() => {}).finally(() => {
+        navigate('/home', { state: { savedRoomName: payload.savedRoomName } });
+      });
+    };
+
+    socket.on('room:closed', handleRoomClosed);
+    return () => {
+      socket.off('room:closed', handleRoomClosed);
+    };
+  }, [leaveVoiceRoom, fetchProfile, navigate]);
+
+  // Best-effort save on page close — not guaranteed to arrive before disconnect
+  useEffect(() => {
+    if (!gameId) return;
+
+    const handleBeforeUnload = () => {
+      if (isHost) {
+        gameActions.guardarYCerrar(gameId);
+      } else {
+        gameActions.abandonarPartida(gameId, 'media');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [gameId, isHost]);
+
   if (state.result) {
     return (
       <ResultModal
@@ -1289,11 +1420,17 @@ export default function GamePage() {
           <VoiceChatControls />
           <button
             type="button"
-            className="stage2-btn stage2-btn--danger"
-            onClick={handleLeave}
-            disabled={leaving}
+            className="stage2-btn stage2-btn--ghost"
+            onClick={() => openSettingsModal({
+              settingsContext: 'in-game',
+              isHost,
+              onSaveAndClose: handleSaveAndClose,
+              onCloseWithoutSave: handleCloseWithoutSave,
+              onLeaveGame: handleLeaveGame,
+            })}
+            aria-label="Configuración"
           >
-            {leaving ? 'Saliendo...' : 'Salir'}
+            ⚙
           </button>
         </div>
       </header>
@@ -1429,6 +1566,7 @@ export default function GamePage() {
                 voiceConnected={connectedPeers.length > 0 || base.isMe === true}
                 isSpeaking={isSpeakingUser(base.userId, base.isMe === true)}
                 onCardClick={base.isMe ? ponerCartaSobreOtra : undefined}
+                protectedIndices={protectedIndicesByPlayer.get(base.userId)}
               />
             ))}
           </div>
@@ -1436,6 +1574,8 @@ export default function GamePage() {
 
         {state.pendingCard && (
           <PendingCardPanel
+            myPlayerId={myUserId}
+            myProtectedIndices={myProtectedIndices}
             pendingCard={state.pendingCard}
             selectableHandCount={selectableHandCount}
             canResolve={canResolvePending}
@@ -1448,6 +1588,7 @@ export default function GamePage() {
 
         {state.pendingSkill && (isMyTurn || state.pendingSkill.tipo === 'intercambiar-carta-rival') && (
           <SkillPanel
+            myPlayerId={myUserId}
             key={`${state.pendingSkill.tipo}-${state.pendingSkill.gameId}-${state.pendingSkill.rivalId ?? ''}`}
             pendingSkill={state.pendingSkill}
             rivals={rivals}

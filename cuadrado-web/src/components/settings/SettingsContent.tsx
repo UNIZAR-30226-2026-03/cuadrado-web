@@ -16,13 +16,19 @@ import {
   getMySettingsRequest,
   updateMySettingsRequest,
 } from '../../services/user.service';
-import { leaveRoom, getLastRoomState, disconnectRoomsSocket } from '../../services/room.service';
 import { getAccessToken } from '../../utils/token';
 import '../../styles/SettingsPage.css';
 
 interface SettingsContentProps {
   onClose: () => void;
   inModal?: boolean;
+  context?: 'lobby' | 'waiting-room' | 'in-game';
+  gameId?: string;
+  isHost?: boolean;
+  onSaveAndClose?: () => void;
+  onCloseWithoutSave?: () => void;
+  onLeaveGame?: () => void;
+  onLeaveRoom?: () => void;
 }
 
 function loadPref<T>(key: string, defaultVal: T): T {
@@ -177,9 +183,95 @@ function PasswordForm({ open, onClose }: PasswordFormProps) {
   );
 }
 
-export default function SettingsContent({ onClose, inModal = false }: SettingsContentProps) {
+function InGameSection({
+  isHost,
+  onSaveAndClose,
+  onCloseWithoutSave,
+  onLeaveGame,
+}: {
+  isHost: boolean;
+  onSaveAndClose: () => void;
+  onCloseWithoutSave: () => void;
+  onLeaveGame: () => void;
+}) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  return (
+    <div className="settings-section">
+      <h2 className="settings-section__title">Partida</h2>
+      <div className="settings-panel">
+        {isHost ? (
+          <>
+            <div className="settings-row">
+              <span className="settings-row__icon settings-row__icon--red">💾</span>
+              <div className="settings-row__body">
+                <span className="settings-row__label">Cerrar partida</span>
+                <span className="settings-row__sublabel">Podrás reanudarla más tarde</span>
+              </div>
+              <div className="settings-row__control">
+                <button
+                  className="settings-action-btn settings-action-btn--danger"
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {confirmOpen && (
+              <div className="save-confirm-modal">
+                <p className="save-confirm-modal__title">¿Qué quieres hacer con la partida?</p>
+                <p className="save-confirm-modal__subtitle">
+                  Elige si quieres conservar el progreso actual o cerrar la sala sin guardar.
+                </p>
+                <div className="save-confirm-modal__actions">
+                  <button className="save-confirm-modal__button save-confirm-modal__button--primary" onClick={onSaveAndClose}>
+                    Guardar y cerrar
+                  </button>
+                  <button className="save-confirm-modal__button save-confirm-modal__button--danger" onClick={onCloseWithoutSave}>
+                    Cerrar sin guardar
+                  </button>
+                  <button className="save-confirm-modal__button save-confirm-modal__button--ghost" onClick={() => setConfirmOpen(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="settings-row">
+            <span className="settings-row__icon settings-row__icon--red">🚪</span>
+            <div className="settings-row__body">
+              <span className="settings-row__label">Salir de la partida</span>
+              <span className="settings-row__sublabel">Serás sustituido por un bot</span>
+            </div>
+            <div className="settings-row__control">
+              <button
+                className="settings-action-btn settings-action-btn--danger"
+                onClick={onLeaveGame}
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function SettingsContent({
+  onClose,
+  inModal = false,
+  context,
+  isHost,
+  onSaveAndClose,
+  onCloseWithoutSave,
+  onLeaveGame,
+  onLeaveRoom,
+}: SettingsContentProps) {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const {
     micPermission,
@@ -206,8 +298,6 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
   });
 
   const [passOpen, setPassOpen] = useState(false);
-  const [closingRoom, setClosingRoom] = useState(false);
-  const [closeRoomError, setCloseRoomError] = useState<string | null>(null);
 
   const handleVolGeneralChange = useCallback((value: number) => {
     hasAudioChangesRef.current = true;
@@ -340,110 +430,90 @@ export default function SettingsContent({ onClose, inModal = false }: SettingsCo
     return () => ctx.revert();
   }, []);
 
-  const handleCloseRoom = useCallback(async () => {
-    const room = getLastRoomState();
-    if (!room) return;
-
-    // Confirmación simple
-    // eslint-disable-next-line no-restricted-globals
-    if (!confirm('¿Cerrar la sala actual? Esta acción expulsará a todos los jugadores.')) return;
-
-    setClosingRoom(true);
-    setCloseRoomError(null);
-    try {
-      await leaveRoom();
-      disconnectRoomsSocket();
-      onClose();
-      navigate('/home');
-    } catch (err) {
-      setCloseRoomError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setClosingRoom(false);
-    }
-  }, [navigate, onClose]);
-
   return (
     <div
       className={`settings-container${inModal ? ' settings-container--modal' : ''}`}
       ref={containerRef}
     >
-      <div className="settings-section">
-        <h2 className="settings-section__title">Cuenta</h2>
-        <div className="settings-panel">
-          <div className="settings-row">
-            <span className="settings-row__icon">
-              <LockIcon />
-            </span>
-            <div className="settings-row__body">
-              <span className="settings-row__label">Contraseña</span>
-              <span className="settings-row__sublabel">Actualiza tu contraseña de acceso</span>
-            </div>
-            <div className="settings-row__control">
-              <button className="settings-action-btn" onClick={() => setPassOpen(open => !open)}>
-                {passOpen ? 'Cancelar' : 'Cambiar'}
-              </button>
-            </div>
-          </div>
-
-          <PasswordForm open={passOpen} onClose={() => setPassOpen(false)} />
-
-          <div className="settings-row">
-            <span className="settings-row__icon settings-row__icon--red">
-              <LogoutIcon />
-            </span>
-            <div className="settings-row__body">
-              <span className="settings-row__label">Cerrar sesión</span>
-              <span className="settings-row__sublabel">Saldrás de tu cuenta actual</span>
-            </div>
-            <div className="settings-row__control">
-              <button
-                className="settings-action-btn settings-action-btn--danger"
-                onClick={() => {
-                  logout();
-                  onClose();
-                  navigate('/');
-                }}
-              >
-                Salir
-              </button>
-            </div>
-          </div>
-
-          {/* Cerrar sala actual (solo visible si eres host) */}
-          {(() => {
-            const room = getLastRoomState();
-            if (!room) return null;
-
-            const amIHost = room.hostId === (user?.username ?? '');
-
-            return (
-              <div className="settings-row">
-                <span className="settings-row__icon settings-row__icon--red">🚪</span>
-                <div className="settings-row__body">
-                  <span className="settings-row__label">Sala actual</span>
-                  <span className="settings-row__sublabel">{`${room.name} (${room.code})`}</span>
-                </div>
-                <div className="settings-row__control">
-                  {amIHost ? (
-                    <>
-                      <button
-                        className="settings-action-btn settings-action-btn--danger"
-                        onClick={handleCloseRoom}
-                        disabled={closingRoom}
-                      >
-                        {closingRoom ? 'Cerrando…' : 'Cerrar sala'}
-                      </button>
-                      {closeRoomError && <div style={{ color: 'var(--danger)', marginTop: 6 }}>{closeRoomError}</div>}
-                    </>
-                  ) : (
-                    <span className="settings-row__sublabel">Solo el creador puede cerrar la sala</span>
-                  )}
-                </div>
+      {(context === 'lobby' || !context) && (
+        <div className="settings-section">
+          <h2 className="settings-section__title">Cuenta</h2>
+          <div className="settings-panel">
+            <div className="settings-row">
+              <span className="settings-row__icon">
+                <LockIcon />
+              </span>
+              <div className="settings-row__body">
+                <span className="settings-row__label">Contraseña</span>
+                <span className="settings-row__sublabel">Actualiza tu contraseña de acceso</span>
               </div>
-            );
-          })()}
+              <div className="settings-row__control">
+                <button className="settings-action-btn" onClick={() => setPassOpen(open => !open)}>
+                  {passOpen ? 'Cancelar' : 'Cambiar'}
+                </button>
+              </div>
+            </div>
+
+            <PasswordForm open={passOpen} onClose={() => setPassOpen(false)} />
+
+            <div className="settings-row">
+              <span className="settings-row__icon settings-row__icon--red">
+                <LogoutIcon />
+              </span>
+              <div className="settings-row__body">
+                <span className="settings-row__label">Cerrar sesión</span>
+                <span className="settings-row__sublabel">Saldrás de tu cuenta actual</span>
+              </div>
+              <div className="settings-row__control">
+                <button
+                  className="settings-action-btn settings-action-btn--danger"
+                  onClick={() => {
+                    logout();
+                    onClose();
+                    navigate('/');
+                  }}
+                >
+                  Salir
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {context === 'waiting-room' && (
+        <div className="settings-section">
+          <h2 className="settings-section__title">Partida</h2>
+          <div className="settings-panel">
+            <div className="settings-row">
+              <span className="settings-row__icon settings-row__icon--red">🚪</span>
+              <div className="settings-row__body">
+                <span className="settings-row__label">Salir de la sala</span>
+                <span className="settings-row__sublabel">
+                  {isHost ? 'Se cerrará la sala para todos' : 'Los demás jugadores continuarán en la sala'}
+                </span>
+              </div>
+              <div className="settings-row__control">
+                <button
+                  className="settings-action-btn settings-action-btn--danger"
+                  onClick={() => { onLeaveRoom?.(); onClose(); }}
+                >
+                  Salir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {context === 'in-game' && (
+        <InGameSection
+          isHost={isHost ?? false}
+          onSaveAndClose={() => { onSaveAndClose?.(); onClose(); }}
+          onCloseWithoutSave={() => { onCloseWithoutSave?.(); onClose(); }}
+          onLeaveGame={() => { onLeaveGame?.(); onClose(); }}
+        />
+      )}
 
       <div className="settings-section">
         <h2 className="settings-section__title">Audio</h2>

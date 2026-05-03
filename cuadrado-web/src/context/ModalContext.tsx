@@ -11,11 +11,22 @@ import {
 
 type ActiveModal = 'settings' | 'create-room' | null;
 
+/** Props opcionales que se pueden pasar al abrir el modal de ajustes */
+export interface SettingsModalProps {
+  settingsContext?: 'lobby' | 'waiting-room' | 'in-game';
+  isHost?: boolean;
+  onLeaveRoom?: () => void;
+  onLeaveGame?: () => void;
+  onSaveAndClose?: () => void;
+  onCloseWithoutSave?: () => void;
+}
+
 interface ModalContextType {
   activeModal: ActiveModal;
   isSettingsOpen: boolean;
   isCreateRoomOpen: boolean;
-  openSettingsModal: () => void;
+  settingsProps: SettingsModalProps;
+  openSettingsModal: (props?: SettingsModalProps) => void;
   openCreateRoomModal: () => void;
   closeModal: () => void;
 }
@@ -24,8 +35,10 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [settingsProps, setSettingsProps] = useState<SettingsModalProps>({});
 
-  const openSettingsModal = useCallback(() => {
+  const openSettingsModal = useCallback((props?: SettingsModalProps) => {
+    setSettingsProps(props ?? {});
     setActiveModal('settings');
   }, []);
 
@@ -35,6 +48,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
+    setSettingsProps({});
   }, []);
 
   const value = useMemo<ModalContextType>(
@@ -42,11 +56,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
       activeModal,
       isSettingsOpen: activeModal === 'settings',
       isCreateRoomOpen: activeModal === 'create-room',
+      settingsProps,
       openSettingsModal,
       openCreateRoomModal,
       closeModal,
     }),
-    [activeModal, closeModal, openCreateRoomModal, openSettingsModal],
+    [activeModal, settingsProps, closeModal, openCreateRoomModal, openSettingsModal],
   );
 
   return <ModalContext.Provider value={value}>{children}</ModalContext.Provider>;

@@ -29,6 +29,7 @@ import type {
   EvTurnoIniciado,
   EvAccionCartaSobreOtra,
   EvPonerOtraCartaSobreOtra,
+  EvPlayerControllerChanged,
 } from '../types/game.types';
 
 const INITIAL_HAND_COUNT = 4;
@@ -59,6 +60,8 @@ export interface Stage0PlayerState {
   isBot: boolean;
   isMe: boolean;
   cardCount: number;
+  controlador?: 'humano' | 'bot';
+  nombreEnPartida?: string;
 }
 
 export interface Stage0GameState {
@@ -86,7 +89,7 @@ export interface Stage0GameState {
   result: EvPartidaFinalizada | null;
   rematch: Stage0RematchState;
   // Índices de cartas propias con protección activa (carta 3).
-  myProtectedIndices: ReadonlySet<number>;
+  protectedIndicesByPlayer: Map<string, Set<number>>;
   // Poderes almacenados del jugador local (7 y/o 8).
   myStoredPowers: number[];
   // ID del jugador con menos puntos tras activar el poder 7. Se limpia manualmente.
@@ -167,9 +170,10 @@ type ReducerAction =
   | { type: 'PODER8_ESTADO'; payload: EvPoder8Estado }
   | { type: 'CLEAR_MENOS_PUNTUACION_RESULT' }
   | { type: 'CLEAR_DENIED_SKILL_NOTICE' }
-  | { type: 'ACCION_CARTA_SOBRE_OTRA'; usuarioImplicado: string; numCartasMano: number }
+  | { type: 'ACCION_CARTA_SOBRE_OTRA'; payload: EvAccionCartaSobreOtra; myUserId: string; localDiscardedIndex: number | null }
   | { type: 'CART_SOBRE_OTRA_RESULTADO'; success: boolean; eventAt: number }
-  | { type: 'CLEAR_CART_SOBRE_OTRA_RESULTADO' };
+  | { type: 'CLEAR_CART_SOBRE_OTRA_RESULTADO' }
+  | { type: 'PLAYER_CONTROLLER_CHANGED'; payload: EvPlayerControllerChanged };
 
 function createEmptyGameState(): Stage0GameState {
   return {
@@ -199,7 +203,7 @@ function createEmptyGameState(): Stage0GameState {
       roomCode: null,
       roomName: null,
     },
-    myProtectedIndices: new Set(),
+    protectedIndicesByPlayer: new Map(),
     myStoredPowers: [],
     menosPuntuacionJugadorId: null,
     deniedSkillNotice: null,
@@ -224,6 +228,19 @@ function buildPlayers(payload: EvInicioPartida, myUserId: string): Stage0PlayerS
       cardCount: (payload.estado?.jugadores?.find(j => j.userId === userId) as any)?.numCartas ?? INITIAL_HAND_COUNT,
     };
   });
+}
+
+function buildProtectedMap(payload: EvInicioPartida): Map<string, Set<number>> {
+  const map = new Map<string, Set<number>>();
+  if (payload.estado && Array.isArray(payload.estado.jugadores)) {
+    payload.estado.jugadores.forEach((j: any) => {
+      // Si el backend expone las cartas protegidas en el array del jugador:
+      if (j.cartasProtegidas && Array.isArray(j.cartasProtegidas)) {
+        map.set(j.userId, new Set(j.cartasProtegidas));
+      }
+    });
+  }
+  return map;
 }
 
 function normalizeCardValue(card: Card): number | 'JOKER' {
@@ -314,6 +331,7 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
           cuboSolicitanteId: action.payload.estado?.cuboSolicitanteId ?? null,
           cuboTurnosRestantes: action.payload.estado?.cuboTurnosRestantes ?? 0,
           myStoredPowers: action.payload.estado?.jugadores?.find(j => j.userId === action.myUserId)?.habilidadesActivadas ?? [],
+          protectedIndicesByPlayer: buildProtectedMap(action.payload),
       };
 
       return { game };
@@ -339,6 +357,7 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
             cuboSolicitanteId: action.payload.estado?.cuboSolicitanteId ?? null,
             cuboTurnosRestantes: action.payload.estado?.cuboTurnosRestantes ?? 0,
             myStoredPowers: action.payload.estado?.jugadores?.find(j => j.userId === action.myUserId)?.habilidadesActivadas ?? [],
+            protectedIndicesByPlayer: buildProtectedMap(action.payload),
         },
       };
     }
@@ -476,77 +495,68 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
       };
 
     case 'INTERCAMBIO_CARTAS': {
-      // Detectar intercambio de TODAS las cartas (sin índices específicos)
-      const esIntercambioTotal =
-        action.payload.numCartaRemitente === undefined &&
-        action.payload.numCartaDestinatario === undefined;
+      const esIntercambioTotal = action.payload.numCartaRemitente === undefined && action.payload.numCartaDestinatario === undefined;
+      const nextProtected = new Map(state.game.protectedIndicesByPlayer);
+      if (Array.isArray(action.payload.proteccionesRemitente)) {
+        nextProtected.set(action.payload.remitente, new Set(action.payload.proteccionesRemitente));
+      }
+      if (Array.isArray(action.payload.proteccionesDestinatario)) {
+        nextProtected.set(action.payload.destinatario, new Set(action.payload.proteccionesDestinatario));
+      }
 
       return {
         game: {
           ...state.game,
-          // Actualizar cardCount si es intercambio de todas y tenemos los datos
           players: esIntercambioTotal && action.payload.cardCountRemitente !== undefined
             ? state.game.players.map((p) => {
-                if (p.userId === action.payload.remitente) {
-                  return { ...p, cardCount: action.payload.cardCountRemitente ?? p.cardCount };
-                } else if (p.userId === action.payload.destinatario) {
-                  return { ...p, cardCount: action.payload.cardCountDestinatario ?? p.cardCount };
-                }
+                if (p.userId === action.payload.remitente) return { ...p, cardCount: action.payload.cardCountRemitente ?? p.cardCount };
+                if (p.userId === action.payload.destinatario) return { ...p, cardCount: action.payload.cardCountDestinatario ?? p.cardCount };
                 return p;
               })
             : state.game.players,
-          lastExchange: {
-            remitente: action.payload.remitente,
-            destinatario: action.payload.destinatario,
-            at: Date.now(),
-          },
+          lastExchange: { remitente: action.payload.remitente, destinatario: action.payload.destinatario, at: Date.now() },
           pendingSkill: null,
-          myProtectedIndices: new Set(),
+          protectedIndicesByPlayer: nextProtected,
         },
       };
     }
 
-    case 'HABILIDAD_DENEGADA':
-      {
-        const jugadorAfectadoId = action.payload.jugadorId ?? action.payload.userId ?? null;
-        const habilidadNegada = action.payload.habilidad ?? action.payload.accion ?? 'habilidad';
-        const isLocalDenied = jugadorAfectadoId === action.myUserId;
-
-        let nextPowers = state.game.myStoredPowers;
-        if (isLocalDenied) {
-          if (habilidadNegada === 'jugador-menos-puntuacion') {
-            const copy = [...state.game.myStoredPowers];
-            const idx = copy.indexOf(7);
-            if (idx !== -1) copy.splice(idx, 1);
-            nextPowers = copy;
-          } else if (habilidadNegada === 'desactivar-proxima-habilidad') {
-            const copy = [...state.game.myStoredPowers];
-            const idx = copy.indexOf(8);
-            if (idx !== -1) copy.splice(idx, 1);
-            nextPowers = copy;
-          }
+    case 'HABILIDAD_DENEGADA': {
+      const jugadorAfectadoId = action.payload.jugadorId ?? action.payload.userId ?? null;
+      const habilidadNegada = action.payload.habilidad ?? action.payload.accion ?? 'habilidad';
+      const isLocalDenied = jugadorAfectadoId === action.myUserId;
+      let nextPowers = state.game.myStoredPowers;
+      
+      if (isLocalDenied) {
+        if (habilidadNegada === 'jugador-menos-puntuacion') {
+          const copy = [...state.game.myStoredPowers];
+          const idx = copy.indexOf(7);
+          if (idx !== -1) copy.splice(idx, 1);
+          nextPowers = copy;
+        } else if (habilidadNegada === 'desactivar-proxima-habilidad') {
+          const copy = [...state.game.myStoredPowers];
+          const idx = copy.indexOf(8);
+          if (idx !== -1) copy.splice(idx, 1);
+          nextPowers = copy;
         }
-
-        return {
-          game: {
-            ...state.game,
-            pendingSkill: null,
-            myProtectedIndices: new Set(),
-            myStoredPowers: nextPowers,
-            deniedSkillNotice: isLocalDenied
-              ? { eventAt: action.eventAt, habilidad: habilidadNegada }
-              : state.game.deniedSkillNotice,
-          },
-        };
       }
+
+      return {
+        game: {
+          ...state.game,
+          pendingSkill: null,
+          myStoredPowers: nextPowers,
+          deniedSkillNotice: isLocalDenied ? { eventAt: action.eventAt, habilidad: habilidadNegada } : state.game.deniedSkillNotice,
+        },
+      };
+    }
 
     case 'CARTA_PROTEGIDA': {
-      if (action.jugadorId !== action.myUserId) {
-        return state;
-      }
-      const next = new Set(state.game.myProtectedIndices);
-      next.add(action.cartaIndex);
-      return { game: { ...state.game, myProtectedIndices: next } };
+      const nextProtected = new Map(state.game.protectedIndicesByPlayer);
+      const playerSet = new Set(nextProtected.get(action.jugadorId) || []);
+      playerSet.add(action.cartaIndex);
+      nextProtected.set(action.jugadorId, playerSet);
+      return { game: { ...state.game, protectedIndicesByPlayer: nextProtected } };
     }
 
     case 'CLEAR_PEEKED_CARD':
@@ -667,7 +677,7 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
             roomCode: null,
             roomName: null,
           },
-          myProtectedIndices: new Set(),
+          protectedIndicesByPlayer: new Map(),
           myStoredPowers: [],
           menosPuntuacionJugadorId: null,
           deniedSkillNotice: null,
@@ -691,17 +701,36 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
         },
       };
 
-    case 'ACCION_CARTA_SOBRE_OTRA':
+    case 'ACCION_CARTA_SOBRE_OTRA': {
+      const nextProtected = new Map(state.game.protectedIndicesByPlayer);
+      const payloadAny = action.payload as any;
+
+      // SOLUCIÓN 3: Desplazamiento inteligente de índices al encogerse la mano
+      if (Array.isArray(payloadAny.cartasProtegidas)) {
+        nextProtected.set(action.payload.usuarioImplicado, new Set(payloadAny.cartasProtegidas));
+      } else if (action.payload.usuarioImplicado === action.myUserId && action.localDiscardedIndex !== null) {
+        // Desplazamos las protecciones localmente (si eliminas la carta 0, la 1 pasa a ser la 0 y conserva el candado)
+        const oldSet = nextProtected.get(action.myUserId);
+        if (oldSet) {
+          const newSet = new Set<number>();
+          oldSet.forEach((idx) => {
+            if (idx < action.localDiscardedIndex!) newSet.add(idx);
+            else if (idx > action.localDiscardedIndex!) newSet.add(idx - 1);
+          });
+          nextProtected.set(action.myUserId, newSet);
+        }
+      }
+
       return {
         game: {
           ...state.game,
+          protectedIndicesByPlayer: nextProtected,
           players: state.game.players.map((p) =>
-            p.userId === action.usuarioImplicado
-              ? { ...p, cardCount: Math.min(6, action.numCartasMano) }
-              : p,
+            p.userId === action.payload.usuarioImplicado ? { ...p, cardCount: Math.min(6, action.payload.numCartasMano) } : p
           ),
         },
-      };
+      };    
+    }
 
       case 'CART_SOBRE_OTRA_RESULTADO':
         return {
@@ -719,6 +748,21 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
           },
         };
 
+    case 'PLAYER_CONTROLLER_CHANGED': {
+      const { userId, controlador, nombreEnPartida } = action.payload;
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          players: state.game.players.map((p) =>
+            p.userId === userId
+              ? { ...p, controlador, nombreEnPartida: nombreEnPartida ?? p.nombreEnPartida }
+              : p,
+          ),
+        },
+      };
+    }
+
       default:
         return state;
   }
@@ -726,6 +770,8 @@ function reducer(state: ReducerState, action: ReducerAction): ReducerState {
 
 export interface UseGameReturn {
   state: Stage0GameState;
+  gameId: string;
+  isHost: boolean;
   myPlayer: Stage0PlayerState | null;
   isMyTurn: boolean;
   canDrawCard: boolean;
@@ -734,6 +780,7 @@ export interface UseGameReturn {
   canRequestCubo: boolean;
   canUsePoder7: boolean;
   canUsePoder8: boolean;
+  protectedIndicesByPlayer: Map<string, Set<number>>;
   selectableHandCount: number;
   lastSkillUse: Stage0SkillUse | null;
   debugEvents: Stage0DebugEvent[];
@@ -806,6 +853,7 @@ export function useGame(myUserId: string): UseGameReturn {
   const quickDiscardSelectedIndexRef = useRef<number | null>(null);
   // GameId del descarte rápido activo.
   const quickDiscardGameIdRef = useRef<string | null>(null);
+  const successfulDiscardIndexRef = useRef<number | null>(null);
   const [quickDiscardRequestPending, setQuickDiscardRequestPending] = useState(false);
 
   const [debugEvents, setDebugEvents] = useState<Stage0DebugEvent[]>(() => {
@@ -1042,6 +1090,8 @@ export function useGame(myUserId: string): UseGameReturn {
         const gameId = quickDiscardGameIdRef.current;
         quickDiscardSelectedIndexRef.current = null;
 
+        successfulDiscardIndexRef.current = selectedIndex;
+
         console.log('📥 onSolicitudReaccionResponse accepted:', { selectedIndex, gameId });
         if (selectedIndex === null || gameId === null) {
           console.log('❌ Missing selectedIndex or gameId:', { selectedIndex, gameId });
@@ -1057,14 +1107,16 @@ export function useGame(myUserId: string): UseGameReturn {
         // Actualizar conteos globales
         dispatch({
           type: 'ACCION_CARTA_SOBRE_OTRA',
-          usuarioImplicado: payload.usuarioImplicado,
-          numCartasMano: payload.numCartasMano,
+          payload,
+          myUserId,
+          localDiscardedIndex: successfulDiscardIndexRef.current
         });
 
         // Si la acción afectó al jugador local, inferir resultado:
         // - Si previamente recibimos la confirmación privada (`onPonerOtraCartaSobreOtra`), es éxito.
         // - Si no, entonces fue fallo (el servidor no envía confirmación privada en fallo).
         if (payload.usuarioImplicado && payload.usuarioImplicado === myUserId) {
+          successfulDiscardIndexRef.current = null;
           console.log('✔️ onAccionCartaSobreOtra: My action completed');
           quickDiscardRequestInFlightRef.current = false;
           setQuickDiscardRequestPending(false);
@@ -1085,7 +1137,11 @@ export function useGame(myUserId: string): UseGameReturn {
         quickDiscardRequestInFlightRef.current = false;
         setQuickDiscardRequestPending(false);
         dispatch({ type: 'CART_SOBRE_OTRA_RESULTADO', success: true, eventAt: Date.now() });
-      }
+      },
+      onPlayerControllerChanged: (ev) => {
+        pushDebugEvent('game:player-controller-changed', ev);
+        dispatch({ type: 'PLAYER_CONTROLLER_CHANGED', payload: ev });
+      },
     });
 
     return () => {
@@ -1100,6 +1156,9 @@ export function useGame(myUserId: string): UseGameReturn {
     null;
 
   const isMyTurn = Boolean(gameState.activePlayerId && gameState.activePlayerId === myUserId);
+
+  // isHost se deriva comparando el usuario actual con el hostId de la sala.
+  const isHost = Boolean(myUserId && getLastRoomState()?.hostId === myUserId);
 
   // pendingSkill bloquea robar aunque la fase sea WAIT_DRAW, evitando emitir
   // game:robar-carta mientras el backend espera la resolución del skill.
@@ -1343,6 +1402,8 @@ export function useGame(myUserId: string): UseGameReturn {
 
   return {
     state: gameState,
+    gameId: gameState.gameId,
+    isHost,
     myPlayer,
     isMyTurn,
     canDrawCard,
@@ -1384,5 +1445,6 @@ export function useGame(myUserId: string): UseGameReturn {
     volverAJugar,
     ponerCartaSobreOtra,
     clearCartaSobreOtraResult,
+    protectedIndicesByPlayer: gameState.protectedIndicesByPlayer,
   };
 }

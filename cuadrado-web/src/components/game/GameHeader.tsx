@@ -1,7 +1,7 @@
 // components/game/GameHeader.tsx - Cabecera compartida: logo (home) o botón volver + título + badge de cubitos
 
 import { useAuth } from '../../context/AuthContext';
-import { useModal } from '../../context/ModalContext';
+import { useModal, type SettingsModalProps } from '../../context/ModalContext';
 import VoiceChatControls from '../voice/VoiceChatControls';
 import '../../styles/GameHeader.css';
 
@@ -12,6 +12,8 @@ interface GameHeaderProps {
   onBack?: () => void;
   /** Si true, muestra los controles de chat de voz (mute/deafen) en el área de acciones. */
   showVoiceControls?: boolean;
+  /** Props opcionales que se pasan al modal de ajustes al abrirlo desde esta cabecera. */
+  settingsModalProps?: SettingsModalProps;
 }
 
 /** Icono SVG de cubo wireframe (solo aristas) */
@@ -37,7 +39,7 @@ function CubeWireframeIcon({ size = 18 }: { size?: number }) {
   );
 }
 
-export default function GameHeader({ title, onBack, showVoiceControls = false }: GameHeaderProps = {}) {
+export default function GameHeader({ title, onBack, showVoiceControls = false, settingsModalProps }: GameHeaderProps = {}) {
   const { user } = useAuth();
   const { openSettingsModal } = useModal();
   const isSub = Boolean(title || onBack);
@@ -71,7 +73,7 @@ export default function GameHeader({ title, onBack, showVoiceControls = false }:
 
         <button
           className="game-header__icon-btn"
-          onClick={openSettingsModal}
+          onClick={() => openSettingsModal(settingsModalProps)}
           aria-label="Ajustes"
           title="Ajustes"
         >

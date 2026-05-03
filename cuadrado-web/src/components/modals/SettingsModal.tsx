@@ -6,7 +6,15 @@ import SettingsContent from '../settings/SettingsContent';
 import AppModal from './AppModal';
 
 export default function SettingsModal() {
-  const { isSettingsOpen, closeModal } = useModal();
+  const { isSettingsOpen, closeModal, settingsProps } = useModal();
+  const {
+    settingsContext,
+    isHost,
+    onLeaveRoom,
+    onLeaveGame,
+    onSaveAndClose,
+    onCloseWithoutSave,
+  } = settingsProps;
 
   useEffect(() => {
     if (!isSettingsOpen) return;
@@ -21,7 +29,16 @@ export default function SettingsModal() {
 
   return (
     <AppModal label="Configuración" modifier="settings" title="Configuración" onClose={closeModal}>
-      <SettingsContent onClose={closeModal} inModal />
+      <SettingsContent
+        onClose={closeModal}
+        inModal
+        context={settingsContext}
+        isHost={isHost}
+        onLeaveRoom={onLeaveRoom}
+        onLeaveGame={onLeaveGame}
+        onSaveAndClose={onSaveAndClose}
+        onCloseWithoutSave={onCloseWithoutSave}
+      />
     </AppModal>
   );
 }

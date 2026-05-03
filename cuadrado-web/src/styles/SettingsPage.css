@@ -377,3 +377,94 @@
     width: 90px;
   }
 }
+
+/* === Modal de confirmación de guardado de partida === */
+.save-confirm-modal {
+  margin: 0.5rem 18px 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(16, 34, 76, 0.96), rgba(12, 24, 56, 0.98));
+  border: 1px solid rgba(0, 229, 255, 0.34);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.save-confirm-modal__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-100);
+  margin: 0;
+}
+
+.save-confirm-modal__subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-50);
+}
+
+.save-confirm-modal__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.save-confirm-modal__button {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--spring),
+    box-shadow 160ms,
+    background 160ms,
+    border-color 160ms,
+    color 160ms;
+}
+
+.save-confirm-modal__button:hover {
+  transform: translateY(-1px);
+}
+
+.save-confirm-modal__button--primary {
+  color: #f9feff;
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.22), rgba(0, 229, 255, 0.12));
+  border-color: rgba(0, 229, 255, 0.50);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.10), 0 8px 18px rgba(0, 229, 255, 0.08);
+}
+
+.save-confirm-modal__button--primary:hover {
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.30), rgba(0, 229, 255, 0.18));
+  border-color: var(--neon-cyan);
+}
+
+.save-confirm-modal__button--danger {
+  color: #ff8a8a;
+  background: rgba(255, 90, 90, 0.10);
+  border-color: rgba(255, 90, 90, 0.34);
+}
+
+.save-confirm-modal__button--danger:hover {
+  background: rgba(255, 90, 90, 0.18);
+  border-color: #ff5a5a;
+}
+
+.save-confirm-modal__button--ghost {
+  color: var(--text-80);
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.34);
+}
+
+.save-confirm-modal__button--ghost:hover {
+  background: rgba(168, 85, 247, 0.14);
+  border-color: rgba(168, 85, 247, 0.50);
+}

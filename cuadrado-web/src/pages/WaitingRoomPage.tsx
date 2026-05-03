@@ -151,6 +151,22 @@ export default function WaitingRoomPage() {
     }
   }, [localBots.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Abandonar sala desde ajustes ────────────────────────────────────
+  const handleLeaveRoom = useCallback(async () => {
+    if (isLeavingRef.current) return;
+    isLeavingRef.current = true;
+    leaveVoiceRoom();
+    try {
+      await leaveRoom();
+    } catch (e) {
+      console.error('Error al abandonar la sala', e);
+    } finally {
+      disconnectRoomsSocket();
+      setRoom(null);
+      navigate('/home');
+    }
+  }, [navigate, leaveVoiceRoom]);
+
   // ── Comenzar partida ────────────────────────────────────────────────
   const handleStart = async () => {
     if (!room) return;
@@ -305,7 +321,16 @@ export default function WaitingRoomPage() {
 
   return (
     <div className="app-page">
-      <GameHeader title="Sala de espera" onBack={handleBack} showVoiceControls />
+      <GameHeader
+        title="Sala de espera"
+        onBack={handleBack}
+        showVoiceControls
+        settingsModalProps={{
+          settingsContext: 'waiting-room',
+          isHost,
+          onLeaveRoom: handleLeaveRoom,
+        }}
+      />
 
       <main className="app-page__content room-page__content">
 

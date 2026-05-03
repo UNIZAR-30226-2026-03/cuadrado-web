@@ -245,3 +245,11 @@ export interface GameState {
   lastDiscardedCard: Card | null;
   lastDiscardPlayerId: string | null;
 }
+
+export interface EvPlayerControllerChanged {
+  gameId: string;
+  userId: string;
+  controlador: 'humano' | 'bot';
+  dificultadBot?: string;
+  nombreEnPartida?: string;
+}

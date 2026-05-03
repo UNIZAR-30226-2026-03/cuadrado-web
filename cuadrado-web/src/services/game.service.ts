@@ -25,6 +25,7 @@ import type {
   EvSolicitudReaccionResponse,
   EvPonerOtraCartaSobreOtra,
   EvAccionCartaSobreOtra,
+  EvPlayerControllerChanged,
 } from '../types/game.types';
 
 // ── Subscripciones ────────────────────────────────────────────────────────────
@@ -70,6 +71,8 @@ export interface GameEventHandlers {
   onPonerOtraCartaSobreOtra?: (data: EvPonerOtraCartaSobreOtra) => void;
   /** Broadcast: conteo actualizado del jugador que intentó la reacción */
   onAccionCartaSobreOtra?: (data: EvAccionCartaSobreOtra) => void;
+  /** Notificación de cambio de controlador de un jugador (humano ↔ bot) */
+  onPlayerControllerChanged?: (data: EvPlayerControllerChanged) => void;
 }
 
 export interface SavedGameSummary {
@@ -271,6 +274,7 @@ export function subscribeToGameEvents(handlers: GameEventHandlers): void {
   reg('game:poner-carta-sobre-otra', handlers.onSolicitudReaccionResponse);
   reg('game:poner-otra-carta-sobre-otra', handlers.onPonerOtraCartaSobreOtra);
   reg('game:accion-carta-sobre-otra', handlers.onAccionCartaSobreOtra);
+  reg<EvPlayerControllerChanged>('game:player-controller-changed', handlers.onPlayerControllerChanged);
 }
 
 export function unsubscribeFromGameEvents(): void {
@@ -356,4 +360,12 @@ export const gameActions = {
   /** Pone la carta en la pila de descarte (solo si se tiene el slot por solicitud previa) */
   ponerCartaSobreOtra: (gameId: string, numCarta: number) =>
     emit('game:poner-carta-sobre-otra', { gameId, numCarta }),
+
+  /** Guarda el estado de la partida y cierra la sala */
+  guardarYCerrar: (gameId: string) =>
+    emit('game:guardar-y-cerrar', { gameId }),
+
+  /** Abandona la partida sustituyendo al jugador por un bot */
+  abandonarPartida: (gameId: string, dificultadBot: 'facil' | 'media' | 'dificil' = 'media') =>
+    emit('game:abandonar-partida', { gameId, dificultadBot }),
 };
