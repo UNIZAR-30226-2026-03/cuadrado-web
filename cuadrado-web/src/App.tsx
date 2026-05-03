@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
-import SettingsModal from './components/modals/SettingsModal';
+import { VoiceProvider, useVoice } from './context/VoiceContext';import SettingsModal from './components/modals/SettingsModal';
 import CreateRoomModal from './components/modals/CreateRoomModal';
 
 import WelcomePage from './pages/WelcomePage';
@@ -32,6 +32,7 @@ function AppInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, authReady } = useAuth();
+  const { leaveVoiceRoom } = useVoice();
   const hideOn = [
     '/login',
     '/register',
@@ -40,6 +41,13 @@ function AppInner() {
     '/reset-password',
   ];
   const hideOverlay = hideOn.includes(location.pathname);
+  useEffect(() => {
+    const rutasConVoz = ['/waiting-room', '/game'];
+    // Si la ruta actual no está en la lista de rutas con voz permitidas...
+    if (!rutasConVoz.includes(location.pathname)) {
+      leaveVoiceRoom();
+    }
+  }, [location.pathname, leaveVoiceRoom]);
 
   useEffect(() => {
     const publicAuthRoutes = new Set(hideOn);
@@ -106,7 +114,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <ModalProvider>
-          <AppInner />
+          <VoiceProvider>
+            <AppInner />
+          </VoiceProvider>
         </ModalProvider>
       </BrowserRouter>
     </AuthProvider>

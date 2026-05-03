@@ -7,7 +7,7 @@ export interface RulesConfig {
   fillWithBots: boolean;
   dificultadBots?: 'media' | 'dificil';
   deckCount: number;
-  enabledPowers: string[];
+  enabledPowers: number[];
 }
 
 export interface PublicRoomSummary {
@@ -44,7 +44,7 @@ export interface RoomState {
 
 export interface SavedRoomPayload {
   name: string;
-  rules: RulesConfig;
+  rules?: Partial<RulesConfig>;
 }
 
 export interface CreateRoomPayload {

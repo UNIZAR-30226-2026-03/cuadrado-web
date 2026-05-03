@@ -2,7 +2,7 @@
 //
 // Sección superior: lista de salas públicas obtenida del backend via
 //   room.service::listPublicRooms, con botón "Unirse" por fila.
-// Sección inferior: campo de código de 7 dígitos para salas privadas.
+// Sección inferior: campo de código de 6 dígitos para salas privadas.
 // Ambas acciones llaman a room.service::joinRoom y navegan a /waiting-room.
 
 import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
@@ -97,7 +97,7 @@ export default function JoinRoomPage() {
 
   // ── Unirse a sala privada ─────────────────────────────────────────────
   const handleJoinPrivate = useCallback(async () => {
-    if (privateCode.length !== 7) return;
+    if (privateCode.length !== 6) return;
     setJoiningPrivate(true);
     setPrivateError(null);
     try {
@@ -110,9 +110,9 @@ export default function JoinRoomPage() {
     }
   }, [privateCode, navigate]);
 
-  // Permite caracteres alfanuméricos (letras y dígitos), máximo 7, en mayúsculas
+  // Permite caracteres alfanuméricos (letras y dígitos), máximo 6, en mayúsculas
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 7).toUpperCase();
+    const val = e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase();
     setPrivateCode(val);
     setPrivateError(null);
   };
@@ -203,15 +203,15 @@ export default function JoinRoomPage() {
                   type="text"
                   inputMode="text"
                   autoCapitalize="characters"
-                  maxLength={7}
+                  maxLength={6}
                   value={privateCode}
                   onChange={handleCodeChange}
-                  placeholder="_ _ _ _ _ _ _"
-                  aria-label="Código de sala privada (7 caracteres)"
+                  placeholder="_ _ _ _ _ _"
+                  aria-label="Código de sala privada (6 caracteres)"
                   className="room-private__input"
                 />
                 <button
-                  disabled={privateCode.length !== 7 || joiningPrivate}
+                  disabled={privateCode.length !== 6 || joiningPrivate}
                   onClick={handleJoinPrivate}
                   className="room-private__submit"
                 >

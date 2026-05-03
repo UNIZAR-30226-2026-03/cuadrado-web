@@ -9,6 +9,7 @@ import gsap from 'gsap';
 import GameHeader from '../components/game/GameHeader';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useVoice } from '../context/VoiceContext';
 import {
   connectRoomsSocket,
   disconnectRoomsSocket,
@@ -16,10 +17,13 @@ import {
   startRoom,
   leaveRoom,
   getLastRoomState,
+  consumeCreateRoomWarning,
 } from '../services/room.service';
-import { POWER_MAP } from '../data/cardPowers';
+import { getLastSavedGameSummary } from '../services/game.service';
+import { POWER_MAP, numberToCardLabel } from '../data/cardPowers';
 import type { RoomState } from '../types/room.types';
 import '../styles/RoomPages.css';
+import '../styles/VoiceChat.css';
 
 interface LocalBot {
   userId: string;
@@ -37,14 +41,20 @@ function formatTurnTime(seconds: number): string {
   return `${seconds}s`;
 }
 
+function isBotSavedPlayer(userId: string): boolean {
+  return userId.trim().toLowerCase().startsWith('bot');
+}
+
 export default function WaitingRoomPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { joinVoiceRoom, leaveVoiceRoom, updatePlayerMapping, isSpeakingUser, connectedPeers } = useVoice();
 
   // Estado inicial desde caché para evitar parpadeo "Cargando sala…"
   const [room, setRoom] = useState<RoomState | null>(getLastRoomState());
+  const [createWarning, setCreateWarning] = useState<string | null>(() => consumeCreateRoomWarning());
   const [showPowers, setShowPowers] = useState(false);
-  const [selectedPower, setSelectedPower] = useState<string | null>(null);
+  const [selectedPower, setSelectedPower] = useState<number | null>(null);
   const [closedByHost, setClosedByHost] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showFillBots, setShowFillBots] = useState(false);
@@ -56,6 +66,40 @@ export default function WaitingRoomPage() {
 
   // El backend usa el username como userId en las salas (decoded.sub del JWT)
   const currentUserId = user?.username ?? '';
+
+  // ── Chat de voz: unirse a sala cuando el código esté disponible ────
+  // Inicializar como true si ya hay peers conectados (viniendo de revancha)
+  const [voiceJoined, setVoiceJoined] = useState(connectedPeers.length > 0);
+
+  // Sincronizar con peers conectados reales
+  useEffect(() => {
+    if (connectedPeers.length > 0) {
+      setVoiceJoined(true);
+    }
+  }, [connectedPeers.length]);
+
+  const handleJoinVoice = useCallback(async () => {
+    if (!room?.code || voiceJoined) return;
+    try {
+      await joinVoiceRoom(room.code);
+      setVoiceJoined(true);
+    } catch (err) {
+      console.error('Error al conectar voz:', err);
+    }
+  }, [room?.code, voiceJoined, joinVoiceRoom]);
+
+  useEffect(() => {
+    if (!room?.code || voiceJoined) return;
+    // Disparar automáticamente pero con un pequeño retraso para permitir que sea un "gesto" válido
+    const timer = setTimeout(handleJoinVoice, 500);
+    return () => clearTimeout(timer);
+  }, [room?.code, voiceJoined, handleJoinVoice]);
+
+  // ── Chat de voz: actualizar mapeo socketId→userId al cambiar jugadores ─
+  useEffect(() => {
+    if (!room?.players) return;
+    updatePlayerMapping(room.players.map(p => ({ userId: p.userId, socketId: p.socketId })));
+  }, [room?.players, updatePlayerMapping]);
 
   // ── Conexión y escucha en tiempo real ───────────────────────────────
   useEffect(() => {
@@ -107,9 +151,26 @@ export default function WaitingRoomPage() {
     }
   }, [localBots.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Abandonar sala desde ajustes ────────────────────────────────────
+  const handleLeaveRoom = useCallback(async () => {
+    if (isLeavingRef.current) return;
+    isLeavingRef.current = true;
+    leaveVoiceRoom();
+    try {
+      await leaveRoom();
+    } catch (e) {
+      console.error('Error al abandonar la sala', e);
+    } finally {
+      disconnectRoomsSocket();
+      setRoom(null);
+      navigate('/home');
+    }
+  }, [navigate, leaveVoiceRoom]);
+
   // ── Comenzar partida ────────────────────────────────────────────────
   const handleStart = async () => {
     if (!room) return;
+    if (shouldBlockStartForResume) return;
     if (room.players.length === 1 && !room.rules.fillWithBots) {
       return;
     }
@@ -159,6 +220,7 @@ export default function WaitingRoomPage() {
   const handleBack = async () => {
     if (isLeavingRef.current) return;
     isLeavingRef.current = true;
+    leaveVoiceRoom();
     try {
       await leaveRoom();
     } catch (e) {
@@ -203,7 +265,7 @@ export default function WaitingRoomPage() {
   if (!room) {
     return (
       <div className="app-page">
-        <GameHeader title="Sala de espera" onBack={handleBack} />
+        <GameHeader title="Sala de espera" onBack={handleBack} showVoiceControls />
         <p style={{ textAlign: 'center' }}>Cargando sala…</p>
       </div>
     );
@@ -211,12 +273,30 @@ export default function WaitingRoomPage() {
 
   const maxPlayers = room.rules.maxPlayers;
   const deckCount = room.rules.deckCount;
+  const savedGame = getLastSavedGameSummary();
+  const expectedHumanPlayers = (savedGame?.players ?? []).filter(userId => !isBotSavedPlayer(userId));
+  const connectedHumanIds = new Set(
+    room.players
+      .filter(player => player.controlador !== 'bot' && player.connected === true)
+      .map(player => player.userId),
+  );
+  const missingHumanNames = expectedHumanPlayers.filter(userId => !connectedHumanIds.has(userId));
+  const hasMissingHumanPlayers = missingHumanNames.length > 0;
+  const shouldBlockStartForResume = expectedHumanPlayers.length > 0 && hasMissingHumanPlayers;
   const botModeLabel = !room.rules.fillWithBots
     ? 'Sin bots'
     : room.rules.dificultadBots === 'dificil'
       ? 'Bots: Difícil'
       : 'Bots: Media';
-  const isHost = currentUserId === room.hostId;
+  const currentSocketId = getRoomsSocket()?.id ?? '';
+  const meInRoom = room.players.find(
+    (p) => p.userId === currentUserId || (currentSocketId !== '' && p.socketId === currentSocketId),
+  );
+  const isHost = Boolean(
+    meInRoom?.isHost ||
+    (currentUserId !== '' && currentUserId === room.hostId) ||
+    (currentSocketId !== '' && room.players.some((p) => p.isHost && p.socketId === currentSocketId)),
+  );
   const blockedSoloStart = room.players.length === 1 && !room.rules.fillWithBots;
   
   // ── Construir slots ─────────────────────────────────────────────────
@@ -241,7 +321,16 @@ export default function WaitingRoomPage() {
 
   return (
     <div className="app-page">
-      <GameHeader title="Sala de espera" onBack={handleBack} />
+      <GameHeader
+        title="Sala de espera"
+        onBack={handleBack}
+        showVoiceControls
+        settingsModalProps={{
+          settingsContext: 'waiting-room',
+          isHost,
+          onLeaveRoom: handleLeaveRoom,
+        }}
+      />
 
       <main className="app-page__content room-page__content">
 
@@ -250,6 +339,19 @@ export default function WaitingRoomPage() {
           <p className="room-section__title">
             Sala de {room.name}
           </p>
+
+          {createWarning && (
+            <div className="app-page__error" role="alert">
+              {createWarning}
+              <button
+                className="room-link-btn"
+                onClick={() => setCreateWarning(null)}
+                style={{ marginLeft: 12 }}
+              >
+                Cerrar
+              </button>
+            </div>
+          )}
 
           {/* ── Badges de información de sala ──────────────────── */}
           <div className="room-info-bar">
@@ -268,6 +370,14 @@ export default function WaitingRoomPage() {
             <span className="room-info-badge">
               👥 {room.players.length}/{maxPlayers} jugadores
             </span>
+            {shouldBlockStartForResume && (
+              <span
+                className="room-info-badge"
+                style={{ borderColor: 'rgba(251, 191, 36, 0.65)', color: 'var(--text-100)' }}
+              >
+                ⏳ Faltan: {missingHumanNames.join(', ')}
+              </span>
+            )}
           </div>
 
           {/* ── Panel de slots ─────────────────────────────────── */}
@@ -290,9 +400,12 @@ export default function WaitingRoomPage() {
                       <span className="waiting-slot__empty">Vacío</span>
                     )}
 
-                    {slot.type === 'player' && (
+                    {slot.type === 'player' && (() => {
+                      const speaking = isSpeakingUser(slot.data.userId, isSelf);
+                      const avatarVoiceClass = speaking ? ' waiting-avatar--speaking' : ' waiting-avatar--voice';
+                      return (
                       <div className="waiting-slot__player">
-                        <div className="waiting-avatar">
+                        <div className={`waiting-avatar${avatarVoiceClass}`}>
                           {/* Inicial del username como avatar (el backend no envía avatarUrl en RoomState) */}
                           <span className="waiting-avatar__initial">
                             {slot.data.userId.charAt(0).toUpperCase()}
@@ -306,9 +419,15 @@ export default function WaitingRoomPage() {
                             {slot.data.userId}
                             {isSelf && <span className="waiting-you-badge"> (Tú)</span>}
                           </span>
+                          {slot.data.controlador !== 'bot' && slot.data.connected !== true && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--neon-gold)' }}>
+                              Esperando reconexión
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {slot.type === 'bot' && (
                       <div className="waiting-slot__player">
@@ -331,6 +450,20 @@ export default function WaitingRoomPage() {
         {/* ── Footer ───────────────────────────────────────────── */}
         <div className="room-footer room-footer--waiting">
           <div className="room-footer__row">
+            {!voiceJoined && (
+              <button 
+                className="room-link-btn" 
+                onClick={handleJoinVoice}
+                style={{ color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.4)' }}
+              >
+                🎤 Conectar Voz
+              </button>
+            )}
+            {voiceJoined && (
+              <span className="room-info-badge" style={{ color: '#86efac' }}>
+                🎤 Voz conectada
+              </span>
+            )}
             <button
               className="room-link-btn"
               onClick={() => { setShowPowers(true); setSelectedPower(null); }}
@@ -342,9 +475,13 @@ export default function WaitingRoomPage() {
             {isHost && (
               <button
                 className="room-cta"
-                disabled={blockedSoloStart}
+                disabled={blockedSoloStart || shouldBlockStartForResume}
                 onClick={handleStart}
-                title={blockedSoloStart ? 'Necesitas al menos otro jugador o tener completar con bots activo' : undefined}
+                title={shouldBlockStartForResume
+                  ? `Faltan por reconectarse: ${missingHumanNames.join(', ')}`
+                  : blockedSoloStart
+                    ? 'Necesitas al menos otro jugador o tener completar con bots activo'
+                    : undefined}
               >
                 Comenzar partida
               </button>
@@ -427,35 +564,38 @@ export default function WaitingRoomPage() {
                         style={{ '--fan-index': i, '--fan-total': room.rules.enabledPowers.length } as React.CSSProperties}
                         onClick={() => setSelectedPower(prev => prev === p ? null : p)}
                       >
-                        <span className="fan-card__value">{p}</span>
+                        <span className="fan-card__value">{numberToCardLabel(p)}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 {/* Detalle de la carta seleccionada: los 4 palos */}
-                {selectedPower && (
-                  <div className="power-detail">
-                    <h4 className="power-detail__title">Carta {selectedPower}</h4>
-                    <div className="power-detail__suits">
-                      <span className="suit-card suit-card--hearts">
-                        {selectedPower}<span className="suit">♥</span>
-                      </span>
-                      <span className="suit-card suit-card--diamonds">
-                        {selectedPower}<span className="suit">♦</span>
-                      </span>
-                      <span className="suit-card suit-card--clubs">
-                        {selectedPower}<span className="suit">♣</span>
-                      </span>
-                      <span className="suit-card suit-card--spades">
-                        {selectedPower}<span className="suit">♠</span>
-                      </span>
+                {selectedPower !== null && (() => {
+                  const label = numberToCardLabel(selectedPower);
+                  return (
+                    <div className="power-detail">
+                      <h4 className="power-detail__title">Carta {label}</h4>
+                      <div className="power-detail__suits">
+                        <span className="suit-card suit-card--hearts">
+                          {label}<span className="suit">♥</span>
+                        </span>
+                        <span className="suit-card suit-card--diamonds">
+                          {label}<span className="suit">♦</span>
+                        </span>
+                        <span className="suit-card suit-card--clubs">
+                          {label}<span className="suit">♣</span>
+                        </span>
+                        <span className="suit-card suit-card--spades">
+                          {label}<span className="suit">♠</span>
+                        </span>
+                      </div>
+                      <p className="power-detail__desc">
+                        {POWER_MAP[label]?.shortDesc ?? 'Poder activo en esta sala.'}
+                      </p>
                     </div>
-                    <p className="power-detail__desc">
-                      {POWER_MAP[selectedPower]?.shortDesc ?? 'Poder activo en esta sala.'}
-                    </p>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 

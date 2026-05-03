@@ -83,3 +83,17 @@ export const DEFAULT_POWERS = CARD_POWERS.map(p => ({
   description: p.fullDesc,
   enabled: true,
 }));
+
+/**
+ * Convierte el label de carta ('A', '2'…'J') al número que usa el backend (1–11).
+ * Retorna null si el label no es reconocido.
+ */
+export function cardLabelToNumber(label: string): number | null {
+  const index = CARD_POWERS.findIndex(p => p.value === label);
+  return index === -1 ? null : index + 1;
+}
+
+/** Convierte el número del backend (1–11) al label de carta ('A', '2'…'J'). */
+export function numberToCardLabel(n: number): string {
+  return CARD_POWERS[n - 1]?.value ?? String(n);
+}
