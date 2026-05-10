@@ -17,6 +17,7 @@ import type {
   Stage0SkillUse,
 } from '../hooks/useGame';
 import { useGame } from '../hooks/useGame';
+import { useSkins } from '../hooks/useSkins';
 import { disconnectRoomsSocket, getLastRoomState, getRoomsSocket, leaveRoom } from '../services/room.service';
 import { gameActions } from '../services/game.service';
 import type { Card, EvPartidaFinalizada } from '../types/game.types';
@@ -145,14 +146,14 @@ function decodeCardId(cardId: number): RevealedCardInfo {
   };
 }
 
-function toBoardPlayer(player: Stage0PlayerState, cardCount: number): GamePlayer {
+function toBoardPlayer(player: Stage0PlayerState, cardCount: number, myCardSkinUrl: string | null): GamePlayer {
   return {
     id: player.userId,
     name: player.name,
     elo: 1200,
     cardCount,
     avatarUrl: null,
-    cardSkinUrl: null,
+    cardSkinUrl: player.isMe ? myCardSkinUrl : null,
     isMe: player.isMe,
     isBot: player.isBot,
   };
@@ -1010,6 +1011,16 @@ function ResultModal({
 export default function GamePage() {
   const navigate = useNavigate();
   const { user, fetchProfile } = useAuth();
+  const { inventory, equippedSkinIds } = useSkins();
+  
+  const myCardSkinUrl = useMemo(() => {
+    return inventory.find(s => s.id === equippedSkinIds.Carta)?.url ?? null;
+  }, [inventory, equippedSkinIds.Carta]);
+
+  const myTapeteUrl = useMemo(() => {
+    return inventory.find(s => s.id === equippedSkinIds.Tapete)?.url ?? null;
+  }, [inventory, equippedSkinIds.Tapete]);
+
   useEffect(() => {
     clearHandGridMemory();
     return () => {
@@ -1229,9 +1240,9 @@ export default function GamePage() {
   const renderPlayers = useMemo(
     () => orderedPlayers.slice(0, 8).map((player) => ({
       base: player,
-      display: toBoardPlayer(player, player.cardCount),
+      display: toBoardPlayer(player, player.cardCount, myCardSkinUrl),
     })),
-    [orderedPlayers],
+    [orderedPlayers, myCardSkinUrl],
   );
 
   const positionedPlayers = useMemo(() => {
@@ -1530,7 +1541,10 @@ export default function GamePage() {
 
 
       <main className="stage2-main">
-        <section className={`stage2-board-shell${state.cuboActive ? ' stage2-board-shell--cubo' : ''}`}>
+        <section 
+          className={`stage2-board-shell${state.cuboActive ? ' stage2-board-shell--cubo' : ''}`}
+          style={myTapeteUrl ? { backgroundImage: `url(${myTapeteUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+        >
           <div className="stage2-board" ref={boardRef}>
             <div className="stage2-center-piles">
               <button
