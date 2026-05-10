@@ -388,6 +388,16 @@
   box-shadow: 0 0 50px rgba(0, 229, 255, 0.08), inset 0 0 40px rgba(0, 0, 0, 0.45);
 }
 
+.stage2-board__tapete {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-size: 60%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .stage2-center-piles {
   position: absolute;
   top: 50%;

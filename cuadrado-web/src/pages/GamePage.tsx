@@ -268,7 +268,7 @@ function PendingCardPanel({
 
           <div className="stage2-swap">
             <span>Intercambiar con carta:</span>
-            
+
             <SelectableCardGrid
               playerId={myPlayerId}
               cardCount={selectableHandCount}
@@ -974,9 +974,9 @@ function ResultModal({
               <button
                 type="button"
                 className="stage2-btn stage2-btn--primary"
-                onClick={() => { 
-                  setReplayRequested(true); 
-                  onReplay(); 
+                onClick={() => {
+                  setReplayRequested(true);
+                  onReplay();
                   // Resetear después de 15s si la operación falla silenciosamente
                   const timeoutId = window.setTimeout(() => {
                     setReplayRequested(false);
@@ -1012,7 +1012,7 @@ export default function GamePage() {
   const navigate = useNavigate();
   const { user, fetchProfile } = useAuth();
   const { inventory, equippedSkinIds } = useSkins();
-  
+
   const myCardSkinUrl = useMemo(() => {
     return inventory.find(s => s.id === equippedSkinIds.Carta)?.url ?? null;
   }, [inventory, equippedSkinIds.Carta]);
@@ -1329,7 +1329,7 @@ export default function GamePage() {
       console.error('Error cerrando sala', e);
     } finally {
       disconnectRoomsSocket();
-      await fetchProfile().catch(() => {});
+      await fetchProfile().catch(() => { });
       navigate('/home');
     }
   }, [leaveVoiceRoom, fetchProfile, navigate]);
@@ -1380,7 +1380,7 @@ export default function GamePage() {
     const handleRoomClosed = (payload: { reason: string; savedRoomName?: string }) => {
       leaveVoiceRoom();
       disconnectRoomsSocket();
-      fetchProfile().catch(() => {}).finally(() => {
+      fetchProfile().catch(() => { }).finally(() => {
         navigate('/home', { state: { savedRoomName: payload.savedRoomName } });
       });
     };
@@ -1541,11 +1541,18 @@ export default function GamePage() {
 
 
       <main className="stage2-main">
-        <section 
+        <section
           className={`stage2-board-shell${state.cuboActive ? ' stage2-board-shell--cubo' : ''}`}
-          style={myTapeteUrl ? { backgroundImage: `url(${myTapeteUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+
         >
           <div className="stage2-board" ref={boardRef}>
+            {myTapeteUrl && (
+              <div
+                className="stage2-board__tapete"
+                style={{ backgroundImage: `url(${myTapeteUrl})` }}
+                aria-hidden="true"
+              />
+            )}
             <div className="stage2-center-piles">
               <button
                 type="button"
