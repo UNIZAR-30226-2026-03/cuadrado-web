@@ -3,6 +3,7 @@
 /* === Contenedor raíz === */
 .rules-page-content {
   --section-gap: 56px;
+  overflow-y: auto;
 }
 
 .rules-container {
@@ -157,14 +158,21 @@
   flex-shrink: 0;
 }
 
-.mini-card--black { color: #1a1a2e; }
-.mini-card--red { color: #c0392b; }
+.mini-card--black {
+  color: #1a1a2e;
+}
+
+.mini-card--red {
+  color: #c0392b;
+}
+
 .mini-card--joker {
   background: linear-gradient(135deg, #1a1a2e, #2d1f47);
   color: var(--neon-cyan);
   font-size: 22px;
   border-color: rgba(0, 229, 255, 0.4);
 }
+
 .mini-card--gold {
   background: linear-gradient(135deg, #f5f0e8, #fef9ee);
   color: #c0392b;
@@ -203,9 +211,17 @@
   font-family: var(--font-display);
 }
 
-.card-value-item__points--special { color: var(--neon-gold); }
-.card-value-item__points--danger { color: #ff5a5a; }
-.card-value-item__points--joker { color: var(--neon-cyan); }
+.card-value-item__points--special {
+  color: var(--neon-gold);
+}
+
+.card-value-item__points--danger {
+  color: #ff5a5a;
+}
+
+.card-value-item__points--joker {
+  color: var(--neon-cyan);
+}
 
 /* === Grid de habilidades === */
 .abilities-grid {
@@ -272,7 +288,10 @@
   position: relative;
 }
 
-.ability-card__badge--red { color: #c0392b; }
+.ability-card__badge--red {
+  color: #c0392b;
+}
+
 .ability-card__badge--gold {
   background: linear-gradient(135deg, #fef9ee, #fbbf24);
   color: #92400e;
@@ -436,8 +455,13 @@
   margin-top: 4px;
 }
 
-.scoring-item__value--gold { color: var(--neon-gold); }
-.scoring-item__value--purple { color: var(--neon-purple); }
+.scoring-item__value--gold {
+  color: var(--neon-gold);
+}
+
+.scoring-item__value--purple {
+  color: var(--neon-purple);
+}
 
 /* === Responsive === */
 @media (max-width: 600px) {
@@ -458,5 +482,10 @@
     width: 34px;
     height: 48px;
     font-size: 14px;
+  }
+
+  .app-page__content {
+    overflow-y: auto;
+    height: calc(100vh - 64px);
   }
 }
