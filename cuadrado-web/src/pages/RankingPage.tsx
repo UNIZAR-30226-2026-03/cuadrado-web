@@ -18,8 +18,8 @@ import { getAccessToken } from '../utils/token';
 
 export default function RankingPage() {
   const navigate = useNavigate();
-  const { user }  = useAuth();
-  const listRef   = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const listRef = useRef<HTMLDivElement>(null);
   const accessToken = getAccessToken();
 
   const [entries, setEntries] = useState<RankingEntry[]>([]);
@@ -48,7 +48,7 @@ export default function RankingPage() {
 
     getEquipped(accessToken).then(eq => {
       setMyAvatarUrl(eq.avatar);
-    }).catch(() => {});
+    }).catch(() => { });
   }, [accessToken]);
 
   // Vista derivada: si falta avatar del usuario local, se completa sin mutar estado
@@ -75,20 +75,20 @@ export default function RankingPage() {
     return () => ctx.revert();
   }, [loading]);
 
-  const myUsername  = user?.username ?? '';
-  const isInTop50   = entriesWithAvatar.some(e => e.username === myUsername);
+  const myUsername = user?.username ?? '';
+  const isInTop50 = entriesWithAvatar.some(e => e.username === myUsername);
 
   // Fila del jugador para anclar al pie si no está en top 50
   const myAnchorEntry: RankingEntry | null =
     !isInTop50 && myUsername
       ? {
-          position:    user?.rankPlacement ?? 999,
-          username:    myUsername,
-          eloRating:   user?.eloRating ?? 1200,
-          avatarUrl:   myAvatarUrl ?? null,
-          gamesPlayed: user?.gamesPlayed ?? 0,
-          gamesWon:    user?.gamesWon    ?? 0,
-        }
+        position: user?.rankPlacement ?? 999,
+        username: myUsername,
+        eloRating: user?.eloRating ?? 1200,
+        avatarUrl: myAvatarUrl ?? null,
+        gamesPlayed: user?.gamesPlayed ?? 0,
+        gamesWon: user?.gamesWon ?? 0,
+      }
       : null;
 
   return (
@@ -158,25 +158,22 @@ interface RankingRowProps {
 function RankingRow({ entry, isMe = false }: RankingRowProps) {
   const posClass =
     entry.position === 1 ? 'ranking-pos--top1' :
-    entry.position === 2 ? 'ranking-pos--top2' :
-    entry.position === 3 ? 'ranking-pos--top3' :
-    isMe                 ? 'ranking-pos--me'   : '';
+      entry.position === 2 ? 'ranking-pos--top2' :
+        entry.position === 3 ? 'ranking-pos--top3' :
+          isMe ? 'ranking-pos--me' : '';
 
   const rowClass =
     entry.position === 1 ? 'ranking-row--top1' :
-    entry.position === 2 ? 'ranking-row--top2' :
-    entry.position === 3 ? 'ranking-row--top3' :
-    isMe                 ? 'ranking-row--me'   : '';
+      entry.position === 2 ? 'ranking-row--top2' :
+        entry.position === 3 ? 'ranking-row--top3' :
+          isMe ? 'ranking-row--me' : '';
 
   const posLabel =
     entry.position === 1 ? '🥇' :
-    entry.position === 2 ? '🥈' :
-    entry.position === 3 ? '🥉' :
-    `#${entry.position}`;
+      entry.position === 2 ? '🥈' :
+        entry.position === 3 ? '🥉' :
+          `#${entry.position}`;
 
-  const winRatio = entry.gamesPlayed > 0
-    ? Math.round((entry.gamesWon / entry.gamesPlayed) * 100)
-    : 0;
 
   return (
     <div className={`ranking-row ${rowClass}`}>
@@ -189,9 +186,6 @@ function RankingRow({ entry, isMe = false }: RankingRowProps) {
       <div className="ranking-info">
         <span className={`ranking-info__name${isMe ? ' ranking-info__name--me' : ''}`}>
           {entry.username}{isMe ? ' (tú)' : ''}
-        </span>
-        <span className="ranking-info__sub">
-          {entry.gamesPlayed} partidas · {winRatio}% victorias
         </span>
       </div>
 
