@@ -86,10 +86,6 @@ function formatCardShort(card: Card): string {
   return `${value}${SUIT_SYMBOL[card.palo] ?? ''}`;
 }
 
-function formatCardLong(card: Card): string {
-  return `${formatCardShort(card)} (${card.puntos} pts)`;
-}
-
 function isRedSuit(card: Card): boolean {
   return card.palo === 'corazones' || card.palo === 'rombos';
 }
@@ -1642,9 +1638,6 @@ export default function GamePage() {
         {!state.pendingCard && !state.pendingSkill && (
           <p className="stage2-help">Roba una carta del mazo para continuar el turno.</p>
         )}
-
-        <p className="stage2-help">Estado: {state.phase ?? 'sin fase'} · gameId: {state.gameId || 'pendiente'} · turno #{state.turnIndex}</p>
-        <p className="stage2-help">Descarte superior: {state.topDiscardCard ? formatCardLong(state.topDiscardCard) : 'sin cartas'}</p>
 
         {outOfStageRangePlayers > 0 && (
           <p className="stage2-help stage2-help--warning">
