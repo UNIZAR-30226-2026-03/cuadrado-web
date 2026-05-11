@@ -146,14 +146,14 @@ function decodeCardId(cardId: number): RevealedCardInfo {
   };
 }
 
-function toBoardPlayer(player: Stage0PlayerState, cardCount: number, myCardSkinUrl: string | null): GamePlayer {
+function toBoardPlayer(player: Stage0PlayerState, cardCount: number, myCardSkinUrl: string | null, myAvatarUrl: string | null): GamePlayer {
   return {
     id: player.userId,
     name: player.name,
     elo: 1200,
     cardCount,
-    avatarUrl: null,
-    cardSkinUrl: player.isMe ? myCardSkinUrl : null,
+    avatarUrl: player.isMe ? myAvatarUrl : null,
+    cardSkinUrl: myCardSkinUrl,
     isMe: player.isMe,
     isBot: player.isBot,
   };
@@ -1021,6 +1021,10 @@ export default function GamePage() {
     return inventory.find(s => s.id === equippedSkinIds.Tapete)?.url ?? null;
   }, [inventory, equippedSkinIds.Tapete]);
 
+  const myAvatarUrl = useMemo(() => {
+    return inventory.find(s => s.id === equippedSkinIds.Avatar)?.url ?? null;
+  }, [inventory, equippedSkinIds.Avatar]);
+
   useEffect(() => {
     clearHandGridMemory();
     return () => {
@@ -1240,9 +1244,9 @@ export default function GamePage() {
   const renderPlayers = useMemo(
     () => orderedPlayers.slice(0, 8).map((player) => ({
       base: player,
-      display: toBoardPlayer(player, player.cardCount, myCardSkinUrl),
+      display: toBoardPlayer(player, player.cardCount, myCardSkinUrl, myAvatarUrl),
     })),
-    [orderedPlayers, myCardSkinUrl],
+    [orderedPlayers, myCardSkinUrl, myAvatarUrl],
   );
 
   const positionedPlayers = useMemo(() => {
@@ -1557,6 +1561,7 @@ export default function GamePage() {
               <button
                 type="button"
                 className={`stage2-pile stage2-pile--deck${canDrawCard ? ' stage2-pile--active' : ''}`}
+                style={myCardSkinUrl ? { backgroundImage: `linear-gradient(rgba(9, 24, 53, 0.5), rgba(9, 24, 53, 0.5)), url(${myCardSkinUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : undefined}
                 onClick={drawCard}
                 disabled={!canDrawCard}
               >
