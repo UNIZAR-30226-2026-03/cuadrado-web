@@ -150,7 +150,6 @@ function toBoardPlayer(player: Stage0PlayerState, cardCount: number, myCardSkinU
   return {
     id: player.userId,
     name: player.name,
-    elo: 1200,
     cardCount,
     avatarUrl: player.isMe ? myAvatarUrl : null,
     cardSkinUrl: myCardSkinUrl,

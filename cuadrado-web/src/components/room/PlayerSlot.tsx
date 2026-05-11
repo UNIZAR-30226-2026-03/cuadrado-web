@@ -18,7 +18,6 @@ import {
 export interface GamePlayer {
   id: string;
   name: string;
-  elo: number;
   cardCount: number;
   avatarUrl: string | null;
   cardSkinUrl: string | null;
@@ -150,7 +149,7 @@ export default function PlayerSlot({
   protectedIndices,
 }: PlayerSlotProps) {
   const left = `calc(50% + ${Math.cos(angleRad) * rx}px)`;
-  const top  = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
+  const top = `calc(50% + ${Math.sin(angleRad) * ry}px)`;
 
   // Clase de indicador de voz: --speaking tiene prioridad sobre --voice
   const voiceClass = isSpeaking
@@ -179,7 +178,6 @@ export default function PlayerSlot({
       </div>
       <div className="player-info">
         <span className="player-name">{player.name}</span>
-        <span className="player-elo">{player.elo} ELO</span>
       </div>
       <CardHand
         playerId={player.id}
