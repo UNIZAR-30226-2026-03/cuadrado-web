@@ -59,10 +59,11 @@ export default function ProfilePage() {
 
     const bar = ratioBarRef.current;
     if (bar) {
-      gsap.from(bar, {
-        scaleX: 0, transformOrigin: 'left center',
-        duration: 1.1, ease: 'power3.out', delay: 0.5,
-      });
+      gsap.fromTo(
+        bar,
+        { width: '0%' },
+        { width: `${winRatio}%`, duration: 1.1, ease: 'power3.out', delay: 0.5 },
+      );
     }
 
     return () => ctx.revert();
@@ -174,7 +175,7 @@ export default function ProfilePage() {
                 <div
                   ref={ratioBarRef}
                   className="profile-ratio__bar-fill"
-                  style={{ width: `${winRatio}%` }}
+                  style={{ width: 0 }}
                 />
               </div>
             </div>
